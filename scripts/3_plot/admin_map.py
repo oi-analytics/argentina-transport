@@ -12,7 +12,7 @@ def main(config):
     ax = get_axes()
     plot_basemap(ax, config['paths']['data'])
     scale_bar(ax, location=(0.8, 0.05))
-    plot_basemap_labels(ax, config['paths']['data'])
+    plot_basemap_labels(ax, config['paths']['data'], include_regions=True)
     save_fig(output_file)
 
 

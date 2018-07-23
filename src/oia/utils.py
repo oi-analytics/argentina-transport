@@ -145,20 +145,18 @@ def load_labels(data_path, include_regions):
     with open(labels_filename, 'r') as fh:
         reader = csv.reader(fh)
         header = next(reader)
-        print(header)
         assert header == ['text', 'lon', 'lat', 'size']
         labels = [(text, float(lon), float(lat), int(size))
-            for text, lon, lat, size in reader]
+                  for text, lon, lat, size in reader]
 
     region_labels = []
     if include_regions:
         with open(region_labels_filename, 'r') as fh:
             reader = csv.reader(fh)
-            print(header)
             header = next(reader)
             assert header == ['text', 'lon', 'lat', 'size']
             region_labels = [(text, float(lon), float(lat), int(size))
-                for text, lon, lat, size in reader]
+                             for text, lon, lat, size in reader]
 
     return labels + region_labels
 
