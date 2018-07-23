@@ -1,28 +1,22 @@
 """Shared plotting functions
 """
+import csv
 import json
+import math
 import os
 
 from collections import namedtuple, OrderedDict
 
 import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
+import geopandas as gpd
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-from osgeo import gdal
 import numpy as np
 
-from geopy.distance import vincenty
 from boltons.iterutils import pairwise
-import geopandas as gpd
-
-import configparser
-import csv
-import glob
-
-import fiona
-import fiona.crs
-import rasterio
+from geopy.distance import vincenty
+from osgeo import gdal
 
 
 def load_config():
@@ -34,7 +28,7 @@ def load_config():
     return config
 
 
-def get_axes(extent=[-74.039948, -55.262288, -57.387752, -20.295821], epsg=None):
+def get_axes(extent=(-74.04, -52.90, -20.29, -57.38), epsg=None):
     """Get map axes
 
     Default to Argentina extent // Lambert Conformal projection
@@ -45,7 +39,7 @@ def get_axes(extent=[-74.039948, -55.262288, -57.387752, -20.295821], epsg=None)
         x0, x1, y0, y1 = extent
         cx = x0 + ((x1 - x0) / 2)
         cy = y0 + ((y1 - y0) / 2)
-        ax_proj = ccrs.LambertConformal(central_longitude=cx, central_latitude=cy)
+        ax_proj = ccrs.TransverseMercator(central_longitude=cx, central_latitude=cy)
 
     plt.figure(figsize=(6, 10), dpi=300)
     ax = plt.axes([0.025, 0.025, 0.95, 0.95], projection=ax_proj)
@@ -55,13 +49,17 @@ def get_axes(extent=[-74.039948, -55.262288, -57.387752, -20.295821], epsg=None)
     return ax
 
 
+def save_fig(output_filename):
+    plt.savefig(output_filename)
+
+
 def set_ax_bg(ax, color='#c6e0ff'):
     """Set axis background color
     """
     ax.background_patch.set_facecolor(color)
 
 
-def plot_basemap(ax, data_path, focus='ARG', neighbours=['CHL', 'BOL', 'PRY', 'BRA', 'URY'],
+def plot_basemap(ax, data_path, focus='ARG', neighbours=('CHL', 'BOL', 'PRY', 'BRA', 'URY'),
                  country_border='white', plot_regions=True):
     """Plot countries and regions background
     """
@@ -70,13 +68,7 @@ def plot_basemap(ax, data_path, focus='ARG', neighbours=['CHL', 'BOL', 'PRY', 'B
     states_filename = os.path.join(
         data_path,
         'boundaries',
-        'ne_10m_admin_0_countries_lakes.shp'
-    )
-
-    states_over_lakes_filename = os.path.join(
-        data_path,
-        'boundaries',
-        'ne_10m_admin_0_countries.shp'
+        'admin_0_boundaries.shp'
     )
 
     provinces_filename = os.path.join(
@@ -88,7 +80,7 @@ def plot_basemap(ax, data_path, focus='ARG', neighbours=['CHL', 'BOL', 'PRY', 'B
     lakes_filename = os.path.join(
         data_path,
         'boundaries',
-        'ne_10m_lakes.shp'
+        'physical_lakes.shp'
     )
 
     # Neighbours
@@ -111,7 +103,6 @@ def plot_basemap(ax, data_path, focus='ARG', neighbours=['CHL', 'BOL', 'PRY', 'B
 
     # Lakes
     for record in shpreader.Reader(lakes_filename).records():
-        name = record.attributes['name']
         geom = record.geometry
         ax.add_geometries(
             [geom],
@@ -120,8 +111,61 @@ def plot_basemap(ax, data_path, focus='ARG', neighbours=['CHL', 'BOL', 'PRY', 'B
             facecolor='#c6e0ff',
             zorder=1)
 
+def plot_basemap_labels(ax, data_path, labels=None, include_regions=False):
+    """Plot countries and regions background
+    """
+    proj = ccrs.PlateCarree()
+    extent = ax.get_extent()
+    if labels is None:
+        labels = load_labels(data_path, include_regions)
+
+    for text, x, y, size in labels:
+        if within_extent(x, y, extent):
+            ax.text(
+                x, y,
+                text,
+                alpha=0.7,
+                size=size,
+                horizontalalignment='center',
+                transform=proj)
+
+
+def load_labels(data_path, include_regions):
+    labels_filename = os.path.join(
+        data_path,
+        'boundaries',
+        'labels.csv'
+    )
+    region_labels_filename = os.path.join(
+        data_path,
+        'boundaries',
+        'region_labels.csv'
+    )
+    labels = []
+    with open(labels_filename, 'r') as fh:
+        reader = csv.reader(fh)
+        header = next(reader)
+        print(header)
+        assert header == ['text', 'lon', 'lat', 'size']
+        labels = [(text, float(lon), float(lat), int(size))
+            for text, lon, lat, size in reader]
+
+    region_labels = []
+    if include_regions:
+        with open(region_labels_filename, 'r') as fh:
+            reader = csv.reader(fh)
+            print(header)
+            header = next(reader)
+            assert header == ['text', 'lon', 'lat', 'size']
+            region_labels = [(text, float(lon), float(lat), int(size))
+                for text, lon, lat, size in reader]
+
+    return labels + region_labels
+
 
 def within_extent(x, y, extent):
+    """Test x, y coordinates against (xmin, xmax, ymin, ymax) extent
+    """
     xmin, xmax, ymin, ymax = extent
     return (xmin < x) and (x < xmax) and (ymin < y) and (y < ymax)
 
@@ -213,7 +257,7 @@ def round_sf(x, places=1):
         return 0
     sign = x / abs(x)
     x = abs(x)
-    exp = floor(log10(x)) + 1
+    exp = math.floor(math.log10(x)) + 1
     shift = 10 ** (exp - places)
     rounded = round(x / shift) * shift
     return rounded * sign
@@ -292,21 +336,21 @@ def get_nearest_node(x,sindex_nodes,nodes,id_column):
     return nodes.loc[list(sindex_nodes.nearest(x.bounds[:2]))][id_column].values[0]
 
 
-def count_points_in_polygon(x,points_sindex):
+def count_points_in_polygon(row, points_sindex):
     """
    Inputs are:
-        x -- row of dataframe
+        row -- row of dataframe
         points_sindex -- spatial index of dataframe with points in the region to consider
     Outputs are:
         Amount of points in polygon
     """
-    return len(list(points_sindex.intersection(x.bounds)))
+    return len(list(points_sindex.intersection(row.bounds)))
 
 
-def extract_value_from_gdf(x,gdf_sindex,gdf,column_name):
+def extract_value_from_gdf(row, gdf_sindex, gdf, column_name):
     """
    Inputs are:
-        x -- row of dataframe
+        row -- row of dataframe
         gdf_sindex -- spatial index of dataframe of which we want to extract the value
         gdf -- GeoDataFrame of which we want to extract the value
         column_name -- column that contains the value we want to extract
@@ -314,4 +358,4 @@ def extract_value_from_gdf(x,gdf_sindex,gdf,column_name):
     Outputs are:
         extracted value from other gdf
     """
-    return gdf.loc[list(gdf_sindex.intersection(x.bounds[:2]))][column_name].values[0]
+    return gdf.loc[list(gdf_sindex.intersection(row.bounds[:2]))][column_name].values[0]

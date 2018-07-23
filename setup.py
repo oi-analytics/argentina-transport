@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
+"""Setup packages in src directory to be accessible to scripts
+"""
 from __future__ import absolute_import
 from __future__ import print_function
 
