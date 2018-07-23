@@ -1,0 +1,7 @@
+# Editor, config
+.vscode
+config.json
+
+# Python
+*.pyc
+*.egg-info
