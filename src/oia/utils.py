@@ -41,6 +41,7 @@ def get_axes(extent=(-74.04, -52.90, -20.29, -57.38), epsg=None):
         cy = y0 + ((y1 - y0) / 2)
         ax_proj = ccrs.TransverseMercator(central_longitude=cx, central_latitude=cy)
 
+    print(" * Setup axes")
     plt.figure(figsize=(6, 10), dpi=300)
     ax = plt.axes([0.025, 0.025, 0.95, 0.95], projection=ax_proj)
     proj = ccrs.PlateCarree()
@@ -50,6 +51,7 @@ def get_axes(extent=(-74.04, -52.90, -20.29, -57.38), epsg=None):
 
 
 def save_fig(output_filename):
+    print(" * Save", os.path.basename(output_filename))
     plt.savefig(output_filename)
 
 
@@ -84,6 +86,7 @@ def plot_basemap(ax, data_path, focus='ARG', neighbours=('CHL', 'BOL', 'PRY', 'B
     )
 
     # Neighbours
+    print(" * Load countries")
     for record in shpreader.Reader(states_filename).records():
         country_code = record.attributes['ISO_A3']
         if country_code == focus or country_code in neighbours:
@@ -97,11 +100,13 @@ def plot_basemap(ax, data_path, focus='ARG', neighbours=('CHL', 'BOL', 'PRY', 'B
 
     # Regions
     if plot_regions:
+        print(" * Load regions")
         for record in shpreader.Reader(provinces_filename).records():
             geom = record.geometry
             ax.add_geometries([geom], crs=proj, edgecolor='#ffffff', facecolor='#d2d2d2')
 
     # Lakes
+    print(" * Load lakes")
     for record in shpreader.Reader(lakes_filename).records():
         geom = record.geometry
         ax.add_geometries(
@@ -134,15 +139,15 @@ def load_labels(data_path, include_regions):
     labels_filename = os.path.join(
         data_path,
         'boundaries',
-        'labels.csv'
+        'admin_0_labels.csv'
     )
     region_labels_filename = os.path.join(
         data_path,
         'boundaries',
-        'region_labels.csv'
+        'admin_1_labels.csv'
     )
     labels = []
-    with open(labels_filename, 'r') as fh:
+    with open(labels_filename, 'r', encoding='utf-8-sig') as fh:
         reader = csv.reader(fh)
         header = next(reader)
         assert header == ['text', 'lon', 'lat', 'size']
@@ -151,7 +156,7 @@ def load_labels(data_path, include_regions):
 
     region_labels = []
     if include_regions:
-        with open(region_labels_filename, 'r') as fh:
+        with open(region_labels_filename, 'r', encoding='utf-8-sig') as fh:
             reader = csv.reader(fh)
             header = next(reader)
             assert header == ['text', 'lon', 'lat', 'size']
@@ -201,7 +206,7 @@ def scale_bar(ax, length=100, location=(0.5, 0.05), linewidth=3):
 
     # Plot the scalebar and label
     ax.plot(bar_xs, [sby, sby], transform=tmc, color='k', linewidth=linewidth)
-    ax.text(sbx, sby + 10*length, str(length) + ' km', transform=tmc,
+    ax.text(sbx, sby + 50*length, str(length) + ' km', transform=tmc,
             horizontalalignment='center', verticalalignment='bottom', size=8)
 
 
