@@ -5,3 +5,5 @@ config.json
 # Python
 *.pyc
 *.egg-info
+.ipynb_checkpoints
+
