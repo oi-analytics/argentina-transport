@@ -20,16 +20,16 @@ def main(config):
         'geometry': 'Polygon',
         'properties': [
             ('id', 'str'),
-            ('admin_1_shortcode', 'str'),
-            ('admin_1_shortname', 'str'),
+            ('admin_1_sc', 'str'),
+            ('admin_1_sn', 'str'),
         ]
     }
 
     def transform_zone(record):
         record['properties'] = {
             'id': "econ_{}".format(record['properties']['DATA']),
-            'admin_1_shortcode': record['properties']['PROV'],
-            'admin_1_shortname': record['properties']['PROVINCIA'],
+            'admin_1_sc': record['properties']['PROV'],
+            'admin_1_sn': record['properties']['PROVINCIA'],
         }
         return record
 
@@ -48,14 +48,14 @@ def main(config):
         'geometry': 'Point',
         'properties': [
             ('id', 'str'),
-            ('admin_1_shortcode', 'str'),
+            ('admin_1_sc', 'str'),
         ]
     }
 
     def transform_centroid(record):
         record['properties'] = {
             'id': "econ_{}".format(record['properties']['DATA']),
-            'admin_1_shortcode': record['properties']['ZONA'],
+            'admin_1_sc': record['properties']['ZONA'],
         }
         return record
 
@@ -108,8 +108,8 @@ def main(config):
             with fiona.open(path) as source:
                 for record in source:
                     props = record['properties']
-                    a_id = props['FILA']
-                    b_id = props['COLUMNA']
+                    a_id = "econ_{}".format(props['FILA'])
+                    b_id = "econ_{}".format(props['COLUMNA'])
                     a_to_b = props['AB']
                     b_to_a = props['BA']
                     # from row to column
