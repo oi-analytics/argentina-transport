@@ -9,6 +9,7 @@ from collections import namedtuple, OrderedDict
 
 import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
+import fiona
 import geopandas as gpd
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -26,6 +27,33 @@ def load_config():
     with open(config_path, 'r') as config_fh:
         config = json.load(config_fh)
     return config
+
+
+def transform_geo_file(source_file, sink_file, sink_schema, transform_record):
+    """Transform a fiona-readable file
+
+    Parameters
+    ----------
+    source_file: str
+        source file path
+    sink_file: str
+        destination file path
+    sink_schema: dict
+        fiona schema for output
+    transform_record: function
+        function that accepts a fiona record and returns a fiona record or None
+    """
+    with fiona.open(source_file) as source:
+        with fiona.open(
+                sink_file,
+                'w',
+                driver=source.driver,
+                crs=source.crs,
+                schema=sink_schema) as sink:
+            for record in source:
+                out_record = transform_record(record)
+                if out_record is not None:
+                    sink.write(out_record)
 
 
 def get_axes(extent=(-74.04, -52.90, -20.29, -57.38), epsg=None):
