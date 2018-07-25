@@ -71,10 +71,10 @@ def main(config):
         return record
 
     transform_geo_file(
-        source_file=os.path.join(incoming_data_path, '5', 'RutasNacionaes', 'Rutas_nacionales.shp'),
+        source_file=os.path.join(incoming_data_path, '5', 'RutasProvinciales', 'Rutas_provinciales.shp'),
         sink_file=os.path.join(data_path, 'network', 'road_edges_provincial.shp'),
         sink_schema=edge_schema,
-        transform_record=transform_edge_national
+        transform_record=transform_edge_provincial
     )
 
     # TODO split edges at intersections, add to_id, from_id

@@ -47,7 +47,10 @@ def main(config):
     # - "air_{}".format(Cod_Orig) => from_id
     # - "air_{}".format(Cod_Dest) => to_id
     # - Pax_2016 => passengers_2016
+    # TODO fix origin and destination ids - they all use three-letter codes but DO NOT MATCH
+    # the IATA codes used for nodes
     def transform_edge(record):
+        orig_props = record['properties']
         record['properties'] = {
             'id': "air_{}-{}".format(
                 record['properties']['Cod_Orig'], record['properties']['Cod_Dest']),
@@ -58,6 +61,14 @@ def main(config):
             'from_iata': record['properties']['Cod_Orig'],
             'to_iata': record['properties']['Cod_Dest'],
         }
+        if record['properties']['id'] == 'air_BAR-MDP' and orig_props['Long'] == 898:
+            print("Correcting", orig_props)
+            record['properties']['id'] = 'air_MDP-DRY'
+            record['properties']['from_id'] = 'air_MDP'
+            record['properties']['from_iata'] = 'MDP'
+            record['properties']['to_id'] = 'air_DRY'
+            record['properties']['to_iata'] = 'DRY'
+
         return record
 
     edge_schema = {
@@ -94,6 +105,16 @@ def main(config):
                     props['Cod_Dest'],
                     int(props['Pax_2016'])
                 )
+                if props['Cod_Orig'] == 'BAR' and props['Cod_Dest'] == 'MDP' and props['Long'] == 898:
+                    print("Correcting", props)
+                    row = (
+                        'air_MDP-DRY',
+                        'air_MDP',
+                        'MDP',
+                        'air_DRY',
+                        'DRY',
+                        int(props['Pax_2016'])
+                    )
                 w.writerow(row)
 
 
