@@ -7,3 +7,5 @@ config.json
 *.egg-info
 .ipynb_checkpoints
 
+# Data
+*.xml
