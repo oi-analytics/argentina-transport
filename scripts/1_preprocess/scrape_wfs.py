@@ -41,7 +41,6 @@ def main(output_dir, server):
     for i, featuretype in enumerate(featuretypes):
         name = featuretype.find('Name').text
         print(" * Saving", i, "of", len(featuretypes), name)
-        continue
         url = url_template.format(server, name)
         fname = os.path.join(output_dir, fname_template.format(name.replace(":", "-")))
         if not os.path.exists(fname):
