@@ -144,7 +144,7 @@ def plot_basemap(ax, data_path, focus='ARG', neighbours=('CHL', 'BOL', 'PRY', 'B
             facecolor='#c6e0ff',
             zorder=1)
 
-def plot_basemap_labels(ax, data_path, labels=None, include_regions=False):
+def plot_basemap_labels(ax, data_path, labels=None, include_regions=False, include_zorder=2):
     """Plot countries and regions background
     """
     proj = ccrs.PlateCarree()
@@ -160,6 +160,7 @@ def plot_basemap_labels(ax, data_path, labels=None, include_regions=False):
                 alpha=0.7,
                 size=size,
                 horizontalalignment='center',
+                zorder = include_zorder,
                 transform=proj)
 
 
