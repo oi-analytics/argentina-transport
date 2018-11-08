@@ -14,21 +14,18 @@ The code:
 7. Outputs the results as new shapefiles
 """
 import configparser
+import copy
 import csv
 import glob
 import os
 import sys
+import subprocess as sp
 
 import fiona
 import fiona.crs
-
-import subprocess as sp
-import psycopg2
-import osgeo.ogr as ogr
-
-import copy
 import networkx as nx
-
+import osgeo.ogr as ogr
+import psycopg2
 
 from oia.utils import load_config
 import oia.dbutils as db
@@ -41,10 +38,7 @@ def open_connection_psycopg2():
 	# ========================================
 	conf = load_config()
 
-	try:
-		connection = psycopg2.connect(**conf['database'])
-	except:
-		print ("I am unable to connect to the database")
+	connection = psycopg2.connect(**conf['database'])
 
 	return connection
 
@@ -148,8 +142,8 @@ def vector_details(file_path):
 			crs = fiona.crs.to_string(source.crs)
 		return geometry_type, crs
 	except Exception as ex:
-		print("INFO: fiona read failure (likely not a vector file):", ex)
-		return None
+		print("INFO: fiona read failure (likely not a vector file)")
+		raise ex
 
 
 def write_shapefiles_to_database(input_shape_file_path,shape_encoding):
@@ -179,12 +173,12 @@ def write_shapefiles_to_database(input_shape_file_path,shape_encoding):
 	edge_fname = ''
 	node_geom_type = ''
 	edge_geom_type = ''
-	for file in os.listdir(input_shape_file_path):
-		if file.endswith(".shp"):
-			fpath = os.path.join(input_shape_file_path, file)
+	for file_ in os.listdir(input_shape_file_path):
+		if file_.endswith(".shp"):
+			fpath = os.path.join(input_shape_file_path, file_)
 			geom_type, cr = vector_details(fpath)
 
-			fname = file.split(".")
+			fname = file_.split(".")
 			fname = fname[0].lower().strip()
 
 			if geom_type.lower().strip() in ('point','multipoint'):
@@ -201,10 +195,21 @@ def write_shapefiles_to_database(input_shape_file_path,shape_encoding):
 			elif 'wgs84' in cr.lower().strip():
 				fr_srid = '4326'
 
-			# 	command = "shp2pgsql -I -s {0}:4326 -d -g geom {1} {2} | psql -U {3} -d {4}".format(fr_srid,fpath,fname,conf['database']['user'], conf['database']['database'])
-			command = "shp2pgsql -I -s {0}:4326 -d -W '{1}' -g geom {2} {3} | psql -U {4} -d {5}".format(fr_srid,shape_encoding,fpath,fname,conf['database']['user'], conf['database']['database'])
-			# print (command)
-			sp.call(command, shell=True)
+			command = "shp2pgsql -I -s {0}:4326 -d -W '{1}' -g geom \"{2}\" \"{3}\" | psql -U {4} -d {5} -h {6} -p {7}".format(
+				fr_srid,
+				shape_encoding,
+				fpath,
+				fname,
+				conf['database']['user'],
+				conf['database']['database'],
+				conf['database']['host'],
+				conf['database']['port']
+			)
+			print ("Running,", command)
+			returncode = sp.call(command, shell=True)
+			if returncode != 0:
+				print("Command failed with", returncode)
+				exit(returncode)
 
 
 	return node_fname, edge_fname, node_geom_type, edge_geom_type
