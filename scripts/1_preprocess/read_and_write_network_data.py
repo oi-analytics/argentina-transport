@@ -63,7 +63,7 @@ def main():
 	for s in range(len(sectors)):
 		sect = sectors[s]
 		for subsect in subsects:
-			input_path = os.path.join(config['paths']['data'],'pre_processed_data',sect,subsect)
+			input_path = os.path.join(config['paths']['incoming_data'],'pre_processed_data',sect,subsect)
 			pt_table, ln_table, pt_gm_typ, ln_gm_typ = nc.write_shapefiles_to_database(input_path,sub_enc[s])
 			print (pt_table, ln_table, pt_gm_typ, ln_gm_typ)
 			nd_table, edg_table = nc.create_node_edge_tables_from_point_line_tables(pt_table,ln_table)
