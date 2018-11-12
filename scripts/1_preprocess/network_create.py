@@ -252,7 +252,7 @@ def merge_common_integer_ids_from_network(node_table,node_id,node_geom,node_dist
 		if node_dist > 0:
 			sql_query = '''SELECT A.{0}, B.{1}
 						from {2} as A, {3} as B
-						where ST_Distance(A.{4}::geography,B.{5}::geography) <= {6}
+						where ST_DWithin(A.{4}::geography,B.{5}::geography, {6})
 						and A.{7} <> B.{8}
 						'''.format(node_id,node_id,node_table,node_table,node_geom,node_geom,node_dist,node_id,node_id)
 		else:
@@ -340,7 +340,7 @@ def merge_common_string_ids_from_network(node_table,node_id,node_geom,node_dist,
 		if node_dist > 0:
 			sql_query = '''SELECT A.{0}, B.{1}
 						from {2} as A, {3} as B
-						where ST_Distance(A.{4}::geography,B.{5}::geography) <= {6}
+						where ST_DWithin(A.{4}::geography,B.{5}::geography, {6})
 						and A.{7} <> B.{8}
 						'''.format(node_id,node_id,node_table,node_table,node_geom,node_geom,node_dist,node_id,node_id)
 		else:
