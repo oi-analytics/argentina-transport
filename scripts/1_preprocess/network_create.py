@@ -730,18 +730,45 @@ def match_points_to_lines(point_table,line_table,point_id,line_id,point_attr,lin
 	point_line_list = []
 	with conn.cursor() as cur:
 		if point_attr and line_attr:
-			sql_query = '''SELECT A.{0},
-						(select B.{1} from {2} as B order by st_distance(A.{3},B.{4}) asc limit 1),
-						COALESCE((select B.{5} from {6} as B where A.{7} = B.{8} order by st_distance(A.{9},B.{10}) asc limit 1),-9999),
-						(select ST_distance(A.{11}::geography,B.{12}::geography) from {13} as B order by st_distance(A.{14},B.{15}) asc limit 1),
-						COALESCE((select ST_distance(A.{16}::geography,B.{17}::geography) from {18} as B where A.{19} = B.{20}
-						order by st_distance(A.{21},B.{22}) asc limit 1),-9999)
-						from {23} as A
-						'''.format(point_id,line_id,line_table,point_geom,line_geom,
-							line_id,line_table,point_attr,line_attr,point_geom,line_geom,
-							point_geom,line_geom,line_table,point_geom,line_geom,
-							point_geom,line_geom,line_table,point_attr,line_attr,point_geom,line_geom,
-							point_table)
+			# TODO threshold for speeedup?? dwithin
+			# TODO fewer subqueries?? (avoid repeated st_distance calculation)
+			sql_query = '''SELECT
+				A.{point_id},
+				(
+					select B.{line_id} from {line_table} as B
+					order by st_distance(A.{point_geom}, B.{line_geom}) asc limit 1
+				),
+				COALESCE(
+					(
+						select B.{line_id} from {line_table} as B
+						where A.{point_attr} = B.{line_attr}
+						order by st_distance(A.{point_geom}, B.{line_geom}) asc limit 1
+					),
+					-9999
+				),
+				(
+					select ST_distance(A.{point_geom}::geography, B.{line_geom}::geography) from {line_table} as B
+					order by st_distance(A.{point_geom}, B.{line_geom}) asc limit 1
+				),
+				COALESCE(
+					(
+						select ST_distance(A.{point_geom}::geography, B.{line_geom}::geography) from {line_table} as B
+						where A.{point_attr} = B.{line_attr}
+						order by st_distance(A.{point_geom}, B.{line_geom}) asc limit 1
+					),
+					-9999
+				)
+				from {point_table} as A
+			'''.format({
+				"line_table": line_table,
+				"line_id": line_id,
+				"line_attr": line_attr,
+				"line_geom": line_geom,
+				"point_table": point_table,
+				"point_id": point_id,
+				"point_attr": point_attr,
+				"point_geom": point_geom
+			})
 
 			cur.execute(sql_query)
 			for row in cur:
@@ -781,14 +808,28 @@ def match_points_to_lines(point_table,line_table,point_id,line_id,point_attr,lin
 					point_line_list.append((nid,sbid_lid,sbid_dist))
 
 		else:
-			sql_query = '''SELECT A.{0},
-						(select B.{1} from {2} as B order by st_distance(A.{3},B.{4}) asc limit 1),
-						(select ST_distance(A.{5}::geography,B.{6}::geography) from {7} as B order by st_distance(A.{8},B.{9}) asc limit 1)
-						from {10} as A
-						'''.format(point_id,line_id,line_table,point_geom,line_geom,
-							point_geom,line_geom,
-							line_table,point_geom,line_geom,
-							point_table)
+			sql_query = '''SELECT A.{point_id},
+				(
+					select
+						B.{line_id}
+					from {line_table} as B
+					order by st_distance(A.{point_geom}, B.{line_geom}) asc limit 1
+				),
+				(
+					select
+						ST_distance(A.{point_geom}::geography, B.{line_geom}::geography)
+					from {line_table} as B
+					order by st_distance(A.{point_geom}, B.{line_geom}) asc limit 1
+				)
+				from {point_table} as A
+			'''.format({
+				"point_id": point_id,
+				"point_geom": point_geom,
+				"point_table": point_table,
+				"line_id": line_id,
+				"line_geom": line_geom,
+				"line_table": line_table,
+			})
 
 			cur.execute(sql_query)
 			for row in cur:
