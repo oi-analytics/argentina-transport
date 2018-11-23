@@ -77,8 +77,6 @@ def main(config):
         transform_record=transform_edge_provincial
     )
 
-    # TODO split edges at intersections, add to_id, from_id
-    # TODO reconcile roads duplicated between datasets
 
 if __name__ == '__main__':
     CONFIG = load_config()
