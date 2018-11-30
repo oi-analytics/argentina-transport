@@ -27,6 +27,41 @@ def est_trade_value(x,output_new,sector):
 #    x['gdp'] = x.gdp*(sec_output.loc[sec_output.region==x.reg1].values[0][2])
     return x
 
+def indind_iotable(sup_table,use_table,sectors):
+    # GET VARIABLES
+    x = np.array(sup_table.sum(axis=0)) # total production on industry level
+    g = np.array(sup_table.sum(axis=1)) # total production on product level
+    F = use_table.iloc[:16,16:].sum(axis=1)
+    
+    #Numpify
+    Sup_array = np.asarray(sup_table.iloc[:len(sectors),:len(sectors)]) # numpy array if supply matrix
+    Use_array = np.asarray(use_table.iloc[:len(sectors),:len(sectors)]) # numpy array of use matrix
+    
+    g_diag_inv = np.linalg.inv(np.diag(g)) # inverse of g (and diagolinized)
+    x_diag_inv = np.linalg.inv(np.diag(x)) # inverse of x (and diagolinized)
+    
+    # Calculate the matrices
+    B = np.dot(Use_array,x_diag_inv) # B matrix (U*x^-1)
+    D = np.dot(Sup_array.T,g_diag_inv) # D matrix (V*g^-1)
+    I_i = np.identity((len(x))) # Identity matrix for industry-to-industry
+    
+    # Inverse for industry-to-industry
+    A_ii = np.dot(D,B)
+    F_ii = np.dot(D,F)/1e6
+    IDB_inv = np.linalg.inv((I_i-np.dot(D,B))) # (I-DB)^-1 
+    
+    # And canclulate sum of industries
+    ind = np.dot(IDB_inv,np.dot(D,F)/1e6) # (I-DB)^-1 * DF
+    
+    IO = pd.concat([pd.DataFrame(np.dot(A_ii,np.diag(ind))),pd.DataFrame(F_ii)],axis=1)
+    IO.columns = list(use_table.columns[:17])
+    IO.index = list(use_table.columns[:16])
+    VA = np.array(list(ind)+[0])-np.array(IO.sum(axis=0))
+    VA[-1] = 0
+    IO.loc['ValueA'] = VA
+    
+    return IO,VA
+
 # =============================================================================
 # # Load mapper functions to aggregate tables
 # =============================================================================
@@ -65,12 +100,10 @@ sup_table = sup_table.T.groupby(level=0,axis=0).sum()
 use_table = pd.read_excel(os.path.join(data_path,'economic_IO_tables','input','sh_cou_06_16.xls'),
                           sheet_name='Mat Utilizacion pc',skiprows=2,header=[0,1],index_col=[0,1],nrows=271)
 
-basic_prod_prices = use_table[[#'PRODUCCION NACIONAL A PRECIOS BASICOS',
-                               'IMPORTACIONES  (CIF a nivel de producto y FOB a nivel total)',
+basic_prod_prices = use_table[['IMPORTACIONES  (CIF a nivel de producto y FOB a nivel total)',
                                'AJUSTE CIF/FOB DE LAS IMPORTACIONES','DERECHOS DE IMPORTACION',
                                'IMPUESTOS A LOS PRODUCTOS NETOS DE SUBSIDIOS','MARGENES DE COMERCIO',
                                'MARGENES DE TRANSPORTE','IMPUESTO AL VALOR AGREGADO NO DEDUCIBLE',
-                               #'OFERTA TOTAL A PRECIOS DE  COMPRADOR'
                                 ]]*-1
 
 use_table = use_table.drop(['PRODUCCION NACIONAL A PRECIOS BASICOS',
@@ -98,45 +131,9 @@ use_table = use_table.T.groupby(level=0,axis=0).sum()
 use_table= pd.concat([use_table,basic_prod_prices],axis=1)
 
 # =============================================================================
-# Create Industry-Industry IO table
+# Create IO table and translate to 2016 values
 # =============================================================================
-
-
-# GET VARIABLES
-x = np.array(sup_table.sum(axis=0)) # total production on industry level
-g = np.array(sup_table.sum(axis=1)) # total production on product level
-F = use_table.iloc[:16,16:].sum(axis=1)
-
-#Numpify
-Sup_array = np.asarray(sup_table.iloc[:16,:16]) # numpy array if supply matrix
-Use_array = np.asarray(use_table.iloc[:16,:16]) # numpy array of use matrix
-
-g_diag_inv = np.linalg.inv(np.diag(g)) # inverse of g (and diagolinized)
-x_diag_inv = np.linalg.inv(np.diag(x)) # inverse of x (and diagolinized)
-
-# Calculate the matrices
-B = np.dot(Use_array,x_diag_inv) # B matrix (U*x^-1)
-D = np.dot(Sup_array.T,g_diag_inv) # D matrix (V*g^-1)
-I_i = np.identity((len(x))) # Identity matrix for industry-to-industry
-
-# Inverse for industry-to-industry
-A_ii = np.dot(D,B)
-F_ii = np.dot(D,F)/1e6
-IDB_inv = np.linalg.inv((I_i-np.dot(D,B))) # (I-DB)^-1 
-
-# And canclulate sum of industries
-ind = np.dot(IDB_inv,np.dot(D,F)/1e6) # (I-DB)^-1 * DF
-
-IO_ARG = pd.concat([pd.DataFrame(np.dot(A_ii,np.diag(ind))),pd.DataFrame(F_ii)],axis=1)
-IO_ARG.columns = list(use_table.columns[:17])
-IO_ARG.index = list(use_table.columns[:16])
-VA = np.array(list(ind)+[0])-np.array(IO_ARG.sum(axis=0))
-VA[-1] = 0
-IO_ARG.loc['ValueA'] = VA
-
-# =============================================================================
-# Update table to 2016
-# =============================================================================
+IO_ARG,VA = indind_iotable(sup_table,use_table,sectors)
 
 va_new = [498.319,21.986,264.674,1113.747,123.094,315.363,1076.121,168.899,441.293,321.376,750.356,647.929,448.372,426.642,235.624,58.837]
 u = ((((np.array(IO_ARG.sum(axis=0)))/VA)[:16])*va_new)
