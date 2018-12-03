@@ -4,3 +4,9 @@ psycopg2
 GDAL
 networkx
 boltons
+pandas
+geopandas
+openpyxl
+geopy
+xlrd
+unidecode
