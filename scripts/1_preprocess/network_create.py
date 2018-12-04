@@ -226,6 +226,42 @@ def convert_multipoint_to_singlepoint(point_table,point_epsg):
 
 	conn.close()
 
+def create_points_from_line_intersections(edge_table,point_table,point_id,sector):
+	conn = open_connection_psycopg2()
+
+	nodes_added = []
+	start_id = 0
+	with conn.cursor() as cur:
+		sql_query = '''SELECT max({0}) FROM {1}
+					'''.format(point_id,point_table)
+		cur.execute(sql_query)
+		for row in cur.fetchall():
+			start_id = row[0]
+		
+
+		sql_query = '''SELECT ST_AsText(ST_Intersection(A.geom,B.geom))
+						FROM {0} as A, {1} as B
+						WHERE ST_Intersects(A.geom,B.geom)
+					'''.format(edge_table,edge_table)
+		cur.execute(sql_query)
+		for row in cur.fetchall():
+			a_n = row[0]
+			if ogr.CreateGeometryFromWkt(a_n).GetGeometryName() == 'POINT':
+				start_id += 1
+				nodes_added.append((start_id,a_n))
+				print (start_id,a_n)
+
+		for n in nodes_added:
+			nfid = sector + 'n_' + str(n[0])
+			sql_insert = '''INSERT INTO public.{0}
+						(node_id,gid,geom)
+						VALUES ('{1}',{2},
+						ST_GeomFromText('{3}',4326))
+						'''.format(point_table,nfid,n[0],n[1])
+			cur.execute(sql_insert)
+			conn.commit()
+
+	conn.close()
 
 def merge_common_integer_ids_from_network(node_table,node_id,node_geom,node_dist,node_attributes):
 	# ===============================================================================================
@@ -263,7 +299,7 @@ def merge_common_integer_ids_from_network(node_table,node_id,node_geom,node_dist
 						'''.format(node_id,node_id,node_table,node_table,node_geom,node_geom,node_id,node_id)
 
 		cur.execute(sql_query)
-		for row in cur:
+		for row in cur.fetchall():
 			a_n = row[0]
 			b_n = row[1]
 			if ([a_n,b_n] not in node_s_pairs) and ([b_n,a_n] not in node_s_pairs):
@@ -285,7 +321,7 @@ def merge_common_integer_ids_from_network(node_table,node_id,node_geom,node_dist
 							'''.format(attributes,attributes,node_table,node_table,node_id,nodes[0],node_id,tuple(del_nodes))
 
 				cur.execute(sql_query)
-				for row in cur:
+				for row in cur.fetchall():
 					attributes_vals.append(row[0])
 					attributes_vals.append(row[1])
 
@@ -349,7 +385,7 @@ def merge_common_string_ids_from_network(node_table,node_id,node_geom,node_dist,
 						'''.format(node_id,node_id,node_table,node_table,node_geom,node_geom,node_id,node_id)
 
 		cur.execute(sql_query)
-		for row in cur:
+		for row in cur.fetchall():
 			a_n = row[0]
 			b_n = row[1]
 			if ([a_n,b_n] not in node_s_pairs) and ([b_n,a_n] not in node_s_pairs):
@@ -374,7 +410,7 @@ def merge_common_string_ids_from_network(node_table,node_id,node_geom,node_dist,
 							'''.format(attributes,attributes,node_table,node_table,node_id,nodes[0],node_id,str(tuple(del_nodes)))
 
 				cur.execute(sql_query)
-				for row in cur:
+				for row in cur.fetchall():
 					attributes_vals.append(row[0])
 					attributes_vals.append(row[1])
 
@@ -440,7 +476,7 @@ def convert_multiline_to_linestring(multiline_table,multiline_id,multiline_geom,
 
 			sql_query = '''SELECT {0}, ST_AsText({1}) FROM {2}'''.format(multiline_id,multiline_geom,multiline_table)
 			cur.execute(sql_query)
-			for row in cur:
+			for row in cur.fetchall():
 				link = int(row[0])
 				gt = row[1]
 
@@ -476,7 +512,7 @@ def convert_multiline_to_linestring(multiline_table,multiline_id,multiline_geom,
 
 			sql_query = '''SELECT {0},{1},ST_AsText({2}) FROM {3}'''.format(multiline_id,multiline_attribute,multiline_geom,multiline_table)
 			cur.execute(sql_query)
-			for row in cur:
+			for row in cur.fetchall():
 				link = int(row[0])
 				attr = row[1]
 				gt = row[2]
@@ -677,7 +713,7 @@ def insert_to_node_edge_tables_from_line_table(sector,node_table,edge_table,line
 					'''.format(line_id,line_geom,line_geom,line_geom,line_table)
 
 		cur.execute(sql_query)
-		for row in cur:
+		for row in cur.fetchall():
 			lid = int(row[0])
 			gt = row[1]
 			st_pt = row[2]
@@ -759,7 +795,7 @@ def match_points_to_lines(point_table,line_table,point_id,line_id,point_attr,lin
 					-9999
 				)
 				from {point_table} as A
-			'''.format({
+			'''.format(**{
 				"line_table": line_table,
 				"line_id": line_id,
 				"line_attr": line_attr,
@@ -771,7 +807,7 @@ def match_points_to_lines(point_table,line_table,point_id,line_id,point_attr,lin
 			})
 
 			cur.execute(sql_query)
-			for row in cur:
+			for row in cur.fetchall():
 				nid = row[0]
 				clid = row[1]
 				sbid_lid = row[2]
@@ -822,7 +858,7 @@ def match_points_to_lines(point_table,line_table,point_id,line_id,point_attr,lin
 					order by st_distance(A.{point_geom}, B.{line_geom}) asc limit 1
 				)
 				from {point_table} as A
-			'''.format({
+			'''.format(**{
 				"point_id": point_id,
 				"point_geom": point_geom,
 				"point_table": point_table,
@@ -832,7 +868,7 @@ def match_points_to_lines(point_table,line_table,point_id,line_id,point_attr,lin
 			})
 
 			cur.execute(sql_query)
-			for row in cur:
+			for row in cur.fetchall():
 				nid = row[0]
 				clid = row[1]
 				cl_dist = row[2]
@@ -885,14 +921,14 @@ def insert_to_node_edge_tables_from_given_points_lines(point_table,line_table,po
 		sql_query = '''SELECT max({0}) FROM {1}
 					'''.format(point_id,point_table)
 		cur.execute(sql_query)
-		for row in cur:
+		for row in cur.fetchall():
 			 n_id = row[0] + 1
 
 		print ('max point',n_id)
 		sql_query = '''SELECT {0}, {1} FROM {2}
 					'''.format(line_id,line_attr,line_table)
 		cur.execute(sql_query)
-		for row in cur:
+		for row in cur.fetchall():
 			lc = row[0]
 			la = row[1]
 			nlist = [(n,m) for (n,l,m) in point_line_list if l == lc]
@@ -1131,7 +1167,7 @@ def eliminate_common_nodes_from_network(node_table,edge_table,node_id,node_geom,
 						'''.format(node_id,node_id,node_table,node_table,node_geom,node_geom,node_dist,node_id,node_id)
 
 			cur.execute(sql_query)
-			for row in cur:
+			for row in cur.fetchall():
 				a_n = row[0]
 				b_n = row[1]
 				if ([a_n,b_n] not in node_s_pairs) and ([b_n,a_n] not in node_s_pairs):
@@ -1149,7 +1185,7 @@ def eliminate_common_nodes_from_network(node_table,edge_table,node_id,node_geom,
 
 			cur.execute(sql_query)
 			out = []
-			for row in cur:
+			for row in cur.fetchall():
 				out.append(list(row[0]))
 			out = to_graph(out)
 			out = nx.connected_components(out)
@@ -1177,11 +1213,12 @@ def eliminate_common_nodes_from_network(node_table,edge_table,node_id,node_geom,
 			conn.commit()
 
 		del_nodes_list = list(set(del_nodes_list))
-		sql_delete = '''DELETE FROM {0}
-					WHERE node_id IN {1}
-					'''.format(node_table,str(tuple(del_nodes_list)))
-		cur.execute(sql_delete)
-		conn.commit()
+		if del_nodes_list:
+			sql_delete = '''DELETE FROM {0}
+						WHERE node_id IN {1}
+						'''.format(node_table,str(tuple(del_nodes_list)))
+			cur.execute(sql_delete)
+			conn.commit()
 
 	conn.close()
 
@@ -1218,7 +1255,7 @@ def bisect_lines_by_nodes(node_table,edge_table,node_id,edge_id,edge_int_id,from
 	with conn.cursor() as cur:
 		sql_query = "SELECT max({0}),max({1}) FROM {2}".format(edge_id,edge_int_id,edge_table)
 		cur.execute(sql_query)
-		for row in cur:
+		for row in cur.fetchall():
 			sector = row[0].split('_')
 			sector = sector[0]
 			e_id = int(row[1])
@@ -1229,7 +1266,7 @@ def bisect_lines_by_nodes(node_table,edge_table,node_id,edge_id,edge_int_id,from
 					and B.{6} != A.{7} and st_distance(A.{8}::geography,B.{9}::geography) <= {10}
 					'''.format(node_id,edge_id,node_table,edge_table,from_node,node_id,to_node,node_id,node_geom,edge_geom,node_edge_dist)
 		cur.execute(sql_query)
-		for row in cur:
+		for row in cur.fetchall():
 			a_n = row[0]
 			b_n = row[1]
 
@@ -1257,7 +1294,7 @@ def bisect_lines_by_nodes(node_table,edge_table,node_id,edge_id,edge_int_id,from
 								to_node,edge_attr,node_table,edge_table,node_id,str(tuple(nl)),edge_id,lc)
 
 				cur.execute(sql_query)
-				for row in cur:
+				for row in cur.fetchall():
 					n = row[0]
 					frac = row[1]
 					st_pt = row[2]
@@ -1334,7 +1371,7 @@ def add_all_columns_from_one_table_to_another(original_table,new_table,common_id
 	with conn.cursor() as cur:
 		sql_query = "SELECT column_name,data_type FROM information_schema.columns WHERE table_name = '{0}'".format(original_table)
 		cur.execute(sql_query)
-		for row in cur:
+		for row in cur.fetchall():
 			if row[0] not in skip_id_list:
 				col_names.append(row[0])
 				col_types.append(row[1])

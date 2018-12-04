@@ -25,30 +25,30 @@ def check_single_point_creation(point_geom_type,point_table,point_epsg):
 
 def main():
 	config = load_config()
-	# sectors = ['railways']
-	# subsects = ['national_rail']
-	# sector_ids = ['rail']
-	# sub_enc = ['utf-8']
-	# cm_attr = ['linea']
-	# pt_attr = [['linea','nombre']]
-	# ln_attr = [['operador','linea']]
-	# cm_attr_typ = ['character varying']
-
-	sectors = ['roads']
-	subsects = ['combined_roads']
-	sector_ids = ['road']
+	sectors = ['railways']
+	subsects = ['national_rail']
+	sector_ids = ['rail']
 	sub_enc = ['utf-8']
-	cm_attr = ['']
-	pt_attr = [['','']]
-	ln_attr = [['','']]
-	cm_attr_typ = ['']
+	cm_attr = ['linea']
+	pt_attr = [['linea','nombre']]
+	ln_attr = [['operador','linea']]
+	cm_attr_typ = ['character varying']
+
+	# sectors = ['roads']
+	# subsects = ['combined_roads']
+	# sector_ids = ['road']
+	# sub_enc = ['utf-8']
+	# cm_attr = ['']
+	# pt_attr = [['','']]
+	# ln_attr = [['','']]
+	# cm_attr_typ = ['']
 
 	pt_id = 'gid'
 	ln_id = 'gid'
 	pt_gm = 'geom'
 	ln_gm = 'geom'
 	dst_thr = 100
-	dst_prox = 20
+	dst_prox = 10
 
 	nd_id = 'node_id'
 	edg_id = 'edge_id'
@@ -57,7 +57,7 @@ def main():
 	t_nd = 'to_node'
 	nd_gm = 'geom'
 	edg_gm = 'geom'
-	nd_prox = 0
+	nd_prox = 10
 	skip_ids = ['gid','edge_id','from_node','to_node','node_id','geom','union']
 
 	for s in range(len(sectors)):
@@ -84,6 +84,9 @@ def main():
 				# print (pt_table,sln_table,pt_id,ln_id,sln_id,pt_gm,ln_gm,pt_ln_list,sector_ids[s],dst_thr,nd_table,edg_table)
 				nc.insert_to_node_edge_tables_from_given_points_lines(pt_table,sln_table,pt_id,ln_id,sln_id,pt_gm,ln_gm,pt_ln_list,sector_ids[s],dst_thr,nd_table,edg_table)
 				print ("Done with inserting nodes and edges")
+				# Add line intersctions as new points
+				nc.create_points_from_line_intersections(edg_table,nd_table,pt_id,sector_ids[s])
+				print ("Done with inserting nodes at line intersections")
 				nc.eliminate_common_nodes_from_network(nd_table,edg_table,nd_id,nd_gm,nd_prox)
 				print ("Done with eliminating common nodes")
 				nc.bisect_lines_by_nodes(nd_table,edg_table,nd_id,edg_id,edg_int_id,f_nd,t_nd,ln_id,nd_gm,edg_gm,nd_prox)
