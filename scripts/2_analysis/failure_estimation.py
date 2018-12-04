@@ -222,11 +222,11 @@ def main():
             flow_df = pd.read_csv(os.path.join(flow_paths_data,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m],int(perct))),encoding='utf-8')
 
             if modes[m] == 'road':
-                e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_{}_{}_percent.csv'.format(modes[m],int(perct))))[['edge_id','total_tons']]
+                e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_national_{}_{}_percent.csv'.format(modes[m],int(perct))))[['edge_id','max_total_tons']]
                 ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
                 ef_df = pd.merge(ef_df,G_df[['edge_id','road_type']],how='left',on=['edge_id'])
                 ef_df = pd.merge(ef_df,e_flow,how='left',on=['edge_id']).fillna(0)
-                ef_sc_list = ef_df[(ef_df['road_type'] != 0) | ef_df['total_tons'] > 0]['edge_id'].values.tolist()
+                ef_sc_list = ef_df[(ef_df['road_type'] != '0') & (ef_df['max_total_tons'] > 0)]['edge_id'].values.tolist()
                 print ('Number of failure scenarios',len(ef_sc_list))
 
             # Perform failure analysis
@@ -234,7 +234,8 @@ def main():
             for t in range(len(types)):
                 print ('* Performing {} {} failure analysis'.format(types[t],modes[m]))
                 ef_list = []
-                for fail_edge in ef_sc_list:
+                for f_edge in range(len(ef_sc_list)):
+                    fail_edge = ef_sc_list[f_edge]
                     if isinstance(fail_edge,list) == False:
                         fail_edge = [fail_edge]
                     ef_dict = igraph_scenario_edge_failures(
@@ -242,7 +243,7 @@ def main():
                     if ef_dict:
                         ef_list += ef_dict
 
-                    print('Done with mode {0} edge {1} type {2}'.format(modes[m], fail_edge, types[t]))
+                    print('Done with mode {0} edge {1} out of {2} type {3}'.format(modes[m], f_edge, len(ef_sc_list),types[t]))
 
                 df = pd.DataFrame(ef_list)
 

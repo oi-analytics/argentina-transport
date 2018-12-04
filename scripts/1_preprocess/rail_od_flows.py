@@ -455,10 +455,12 @@ def main(config):
 
             print ('done with {} in {}'.format(iter_,fd['file_name']))
 
+
         od_df = pd.DataFrame(od_vals,columns = df.columns.values.tolist() + od_ids)
         od_df.to_excel(excel_writer, fd['file_name'] + ' ' + fd['line_name'], index=False,encoding='utf-8-sig')
         excel_writer.save()
 
+        od_df['o_date'] = od_df['origin_date'].dt.date
         od_dfs.append(od_df)
 
         province_ods.append(od_df.groupby(['net_origin_province','net_destination_province','industry_name'])['tons'].sum().reset_index())
@@ -473,7 +475,6 @@ def main(config):
         od_mismatch_df.to_excel(mismatch_excel_writer, fd['file_name'] + ' ' + fd['line_name'] + ' pairs', index=False,encoding='utf-8-sig')
         mismatch_excel_writer.save()        
 
-        od_df['o_date'] = od_df['origin_date'].dt.date
         od_com_day_totals = od_df[['origin_id','destination_id','commodity_group','commodity_subgroup','o_date','tons']].groupby(['origin_id','destination_id','commodity_group','commodity_subgroup','o_date'])['tons'].sum()
         od_com_day_totals.to_excel(day_total_excel_writer,fd['file_name'] + ' ' + fd['line_name'],encoding='utf-8-sig')
         day_total_excel_writer.save()
@@ -497,6 +498,48 @@ def main(config):
     od_vals_group_industry = {}
     od_dfs = pd.concat(od_dfs,axis=0,sort='False', ignore_index=True)
     od_dfs.to_csv(os.path.join(incoming_data_path,'rail_ods','all_ods.csv'),index=False,encoding='utf-8-sig')
+
+    # od_dfs = pd.read_csv(os.path.join(incoming_data_path,'rail_ods','all_ods.csv'),encoding='utf-8-sig')
+
+    gr_cols = ['origin_id','destination_id','net_origin_province','net_destination_province','commodity_group','commodity_subgroup','industry_name','o_date']
+    od_com_day_totals = od_dfs[gr_cols+['tons']].groupby(gr_cols)['tons'].sum().reset_index()
+
+    gr_cols = ['origin_id','destination_id','net_origin_province','net_destination_province','commodity_group','commodity_subgroup','industry_name']
+    od_com_max = od_com_day_totals[gr_cols + ['tons']].groupby(gr_cols).max().rename(columns={'tons': 'max_daily_tons'}).reset_index()
+    od_com_min = od_com_day_totals[gr_cols + ['tons']].groupby(gr_cols).min().rename(columns={'tons': 'min_daily_tons'}).reset_index()
+    od_minmax = pd.merge(od_com_min,od_com_max,how='left',on=gr_cols).fillna(0)
+    
+    # print (od_minmax)
+    for iter_,row in od_minmax.iterrows():
+        if '{}-{}'.format(row.origin_id,row.destination_id) not in od_vals_group_industry.keys():
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)] = {}
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['origin_province'] = row.net_origin_province 
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['destination_province'] = row.net_destination_province
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['min_total_tons'] = row.min_daily_tons
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['max_total_tons'] = row.max_daily_tons
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['min_{}'.format(row.industry_name)] = row.min_daily_tons
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['max_{}'.format(row.industry_name)] = row.max_daily_tons
+        else:
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['min_total_tons'] += row.min_daily_tons
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['max_total_tons'] += row.max_daily_tons
+
+            if 'min_{}'.format(row.industry_name) not in od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)].keys():
+                od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['min_{}'.format(row.industry_name)] = row.min_daily_tons
+                od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['max_{}'.format(row.industry_name)] = row.max_daily_tons
+            else:
+                od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['min_{}'.format(row.industry_name)] += row.min_daily_tons
+                od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['max_{}'.format(row.industry_name)] += row.max_daily_tons
+
+
+    od_list = []
+    for key,values in od_vals_group_industry.items():
+        od_list.append({**{'origin_id':key.split('-')[0],'destination_id':key.split('-')[1]},**values})
+    od_df = pd.DataFrame(od_list).fillna(0)
+    od_df.to_csv(os.path.join(incoming_data_path,'rail_ods','rail_ods.csv'),index=False,encoding='utf-8-sig')
+    
+    del od_list
+    
+    od_vals_group_industry = {}
     for iter_,row in od_dfs.iterrows():
         if '{}-{}'.format(row.origin_id,row.destination_id) not in od_vals_group_industry.keys():
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)] = {}
@@ -506,20 +549,16 @@ def main(config):
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)][row.industry_name] = row.tons
         else:
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['total_tons'] += row.tons
+            
             if row.industry_name not in od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)].keys():
                 od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)][row.industry_name] = row.tons
             else:
                 od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)][row.industry_name] += row.tons
 
-
     od_list = []
     for key,values in od_vals_group_industry.items():
         od_list.append({**{'origin_id':key.split('-')[0],'destination_id':key.split('-')[1]},**values})
     od_df = pd.DataFrame(od_list).fillna(0)
-    od_df.to_csv(os.path.join(incoming_data_path,'rail_ods','rail_ods.csv'),index=False,encoding='utf-8-sig')
-    
-    # od_df.to_excel(excel_writer,'ods',index=False,encoding='utf-8-sig')
-    # excel_writer.save()
     del od_list
 
     province_ods = od_df[['origin_province','destination_province']+industry_cols + ['total_tons']]
