@@ -212,11 +212,6 @@ def main():
         fail_df = pd.read_excel(fail_scenarios_data, sheet_name=modes[m])
         ef_sc_list = edge_failure_sampling(fail_df,'edge_id')
         print ('Number of failure scenarios',len(ef_sc_list))
-        if modes[m] == 'road':
-            ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
-            ef_df = pd.merge(ef_df,G_df[['edge_id','road_type']],how='left',on=['edge_id'])
-            ef_sc_list = ef_df[ef_df['road_type'] != 0]['edge_id'].values.tolist()
-            print ('Number of failure scenarios',len(ef_sc_list))
 
 
         # ef_sc_list = ef_sc_list[0:10]
@@ -225,6 +220,14 @@ def main():
             # Load flow paths
             print ('* Loading {} flow paths'.format(modes[m]))
             flow_df = pd.read_csv(os.path.join(flow_paths_data,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m],int(perct))),encoding='utf-8')
+
+            if modes[m] == 'road':
+                e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_{}_{}_percent.csv'.format(modes[m],int(perct))))[['edge_id','total_tons']]
+                ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
+                ef_df = pd.merge(ef_df,G_df[['edge_id','road_type']],how='left',on=['edge_id'])
+                ef_df = pd.merge(ef_df,e_flow,how='left',on=['edge_id']).fillna(0)
+                ef_sc_list = ef_df[(ef_df['road_type'] != 0) | ef_df['total_tons'] > 0]['edge_id'].values.tolist()
+                print ('Number of failure scenarios',len(ef_sc_list))
 
             # Perform failure analysis
             edge_fail_ranges = []
