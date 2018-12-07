@@ -247,7 +247,7 @@ def scale_bar(ax, length=100, location=(0.5, 0.05), linewidth=3):
             horizontalalignment='center', verticalalignment='bottom', size=8)
 
 
-def generate_weight_bins(weights, n_steps=9, width_step=0.01):
+def generate_weight_bins(weights, n_steps=9, width_step=0.01, interpolation='linear'):
     """Given a list of weight values, generate <n_steps> bins with a width
     value to use for plotting e.g. weighted network flow maps.
     """
@@ -256,15 +256,26 @@ def generate_weight_bins(weights, n_steps=9, width_step=0.01):
 
     width_by_range = OrderedDict()
 
-    mins = np.linspace(min_weight, max_weight, n_steps)
+    if interpolation == 'linear':
+        mins = np.linspace(min_weight, max_weight, n_steps)
+    elif interpolation == 'log':
+        mins = np.geomspace(min_weight, max_weight, n_steps)
+    else:
+        raise ValueError('Interpolation must be log or linear')
     maxs = list(mins)
     maxs.append(max_weight*10)
     maxs = maxs[1:]
 
     assert len(maxs) == len(mins)
 
+    if interpolation == 'log':
+        scale = np.geomspace(1, len(mins),len(mins))
+    else:
+        scale = np.linspace(1,len(mins),len(mins))
+
+
     for i, (min_, max_) in enumerate(zip(mins, maxs)):
-        width_by_range[(min_, max_)] = (i+1) * width_step
+        width_by_range[(min_, max_)] = scale[i] * width_step
 
     return width_by_range
 

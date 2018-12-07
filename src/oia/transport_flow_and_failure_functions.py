@@ -172,7 +172,7 @@ def network_od_path_estimations(graph,
     return edge_path_list, path_dist_list, path_time_list, path_gcost_list
 
 def write_flow_paths_to_network_files(save_paths_df,
-    industry_columns,min_max_exist,gdf_edges, save_csv=True, save_shapes=True, shape_output_path='',csv_output_path=''):
+    min_industry_columns,max_industry_columns,gdf_edges, save_csv=True, save_shapes=True, shape_output_path='',csv_output_path=''):
     """Write results to Shapefiles
 
     Outputs ``gdf_edges`` - a shapefile with minimum and maximum tonnage flows of all
@@ -210,10 +210,17 @@ def write_flow_paths_to_network_files(save_paths_df,
         min_path = path['min_edge_path']
         max_path = path['max_edge_path']
         path_ind_list_min.append(min_path)
-        path_ind_list_max.append(max_path) 
-        for ind in industry_columns:
-            path_ind_list_min.append([path[ind]]*len(min_path))
-            path_ind_list_max.append([path[ind]]*len(max_path))
+        path_ind_list_max.append(max_path)
+        if min_industry_columns == max_industry_columns: 
+            for ind in min_industry_columns:
+                path_ind_list_min.append([path[ind]]*len(min_path))
+                path_ind_list_max.append([path[ind]]*len(max_path))
+        else:
+            for ind in min_industry_columns:
+                path_ind_list_min.append([path[ind]]*len(min_path))
+            for ind in max_industry_columns:
+                path_ind_list_max.append([path[ind]]*len(max_path))
+
 
 
         # print (path_ind_list)
@@ -221,13 +228,13 @@ def write_flow_paths_to_network_files(save_paths_df,
         path_ind_list_max = list(zip(*path_ind_list_max))
         # print (path_ind_list)
         # path_ind_list_df = pd.DataFrame(path_ind_list,columns=['edge_id'] + industry_columns)
-        edge_flows_min.append(pd.DataFrame(path_ind_list_min,columns=['edge_id'] + industry_columns))
+        edge_flows_min.append(pd.DataFrame(path_ind_list_min,columns=['edge_id'] + min_industry_columns))
         if len(edge_flows_min) > 1:
-            edge_flows_min = [pd.concat(edge_flows_min,axis=0,sort='False', ignore_index=True).groupby('edge_id')[industry_columns].sum().reset_index()]
+            edge_flows_min = [pd.concat(edge_flows_min,axis=0,sort='False', ignore_index=True).groupby('edge_id')[min_industry_columns].sum().reset_index()]
 
-        edge_flows_max.append(pd.DataFrame(path_ind_list_max,columns=['edge_id'] + industry_columns))
+        edge_flows_max.append(pd.DataFrame(path_ind_list_max,columns=['edge_id'] + max_industry_columns))
         if len(edge_flows_max) > 1:
-            edge_flows_max = [pd.concat(edge_flows_max,axis=0,sort='False', ignore_index=True).groupby('edge_id')[industry_columns].sum().reset_index()]
+            edge_flows_max = [pd.concat(edge_flows_max,axis=0,sort='False', ignore_index=True).groupby('edge_id')[max_industry_columns].sum().reset_index()]
     
 
         print ('Done with path',iter_)
@@ -238,32 +245,31 @@ def write_flow_paths_to_network_files(save_paths_df,
     if len(edge_flows_min) == 1:
         edge_flows_min = edge_flows_min[0]
     elif len(edge_flows_min) > 1:
-        edge_flows_min = pd.concat(edge_flows_min,axis=0,sort='False', ignore_index=True).groupby('edge_id')[industry_columns].sum().reset_index()
+        edge_flows_min = pd.concat(edge_flows_min,axis=0,sort='False', ignore_index=True).groupby('edge_id')[min_industry_columns].sum().reset_index()
 
     print (edge_flows_min)
 
     if len(edge_flows_max) == 1:
         edge_flows_max = edge_flows_max[0]
     elif len(edge_flows_max) > 1:
-        edge_flows_max = pd.concat(edge_flows_max,axis=0,sort='False', ignore_index=True).groupby('edge_id')[industry_columns].sum().reset_index()
+        edge_flows_max = pd.concat(edge_flows_max,axis=0,sort='False', ignore_index=True).groupby('edge_id')[max_industry_columns].sum().reset_index()
 
     print (edge_flows_max)
 
-    for ind in industry_columns:
-        edge_flows_min.rename(columns={ind:'min_'+ind},inplace=True)
-        edge_flows_max.rename(columns={ind:'max_'+ind},inplace=True) 
+    if min_industry_columns == max_industry_columns:
+        for ind in min_industry_columns:
+            edge_flows_min.rename(columns={ind:'min_'+ind},inplace=True)
+            edge_flows_max.rename(columns={ind:'max_'+ind},inplace=True) 
 
     edge_flows = pd.merge(edge_flows_min,edge_flows_max,how='left',on=['edge_id']).fillna(0)
     tqdm.pandas()
+    industry_columns = [x[4:] for x in min_industry_columns]
     for ind in industry_columns:
         edge_flows['swap'] = edge_flows.progress_apply(lambda x: swap_min_max(x,'min_{}'.format(ind),'max_{}'.format(ind)), axis = 1)
         edge_flows[['min_{}'.format(ind),'max_{}'.format(ind)]] = edge_flows['swap'].apply(pd.Series)
         edge_flows.drop('swap', axis=1, inplace=True)
 
     gdf_edges = pd.merge(gdf_edges,edge_flows,how='left',on=['edge_id']).fillna(0)
-
-    if save_shapes == False:
-        gdf_edges.drop('geometry', axis=1, inplace=True)
 
     # gdf_edges = gdf_edges.set_index('edge_id')
 
@@ -313,6 +319,7 @@ def write_flow_paths_to_network_files(save_paths_df,
         gdf_edges.to_file(shape_output_path,encoding='utf-8')
 
     if save_csv == True:
+        gdf_edges.drop('geometry', axis=1, inplace=True)
         gdf_edges.to_csv(csv_output_path,index=False,encoding='utf-8')
 
 
@@ -429,7 +436,7 @@ def igraph_scenario_edge_failures_changing_tonnages(network_df_in, edge_failure_
 
 def igraph_scenario_edge_failures(network_df_in, edge_failure_set,
     flow_dataframe, vehicle_weight, path_criteria,
-    tons_criteria, cost_criteria, time_criteria):
+    tons_criteria, cost_criteria, time_criteria,transport_mode):
     """Estimate network impacts of each failures
     When the tariff costs of each path are fixed by vehicle weight
 
@@ -467,8 +474,9 @@ def igraph_scenario_edge_failures(network_df_in, edge_failure_set,
 
         network_graph = ig.Graph.TupleList(network_df.itertuples(
             index=False), edge_attrs=list(network_df.columns)[2:])
-        network_graph = add_igraph_generalised_costs(
-            network_graph, 1.0/vehicle_weight, 1)
+        if transport_mode != 'rail':
+            network_graph = add_igraph_generalised_costs(
+                network_graph, 1.0/vehicle_weight, 1)
 
         nodes_name = np.asarray([x['name'] for x in network_graph.vs])
         select_flows = flow_dataframe[flow_dataframe.index.isin(edge_path_index)]

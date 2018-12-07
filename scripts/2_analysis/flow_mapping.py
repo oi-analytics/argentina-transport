@@ -82,7 +82,7 @@ from oia.transport_flow_and_failure_functions import *
 from oia.utils import *
 
 def network_od_paths_assembly(points_dataframe, graph, vehicle_wt, transport_mode,
-                                         csv_output_path=''):
+                                min_tons_column,max_tons_column,csv_output_path=''):
     """Assemble estimates of OD paths, distances, times, costs and tonnages on networks
 
     Parameters
@@ -126,16 +126,22 @@ def network_od_paths_assembly(points_dataframe, graph, vehicle_wt, transport_mod
         try:
             destinations = points_dataframe.loc[[origin], 'destination_id'].values.tolist()
 
-            tons = points_dataframe.loc[[origin], 'total_tons'].values
-
             get_min_path, get_min_dist, get_min_time, get_min_gcost = network_od_path_estimations(
                 graph, origin, destinations, 'min_gcost', 'min_time')
             get_max_path, get_max_dist, get_max_time, get_max_gcost = network_od_path_estimations(
                 graph, origin, destinations,'max_gcost', 'max_time')
 
+            if min_tons_column == max_tons_column:
+                tons = points_dataframe.loc[[origin], max_tons_column].values
+                save_paths += list(zip([origin]*len(destinations), destinations, get_min_path, get_max_path,
+                                       get_min_dist, get_max_dist, get_min_time, get_max_time, list(tons*np.array(get_min_gcost)), list(tons*np.array(get_max_gcost))))
+            else:
+                min_tons = points_dataframe.loc[[origin], min_tons_column].values
+                max_tons = points_dataframe.loc[[origin], max_tons_column].values
+                save_paths += list(zip([origin]*len(destinations), destinations, get_min_path, get_max_path,
+                                       get_min_dist, get_max_dist, get_min_time, get_max_time, list(min_tons*np.array(get_min_gcost)), list(max_tons*np.array(get_max_gcost))))
 
-            save_paths += list(zip([origin]*len(destinations), destinations, get_min_path, get_max_path,
-                                   get_min_dist, get_max_dist, get_min_time, get_max_time, list(tons*np.array(get_min_gcost)), list(tons*np.array(get_max_gcost))))
+
             print("done with {0}".format(origin))
         except:
             print('* no path between {}-{}'.format(origin,destinations))
@@ -149,7 +155,7 @@ def network_od_paths_assembly(points_dataframe, graph, vehicle_wt, transport_mod
     save_paths_df = pd.merge(save_paths_df, points_dataframe, how='left', on=[
                              'origin_id', 'destination_id']).fillna(0)
 
-    save_paths_df = save_paths_df[(save_paths_df['total_tons'] > 0)
+    save_paths_df = save_paths_df[(save_paths_df[max_tons_column] > 0)
                                   & (save_paths_df['origin_id'] != 0)]
     if csv_output_path:
         save_paths_df.to_csv(csv_output_path, index=False, encoding='utf-8-sig')
@@ -186,13 +192,57 @@ def main():
 
     # Supply input data and parameters
     # modes = ['road', 'rail', 'air', 'inland', 'coastal']
-    modes = ['road']
-    veh_wt = [25, 800, 0, 800, 1200]
     # percentage = [10,90,100]
     percentage = [100]
-    total_tons = 'total_tons'
     index_cols = ['origin_id','destination_id','destination_province', 'destination_zone_id', 'origin_province', 'origin_zone_id']
+    modes = [
+                {
+                'sector':'road',
+                'vehicle_wt':15,
+                'min_tons_column':'total_tons',
+                'max_tons_column':'total_tons',
+                'min_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                    'Carnes','Combustibles',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+                    'INDUSTRIA MANUFACTURERA','Industrializados',
+                    'Mineria','PESCA','Regionales','Semiterminados'],
+                'max_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                    'Carnes','Combustibles',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+                    'INDUSTRIA MANUFACTURERA','Industrializados',
+                    'Mineria','PESCA','Regionales','Semiterminados']},
+                {
+                'sector':'rail',
+                'vehicle_wt':1,
+                'min_tons_column':'min_total_tons',
+                'max_tons_column':'max_total_tons',
+                'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                                'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
+                                'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
+                                'min_total_tons'],
+                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
+                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
+                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES', 
+                                'max_total_tons']
+                }
+    ]
 
+    modes = [
+                {
+                'sector':'rail',
+                'vehicle_wt':1,
+                'min_tons_column':'min_total_tons',
+                'max_tons_column':'max_total_tons',
+                'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                                'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
+                                'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
+                                'min_total_tons'],
+                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
+                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
+                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES', 
+                                'max_total_tons']
+                }
+    ]
     # Give the paths to the input data files
     network_data_path = os.path.join(data_path,'network')
 
@@ -213,20 +263,21 @@ def main():
         # Start the OD flow mapping process
         for m in range(len(modes)):
             # Load mode igraph network and GeoDataFrame
-            print ('* Loading {} igraph network and GeoDataFrame'.format(modes[m]))
-            edges_in = pd.read_csv(os.path.join(network_data_path,'{}_edges.csv'.format(modes[m])),encoding='utf-8')
+            print ('* Loading {} igraph network and GeoDataFrame'.format(modes[m]['sector']))
+            edges_in = pd.read_csv(os.path.join(network_data_path,'{}_edges.csv'.format(modes[m]['sector'])),encoding='utf-8')
             G = ig.Graph.TupleList(edges_in.itertuples(index=False), edge_attrs=list(edges_in.columns)[2:])
-            G = add_igraph_generalised_costs(G, 1.0/veh_wt[m], 1)
+            if modes[m]['sector'] != 'rail':
+                G = add_igraph_generalised_costs(G, 1.0/modes[m]['vehicle_wt'], 1)
             del edges_in
-            gdf_edges = gpd.read_file(os.path.join(network_data_path,'{}_edges.shp'.format(modes[m])),encoding='utf-8')
+            gdf_edges = gpd.read_file(os.path.join(network_data_path,'{}_edges.shp'.format(modes[m]['sector'])),encoding='utf-8')
             gdf_edges = gdf_edges[['edge_id','geometry']]
 
             # Load mode OD nodes pairs and tonnages
-            print ('* Loading {} OD nodes pairs and tonnages'.format(modes[m]))
-            ods = pd.read_csv(os.path.join(incoming_data_path,'road_ods','road_ods.csv'),encoding='utf-8-sig')
+            print ('* Loading {} OD nodes pairs and tonnages'.format(modes[m]['sector']))
+            ods = pd.read_csv(os.path.join(incoming_data_path,'{}_ods'.format(modes[m]['sector']),'{}_ods.csv'.format(modes[m]['sector'])),encoding='utf-8-sig')
             print ('Number of unique OD pairs',len(ods.index))
-            if modes[m] == 'road':
-                ods = ods[1.0*ods[total_tons]/365.0 > 0.5]
+            if modes[m]['sector'] == 'road':
+                ods = ods[1.0*ods['total_tons']/365.0 > 0.5]
 
             print ('Number of unique OD pairs',len(ods.index))
             all_ods = copy.deepcopy(ods)
@@ -235,25 +286,25 @@ def main():
             print (all_ods_tons_cols)
             if modes[m] == 'road':
                 all_ods[all_ods_tons_cols] = 0.01*perct*all_ods[all_ods_tons_cols]/365.0
-                all_ods['vehicle_nums'] = np.maximum(1, np.ceil(all_ods['total_tons']/veh_wt[m]))
+                all_ods['vehicle_nums'] = np.maximum(1, np.ceil(all_ods['total_tons']/modes[m]['vehicle_wt']))
             # Calculate mode OD paths
             print ('* Calculating {} OD paths'.format(modes[m]))
-            csv_output_path = os.path.join(flow_paths_dir,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m],int(perct)))
+            csv_output_path = os.path.join(flow_paths_dir,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m]['sector'],int(perct)))
             all_paths = network_od_paths_assembly(
-                all_ods, G, veh_wt[m], modes[m],csv_output_path=csv_output_path)
+                all_ods, G, modes[m]['vehicle_wt'], modes[m]['sector'],modes[m]['min_tons_column'],modes[m]['max_tons_column'],csv_output_path=csv_output_path)
 
             del all_ods
             # Create network shapefiles with flows
-            print ('* Creating {} network shapefiles and csv files with flows'.format(modes[m]))
+            print ('* Creating {} network shapefiles and csv files with flows'.format(modes[m]['sector']))
 
             # all_paths = pd.read_csv(os.path.join(flow_paths_dir,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m],int(perct))),encoding='utf-8-sig')
-            shp_output_path = os.path.join(flow_shp_dir,'weighted_flows_{}_{}_percent.shp'.format(modes[m],int(perct)))
-            csv_output_path = os.path.join(flow_csv_dir,'weighted_flows_{}_{}_percent.csv'.format(modes[m],int(perct)))
+            shp_output_path = os.path.join(flow_shp_dir,'weighted_flows_{}_{}_percent.shp'.format(modes[m]['sector'],int(perct)))
+            csv_output_path = os.path.join(flow_csv_dir,'weighted_flows_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct)))
 
             min_max_exist = []
             write_flow_paths_to_network_files(all_paths,
-                all_ods_tons_cols,min_max_exist,gdf_edges,
-                save_csv=True, save_shapes=False, shape_output_path=shp_output_path,csv_output_path=csv_output_path)
+                modes[m]['min_ind_cols'],modes[m]['max_ind_cols'],gdf_edges,
+                save_csv=True, save_shapes=True, shape_output_path=shp_output_path,csv_output_path=csv_output_path)
 
 
 if __name__ == '__main__':
