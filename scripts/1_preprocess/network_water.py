@@ -2,65 +2,56 @@
 """
 import os
 
-from oia.utils import load_config, transform_geo_file
+import geopandas as gpd
+import pandas as pd
+
+from oia.utils import load_config
+from shapely.geometry import Point
+from snkit import Network
+from snkit.network import (link_nodes_to_nearest_edge, add_ids, add_topology, add_endpoints,
+                           split_multilinestrings)
 
 def main(config):
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
-    # from 5/Puertos/puertos.shp
+    # from 5/Puertos/port_od_nodes.csv
     # to network/water_nodes.shp
-    # - "water_{}".format(ID) => id
+    # - id => port_id
     # - PUERTO => name
-    # - transporte => port_type
-    #   - inland > inland
-    #   - puertos > sea
-    node_schema = {
-        'geometry': 'Point',
-        'properties': [
-            ('id', 'str'),
-            ('name', 'str'),
-        ]
-    }
-
-    def transform_node(record):
-        record['properties'] = {
-            'id': "water_{}".format(record['properties']['ID']),
-            'name': record['properties']['PUERTO'],
-        }
-        return record
-
-    transform_geo_file(
-        source_file=os.path.join(incoming_data_path, '5', 'Puertos', 'puertos.shp'),
-        sink_file=os.path.join(data_path, 'network', 'water_nodes.shp'),
-        sink_schema=node_schema,
-        transform_record=transform_node
-    )
-
+    in_node_file = os.path.join(incoming_data_path, '5', 'Puertos', 'port_od_nodes.csv')
+    out_node_file = os.path.join(data_path, 'network', 'water_nodes.shp')
     # from 5/Hidrovia/Hidrovia.shp
     # to network/water_edges.shp
-    # - "water_{}".format(UNION) => id
-    # - "inland" => waterway_type
-    # TODO resolve network connectivity inland
-    # TODO construct connections between sea ports
-    edge_schema = {
-        'geometry': 'LineString',
-        'properties': [
-            ('id', 'str'),
-        ]
-    }
+    in_edge_file=os.path.join(incoming_data_path, '5', 'Hidrovia', 'water_edge_basis.shp')
+    out_edge_file=os.path.join(data_path, 'network', 'water_edges.shp')
 
-    def transform_edge(record):
-        record['properties'] = {
-            'id': "water_{}".format(record['properties']['UNION']),
-        }
-        return record
 
-    transform_geo_file(
-        source_file=os.path.join(incoming_data_path, '5', 'Hidrovia', 'Hidrovia.shp'),
-        sink_file=os.path.join(data_path, 'network', 'water_edges.shp'),
-        sink_schema=edge_schema,
-        transform_record=transform_edge
-    )
+    nodes = pd.read_csv(in_node_file)[
+        # ['Puerto', 'Provincia', 'Región', 'Localidad', 'Según la titularidad del Inmueble', 'Modelo de Gestion', 'Según su Destino', 'Latitud Sur', 'Longitud Oeste']
+        ['Puerto', 'Provincia', 'Región', 'Localidad', 'Latitud Sur', 'Longitud Oeste']
+    ].rename(columns={
+        'Puerto': 'name',
+        'Provincia': 'province',
+        'Región': 'region',
+        'Localidad': 'locality',
+        'Latitud Sur': 'lat',
+        'Longitud Oeste': 'lon'
+    })
+    nodes['geometry'] = list(zip(nodes.lon, nodes.lat))
+    nodes['geometry'] = nodes['geometry'].apply(Point)
+    nodes = gpd.GeoDataFrame(nodes, geometry='geometry').drop(['lat', 'lon'], axis=1)
+
+    edges = gpd.read_file(in_edge_file).drop(['OBJECTID', 'ID'], axis=1)
+
+    network = Network(edges=edges, nodes=nodes)
+    network = add_endpoints(split_multilinestrings(network))
+    network = link_nodes_to_nearest_edge(network)
+    network = add_topology(add_ids(network, edge_prefix='watere', node_prefix='watern'))
+
+    network.edges.to_file(out_edge_file)
+    network.nodes.to_file(out_node_file)
+
+
 
 if __name__ == '__main__':
     CONFIG = load_config()
