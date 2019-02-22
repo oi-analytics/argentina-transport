@@ -165,7 +165,7 @@ def main(config):
     # - merge nodes within buffer (simplify graph)
 
     # add topology (a_node, b_node) to edges
-    topological = add_topology(add_ids(joined, edge_prefix='roade', node_prefix='roadn'))
+    topological = add_topology(add_ids(joined, edge_prefix='roade', node_prefix='roadn'), update=True)
 
     # COULD add degree to nodes and join 2-degree stretches
     # with_degree = calculate_node_degree(topological)
