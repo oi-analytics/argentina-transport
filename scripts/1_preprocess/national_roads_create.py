@@ -216,14 +216,25 @@ def road_shapefile_to_dataframe(edges_in,road_properties_dataframe,
 
 def get_attributes(road_gpd,attribute_gpd,road_id_column,attribute_column,road_column_name):
     road_matches = gpd.sjoin(road_gpd,attribute_gpd, how="inner", op='intersects').reset_index()
-    road_match.to_csv('test.csv')
+    
+
+    road_mean = road_matches[[road_id_column,attribute_column]].groupby([road_id_column])[attribute_column].mean().reset_index()
+    road_mean.rename(columns={attribute_column:'{}_mean'.format(road_column_name)},inplace=True)
+    road_min = road_matches[[road_id_column,attribute_column]].groupby([road_id_column])[attribute_column].min().reset_index()
+    road_min.rename(columns={attribute_column:'{}_min'.format(road_column_name)},inplace=True)
+    road_max = road_matches[[road_id_column,attribute_column]].groupby([road_id_column])[attribute_column].max().reset_index()
+    road_max.rename(columns={attribute_column:'{}_max'.format(road_column_name)},inplace=True)
+    
+
+    road_vals = pd.merge(road_mean,road_min,how='left',on=[road_id_column]).fillna(0)
+    road_vals = pd.merge(road_vals,road_max,how='left',on=[road_id_column]).fillna(0)
+
+    return (road_vals)
 
 def main(config):
     tqdm.pandas()
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
-    exchange_rate = 0.026
-
     attributes_desc = [
         {   
             'folder_name':'tmda',
@@ -246,95 +257,23 @@ def main(config):
 
     ] 
 
-    attributes_desc = [
-        {   
-            'folder_name':'tmda',
-            'file_name':'vistagis_selLine.shp',
-            'attribute':'valor',
-            'attribute_rename':'tmda'
-        },
-    ] 
-
-
     '''Get road edge network
     '''
-    road_edges_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','combined_roads_edges.shp')
-    road_nodes_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','combined_roads_nodes.shp')
-    '''Get the road properties, which are mainly the widths of national roads
-    '''
-    skiprows = 4
-    road_properties_df = pd.read_excel(os.path.join(incoming_data_path,'5','DNV_data_recieved_06082018','Tramos por Rutas.xls'),sheet_name='Hoja1',skiprows=skiprows,encoding='utf-8-sig').fillna(0)
-    # road_properties_df = road_properties_df.iloc[skiprows:]
-    road_properties_df.columns = ['road_no','location','inital_km','final_km',
-                                'purpose','description','length_km','left_surface',
-                                'left_width','right_surface','right_width','lanes','terrain']
+    edges = gpd.read_file(os.path.join(incoming_data_path,'pre_processed_network_data','roads','national_roads','rutas','rutas.shp'),encoding='utf-8').fillna(0)
+    edges_id = 'id_ruta'
 
-
-    road_speeds_df = pd.read_excel(os.path.join(incoming_data_path,'5','DNV_data_recieved_06082018','TMDA y Clasificación 2016.xlsx'),sheet_name='Clasificación 2016',skiprows=14,encoding='utf-8-sig').fillna(0)
-    road_speeds_df.columns = map(str.lower, road_speeds_df.columns)
-
-    time_costs_df = pd.read_excel(os.path.join(incoming_data_path,'5','Costs','Costos de Operación de Vehículos.xlsx'),sheet_name='Camión Pesado',skiprows=15,encoding='utf-8-sig').fillna(0)
-    time_costs_df.columns = ['speed','tierra_cost_A','tierra_cost_B','tierra_cost_total',
-                                'ripio_cost_A','ripio_cost_B','ripio_cost_total',
-                                'paved_cost_A','paved_cost_B','paved_cost_total','speed_copy']
-
-    time_costs_df = time_costs_df[time_costs_df['speed'] > 0]
-
-    tariff_costs_df = pd.read_excel(os.path.join(incoming_data_path,'5','Costs','tariff_costs.xlsx'),sheet_name='road',encoding='utf-8')
-
-    # edges = road_shapefile_to_dataframe(road_edges_path,road_properties_df,road_speeds_df,time_costs_df,tariff_costs_df,exchange_rate)
-
-    # nodes = gpd.read_file(road_nodes_path,encoding='utf-8').fillna(0)
-    # nodes.columns = map(str.lower, nodes.columns)
-    # nodes.rename(columns={'id':'node_id'},inplace=True)
-
-    edges_in = road_edges_path
-    edges = gpd.read_file(edges_in,encoding='utf-8').fillna(0)
-    edges.columns = map(str.lower, edges.columns)
-    edges.rename(columns={'id':'edge_id','from_id':'from_node','to_id':'to_node'},inplace=True)
-    edges_max = max([int(x.split('_')[1]) for x in edges['edge_id'].values.tolist()])
-
-    new_edges = {}
-    new_edges['edge_id'] = 'roade_'+ str(edges_max+1)
-    new_edges['from_node'] = 'roadn_65'
-    new_edges['to_node'] = 'roadn_66'
-    new_edges['road_no'] = '003'
-    new_edges['terrain'] = 'flat'
-    new_edges['road_type'] = 'national'
-    new_edges['surface'] = 'Paved'
-    new_edges['inicio_km'] = 0
-    new_edges['fin_km'] = 0
-    new_edges['tmda'] = 0
-
-    new_edges = pd.DataFrame([new_edges],columns=new_edges.keys())
-    new_edges['from_geom'] = nodes[nodes['node_id'] == 'roadn_524'].geometry.values[0]
-    new_edges['to_geom'] = nodes[nodes['node_id'] == 'roadn_413'].geometry.values[0]
-    new_edges['geometry'] = new_edges.apply(lambda x: LineString([x.from_geom,x.to_geom]),axis = 1)
-    new_edges.drop('from_geom',axis=1,inplace=True)
-    new_edges.drop('to_geom',axis=1,inplace=True)
-    new_edges = gpd.GeoDataFrame(new_edges, geometry='geometry',crs='epsg:4326')
-    new_edges.to_file(os.path.join(incoming_data_path,'pre_processed_network_data','roads','rutas','dummy.shp'),encoding = 'utf-8')
-
-    new_edges = road_shapefile_to_dataframe(road_edges_path,road_properties_df,road_speeds_df,time_costs_df,tariff_costs_df,exchange_rate)
-    edges = gpd.GeoDataFrame(pd.concat([edges,new_edges],axis=0,sort='False', ignore_index=True),geometry='geometry',crs='epsg:4326')
-
-    national_edges = edges[edges['road_type'] == 'national'] 
     for a in attributes_desc:
         road_attr = gpd.read_file(os.path.join(incoming_data_path,
                         'pre_processed_network_data','roads','national_roads',
                         a['folder_name'],a['file_name']),encoding='utf-8').fillna(0)
 
-        get_attributes(national_edges,road_attr,'id',a['attribute'],a['attribute_rename'])
-        # r_vals = get_attributes(national_edges,road_attr,edges_id,a['attribute'],a['attribute_rename'])
-        # edges = pd.merge(edges,r_vals,how='left',on=[edges_id]).fillna(0)
+        r_vals = get_attributes(edges,road_attr,edges_id,a['attribute'],a['attribute_rename'])
+        edges = pd.merge(edges,r_vals,how='left',on=[edges_id]).fillna(0)
 
-    # edges.to_file(os.path.join(data_path,'network','road_edges.shp'),encoding = 'utf-8')
-    # edges.drop('geometry', axis=1, inplace=True)
-    # edges.to_csv(os.path.join(data_path,'network','road_edges.csv'),encoding='utf-8',index=False)
 
-    # nodes.to_file(os.path.join(data_path,'network', 'road_nodes.shp'),encoding = 'utf-8')
-    # nodes.drop('geometry', axis=1, inplace=True)
-    # nodes.to_csv(os.path.join(data_path,'network','road_nodes.csv'),encoding='utf-8',index=False)
+    edges.to_file(os.path.join(incoming_data_path,'pre_processed_network_data','roads','national_roads','rutas','rutas_mod.shp'),encoding='utf-8')
+
+
 
 if __name__ == '__main__':
     CONFIG = load_config()

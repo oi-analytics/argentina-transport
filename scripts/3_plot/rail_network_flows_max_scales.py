@@ -19,7 +19,7 @@ def main():
     mode_file_path = os.path.join(config['paths']['data'], 'network',
                                    'rail_edges.shp')
     flow_file_path = os.path.join(config['paths']['output'], 'flow_mapping_combined',
-                                   'weighted_flows_rail_100_percent.csv')
+                                   'weighted_flows_national_rail_100_percent.csv')
 
 
     mode_file = gpd.read_file(mode_file_path,encoding='utf-8')
@@ -45,10 +45,24 @@ def main():
         },
     ]
 
+    plot_sets = [
+        {
+            'file_tag': 'commodities',
+            'legend_label': "AADF ('000 tons/day)",
+            'divisor': 1000,
+            'columns': ['max_total_tons'
+                        ],
+            'title_cols': ['Total tonnage'
+                    ],
+            'significance':0
+        },
+    ]
+
     styles = OrderedDict([
                 ('1',  Style(color='#006d2c', zindex=6, label='Flow')),
                 ('2', Style(color='#636363', zindex=8, label='No flow')),
             ])
+    tot_length = 0
     for plot_set in plot_sets:
         for c in range(len(plot_set['columns'])):
             # basemap
@@ -75,6 +89,7 @@ def main():
                 val = record[column]
                 geom = record.geometry
                 if val > 0:
+                    tot_length += line_length(geom)
                     for nmin, nmax in geoms_by_range:
                         if nmin <= val and val < nmax:
                             geoms_by_range[(nmin, nmax)].append(geom)
@@ -87,6 +102,7 @@ def main():
                     facecolor='none',
                     zorder=1)
 
+            print ('Operational network {} kms'.format(tot_length))
 
                         # plot
             for range_, width in width_by_range.items():
