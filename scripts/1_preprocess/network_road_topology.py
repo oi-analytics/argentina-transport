@@ -136,7 +136,7 @@ def main(config):
 
     # drop based on shared road_name and from-to ids
     network.edges.drop_duplicates(subset=['road_name', 'from_to'], keep='first', inplace=True)
-    network.edges.drop(columns=['from_to'], inplace=True)
+    network.edges.drop(columns=['id', 'to_id', 'from_id', 'from_to'], inplace=True)
 
     # create whole network (ignore nodes from above)
     all_edges = pandas.concat([network.edges, provincial_rural_edges], axis=0)
@@ -157,7 +157,8 @@ def main(config):
     def different_types(node, edge):
         return node.road_type != edge.road_type
 
-    joined = link_nodes_to_edges_within(with_nodes, distance=10, condition=different_types, tolerance=1e-6)
+    joined = link_nodes_to_edges_within(
+        with_nodes, distance=10, condition=different_types, tolerance=1e-6)
 
     # COULD
     # - add nodes at line intersections
@@ -165,7 +166,8 @@ def main(config):
     # - merge nodes within buffer (simplify graph)
 
     # add topology (a_node, b_node) to edges
-    topological = add_topology(add_ids(joined, edge_prefix='roade', node_prefix='roadn'), update=True)
+    with_ids = add_ids(joined, edge_prefix='roade', node_prefix='roadn')
+    topological = add_topology(with_ids)
 
     # COULD add degree to nodes and join 2-degree stretches
     # with_degree = calculate_node_degree(topological)
