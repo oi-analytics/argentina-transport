@@ -535,7 +535,7 @@ def main(config):
     for key,values in od_vals_group_industry.items():
         od_list.append({**{'origin_id':key.split('-')[0],'destination_id':key.split('-')[1]},**values})
     od_df = pd.DataFrame(od_list).fillna(0)
-    od_df.to_csv(os.path.join(incoming_data_path,'rail_ods','rail_ods.csv'),index=False,encoding='utf-8-sig')
+    od_df.to_csv(os.path.join(data_path,'OD_data','rail_ods.csv'),index=False,encoding='utf-8-sig')
     
     del od_list
     
