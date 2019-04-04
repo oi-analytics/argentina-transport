@@ -101,8 +101,7 @@ def main(config):
 
     bridge_df = pd.read_excel(os.path.join(incoming_data_path,'pre_processed_network_data','roads',
                 'national_roads','puente_sel','Consulta Puentes - 2017.xlsx'),sheet_name='Consulta',encoding='utf-8-sig').fillna(0)
-    bridge_df.columns = map(str.lower, bridge_df.columns)
-    bridge_df.to_csv('bridge_description.csv',encoding='utf-8-sig',index=False) 
+    bridge_df.columns = map(str.lower, bridge_df.columns) 
 
     all_ids = list(set(bridge_markers['id_estruct'].values.tolist()))
     ids = copy.deepcopy(all_ids)

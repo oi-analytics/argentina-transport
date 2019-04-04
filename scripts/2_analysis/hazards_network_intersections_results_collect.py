@@ -71,7 +71,8 @@ from oia.transport_flow_and_failure_functions import *
 from tqdm import tqdm
 
 
-def create_hazard_attributes_for_network(intersection_dir,climate_scenario,year,sector,hazard_files,hazard_df,thresholds,commune_shape,network_type=''):
+def create_hazard_attributes_for_network(intersection_dir,climate_scenario,year,sector,hazard_files,
+    hazard_df,thresholds,commune_shape,network_id_column,network_type=''):
     """Extract results of network edges/nodes and hazard intersections to collect
     network-hazard intersection attributes
 
@@ -150,6 +151,7 @@ def create_hazard_attributes_for_network(intersection_dir,climate_scenario,year,
 
                 data_dict = spatial_scenario_selection(
                             hazard_shp, commune_shape, hazard_dict, data_dict,
+                            network_id_column,
                             network_type = network_type)
 
                 print ('Done with file',file)
@@ -188,7 +190,8 @@ def main():
         'paths']['calc'], load_config()['paths']['output']
 
     # Supply input data and parameters
-    modes = ['road','rail','air','water']
+    modes = ['road', 'rail','bridge', 'air', 'water']
+    modes_id_cols = ['edge_id','edge_id','bridge_id','node_id','node_id']
     thresholds = [1, 2, 3, 4, 999]
     national_results = 'Yes'
     climate_scenarios = ['Baseline','Future_Med','Future_High']
@@ -236,8 +239,10 @@ def main():
     # Process national scale results
     if national_results == 'Yes':
         print ('* Processing national scale results')
+        # data_excel = os.path.join(
+        #     output_dir,'national_scale_hazard_intersections.xlsx')
         data_excel = os.path.join(
-            output_dir,'national_scale_hazard_intersections.xlsx')
+            output_dir,'bridge_hazard_intersections.xlsx')
         nat_excel_writer = pd.ExcelWriter(data_excel)
         for m in range(len(modes)):
             mode_data_df = []
@@ -247,13 +252,13 @@ def main():
                     'networks_hazards_intersection_shapefiles',
                     '{}_hazard_intersections'.format(modes[m]),climate_scenarios[cl_sc])
 
-                if modes[m] in ['road','rail']:
+                if modes[m] in ['road','rail','bridge']:
                     ntype = 'edges'
                 else:
                     ntype = 'nodes'
                 data_df = create_hazard_attributes_for_network(
                     intersection_dir,climate_scenarios[cl_sc],years[cl_sc],modes[m],hazard_files,hazard_df,
-                    thresholds,zones,network_type=ntype)
+                    thresholds,zones,modes_id_cols[m],network_type=ntype)
 
                 mode_data_df.append(data_df)
                 del data_df
