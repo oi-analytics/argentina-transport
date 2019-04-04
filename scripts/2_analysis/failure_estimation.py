@@ -177,22 +177,22 @@ def main():
                 }
     ]
 
-    modes = [
-                {
-                'sector':'rail',
-                'vehicle_wt':1,
-                'min_tons_column':'min_total_tons',
-                'max_tons_column':'max_total_tons',
-                'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                                'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
-                                'min_total_tons'],
-                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
-                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
-                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES', 
-                                'max_total_tons']
-                }
-    ]
+    # modes = [
+    #             {
+    #             'sector':'rail',
+    #             'vehicle_wt':1,
+    #             'min_tons_column':'min_total_tons',
+    #             'max_tons_column':'max_total_tons',
+    #             'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+    #                             'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
+    #                             'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
+    #                             'min_total_tons'],
+    #             'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
+    #                             'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
+    #                             'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES', 
+    #                             'max_total_tons']
+    #             }
+    # ]
 
 
     types = ['min', 'max']
@@ -266,7 +266,15 @@ def main():
                 ef_df = pd.merge(ef_df,G_df[['edge_id','road_type']],how='left',on=['edge_id'])
                 ef_df = pd.merge(ef_df,e_flow,how='left',on=['edge_id']).fillna(0)
                 ef_sc_list = ef_df[(ef_df['road_type'] != '0') & (ef_df['max_total_tons'] > 0)]['edge_id'].values.tolist()
-                print ('Number of failure scenarios',len(ef_sc_list))
+            elif modes[m]['sector'] == 'rail':
+                e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_national_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct))))[['edge_id','max_total_tons']]
+                ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
+                G_df = pd.merge(G_df,e_flow[['edge_id','max_total_tons']],how='left',on=['edge_id'])
+                G_df = G_df[G_df['max_total_tons'] > 0]
+                ef_df = pd.merge(ef_df,e_flow[['edge_id','max_total_tons']],how='left',on=['edge_id'])
+                ef_sc_list = ef_df[ef_df['max_total_tons'] > 0]['edge_id'].values.tolist()
+
+            print ('Number of failure scenarios',len(ef_sc_list))
 
             # Perform failure analysis
             edge_fail_ranges = []
@@ -307,6 +315,7 @@ def main():
                     file_name = 'multiple_edge_failures_all_national_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
 
                 df_path = os.path.join(all_fail_scenarios,file_name)
+                flow_df_select.drop('new_path',axis=1,inplace=True)
                 flow_df_select.to_csv(df_path, index=False,encoding='utf-8')
 
                 print ('* Assembling {} {} failure isolation results'.format(types[t],modes[m]['sector']))
