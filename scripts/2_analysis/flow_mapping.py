@@ -224,25 +224,23 @@ def main():
                                 'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
                                 'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES', 
                                 'max_total_tons']
-                }
-    ]
-
-    modes = [
+                },
                 {
-                'sector':'rail',
+                'sector':'port',
                 'vehicle_wt':1,
                 'min_tons_column':'min_total_tons',
                 'max_tons_column':'max_total_tons',
                 'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
                                 'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
+                                'min_INDUSTRIA MANUFACTURERA','min_PESCA','min_TRANSPORTE Y COMUNICACIONES',
                                 'min_total_tons'],
                 'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
                                 'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
-                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES', 
+                                'max_INDUSTRIA MANUFACTURERA','max_PESCA', 'max_TRANSPORTE Y COMUNICACIONES', 
                                 'max_total_tons']
                 }
     ]
+
     # Give the paths to the input data files
     network_data_path = os.path.join(data_path,'network')
 
@@ -264,9 +262,9 @@ def main():
         for m in range(len(modes)):
             # Load mode igraph network and GeoDataFrame
             print ('* Loading {} igraph network and GeoDataFrame'.format(modes[m]['sector']))
-            edges_in = pd.read_csv(os.path.join(network_data_path,'{}_edges.csv'.format(modes[m]['sector'])),encoding='utf-8')
+            edges_in = pd.read_csv(os.path.join(network_data_path,'{}_edges.csv'.format(modes[m]['sector'])),encoding='utf-8-sig')
             G = ig.Graph.TupleList(edges_in.itertuples(index=False), edge_attrs=list(edges_in.columns)[2:])
-            if modes[m]['sector'] != 'rail':
+            if modes[m]['sector'] == 'road':
                 G = add_igraph_generalised_costs(G, 1.0/modes[m]['vehicle_wt'], 1)
             del edges_in
             gdf_edges = gpd.read_file(os.path.join(network_data_path,'{}_edges.shp'.format(modes[m]['sector'])),encoding='utf-8')
@@ -274,19 +272,17 @@ def main():
 
             # Load mode OD nodes pairs and tonnages
             print ('* Loading {} OD nodes pairs and tonnages'.format(modes[m]['sector']))
-            ods = pd.read_csv(os.path.join(incoming_data_path,'{}_ods'.format(modes[m]['sector']),'{}_ods.csv'.format(modes[m]['sector'])),encoding='utf-8-sig')
+            ods = pd.read_csv(os.path.join(data_path,'OD_data','{}_nodes_daily_ods.csv'.format(modes[m]['sector'])),encoding='utf-8-sig')
             print ('Number of unique OD pairs',len(ods.index))
-            if modes[m]['sector'] == 'road':
-                ods = ods[1.0*ods['total_tons']/365.0 > 0.5]
-
-            print ('Number of unique OD pairs',len(ods.index))
+        
             all_ods = copy.deepcopy(ods)
             # all_ods_tons_cols = [col for col in all_ods.columns.values.tolist() if col not in ['origin','o_region','destination','d_region']]
             all_ods_tons_cols = [col for col in all_ods.columns.values.tolist() if col not in index_cols]
             print (all_ods_tons_cols)
-            if modes[m] == 'road':
-                all_ods[all_ods_tons_cols] = 0.01*perct*all_ods[all_ods_tons_cols]/365.0
+            if modes[m]['sector'] == 'road':
                 all_ods['vehicle_nums'] = np.maximum(1, np.ceil(all_ods['total_tons']/modes[m]['vehicle_wt']))
+
+            all_ods[all_ods_tons_cols] = 0.01*perct*all_ods[all_ods_tons_cols]
             # Calculate mode OD paths
             print ('* Calculating {} OD paths'.format(modes[m]))
             csv_output_path = os.path.join(flow_paths_dir,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m]['sector'],int(perct)))

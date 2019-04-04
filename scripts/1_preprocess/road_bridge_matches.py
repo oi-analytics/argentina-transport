@@ -419,7 +419,7 @@ def main(config):
 
     bridge_lines = gpd.GeoDataFrame(pd.DataFrame(bridge_lines,columns=['bridge_id','geometry','length']).fillna(0),geometry='geometry',crs={'init' :'epsg:32720'})
     bridge_lines = bridge_lines.to_crs(epsg=4326)
-    bridge_lines.to_file(os.path.join(data_path,'network','bridge_lines.shp'),encoding='utf-8')
+    bridge_lines.to_file(os.path.join(data_path,'network','bridge_edges.shp'),encoding='utf-8')
 
 
 

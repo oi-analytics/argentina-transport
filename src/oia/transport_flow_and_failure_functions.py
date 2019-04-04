@@ -346,14 +346,14 @@ def write_flow_paths_to_network_files(save_paths_df,
     elif len(edge_flows_min) > 1:
         edge_flows_min = pd.concat(edge_flows_min,axis=0,sort='False', ignore_index=True).groupby('edge_id')[min_industry_columns].sum().reset_index()
 
-    print (edge_flows_min)
+    # print (edge_flows_min)
 
     if len(edge_flows_max) == 1:
         edge_flows_max = edge_flows_max[0]
     elif len(edge_flows_max) > 1:
         edge_flows_max = pd.concat(edge_flows_max,axis=0,sort='False', ignore_index=True).groupby('edge_id')[max_industry_columns].sum().reset_index()
 
-    print (edge_flows_max)
+    # print (edge_flows_max)
 
     if min_industry_columns == max_industry_columns:
         for ind in min_industry_columns:
@@ -362,7 +362,11 @@ def write_flow_paths_to_network_files(save_paths_df,
 
     edge_flows = pd.merge(edge_flows_min,edge_flows_max,how='left',on=['edge_id']).fillna(0)
     tqdm.pandas()
-    industry_columns = [x[4:] for x in min_industry_columns]
+    if min_industry_columns == max_industry_columns:
+        industry_columns = min_industry_columns
+    else:
+        industry_columns = [x[4:] for x in min_industry_columns]
+
     for ind in industry_columns:
         edge_flows['swap'] = edge_flows.progress_apply(lambda x: swap_min_max(x,'min_{}'.format(ind),'max_{}'.format(ind)), axis = 1)
         edge_flows[['min_{}'.format(ind),'max_{}'.format(ind)]] = edge_flows['swap'].apply(pd.Series)
