@@ -71,7 +71,7 @@ from oia.transport_flow_and_failure_functions import *
 from tqdm import tqdm
 
 
-def create_hazard_attributes_for_network(intersection_dir,sector,hazard_files,hazard_df,thresholds,commune_shape,network_type=''):
+def create_hazard_attributes_for_network(intersection_dir,climate_scenario,year,sector,hazard_files,hazard_df,thresholds,commune_shape,network_type=''):
     """Extract results of network edges/nodes and hazard intersections to collect
     network-hazard intersection attributes
 
@@ -130,15 +130,14 @@ def create_hazard_attributes_for_network(intersection_dir,sector,hazard_files,ha
                 hazard_dict = {}
                 hazard_dict['sector'] = sector
                 hazard_shp = os.path.join(root, file)
-                hz_file = [h for h in file.split('_') if 'AR-' in h][0]
+                hz_file = file.split('_')
+                hz_file = [hz_file[h-1]+'_'+hz_file[h] for h in range(len(hz_file)) if '1in' in hz_file[h]][0]
                 hazard_dict['hazard_type'] = hazard_df.loc[hazard_df.file_name ==
                                                             hz_file].hazard_type.values[0]
                 hazard_dict['model'] = hazard_df.loc[hazard_df.file_name ==
                                                         hz_file].model.values[0]
-                hazard_dict['year'] = hazard_df.loc[hazard_df.file_name ==
-                                                    hz_file].year.values[0]
-                hazard_dict['climate_scenario'] = hazard_df.loc[hazard_df.file_name ==
-                                                                hz_file].climate_scenario.values[0]
+                hazard_dict['year'] = year
+                hazard_dict['climate_scenario'] = climate_scenario
                 hazard_dict['probability'] = hazard_df.loc[hazard_df.file_name ==
                                                             hz_file].probability.values[0]
 
@@ -189,11 +188,11 @@ def main():
         'paths']['calc'], load_config()['paths']['output']
 
     # Supply input data and parameters
-    # modes = ['road','rail','air','inland','coastal']
-    modes = ['road','rail']
+    modes = ['road','rail','air','water']
     thresholds = [1, 2, 3, 4, 999]
-    province_results = 'Yes'
     national_results = 'Yes'
+    climate_scenarios = ['Baseline','Future_Med','Future_High']
+    years = [2016,2050,2050]
 
     # Give the paths to the input data files
     # load provinces and get geometry of the right province
@@ -241,23 +240,28 @@ def main():
             output_dir,'national_scale_hazard_intersections.xlsx')
         nat_excel_writer = pd.ExcelWriter(data_excel)
         for m in range(len(modes)):
-            intersection_dir = os.path.join(
-                output_path,
-                'networks_hazards_intersection_shapefiles',
-                '{}_hazard_intersections'.format(modes[m]))
+            mode_data_df = []
+            for cl_sc in range(len(climate_scenarios)):
+                intersection_dir = os.path.join(
+                    output_path,
+                    'networks_hazards_intersection_shapefiles',
+                    '{}_hazard_intersections'.format(modes[m]),climate_scenarios[cl_sc])
 
-            if modes[m] in ['road','rail']:
-                ntype = 'edges'
-            else:
-                ntype = 'nodes'
-            data_df = create_hazard_attributes_for_network(
-                intersection_dir,modes[m],hazard_files,hazard_df,
-                thresholds,zones,network_type=ntype)
+                if modes[m] in ['road','rail']:
+                    ntype = 'edges'
+                else:
+                    ntype = 'nodes'
+                data_df = create_hazard_attributes_for_network(
+                    intersection_dir,climate_scenarios[cl_sc],years[cl_sc],modes[m],hazard_files,hazard_df,
+                    thresholds,zones,network_type=ntype)
 
+                mode_data_df.append(data_df)
+                del data_df
 
-            data_df.to_excel(nat_excel_writer, modes[m], index=False)
+            mode_data_df = pd.concat(mode_data_df,axis=0,sort='False', ignore_index=True)    
+            mode_data_df.to_excel(nat_excel_writer, modes[m], index=False)
             nat_excel_writer.save()
-            del data_df
+            del mode_data_df
 
 
 

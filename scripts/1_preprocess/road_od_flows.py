@@ -358,17 +358,19 @@ def main(config):
 
     province_ods = od_df[['origin_province','destination_province']+industry_cols + ['total_tons']]
     province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index() 
+    province_ods.to_csv(os.path.join(data_path,'OD_data','road_province_annual_ods.csv'),index=False,encoding='utf-8-sig') 
     province_ods.to_excel(province_excel_writer,'industries',index=False,encoding='utf-8-sig')
     province_excel_writer.save()
 
     od_df[industry_cols + ['total_tons']] = 1.0*od_df[industry_cols + ['total_tons']]/365.0
-    od_df = od_df[od['total_tons'] > 0.5]
+    od_df = od_df[od_df['total_tons'] > 0.5]
     print ('Number of unique OD pairs',len(od_df.index))
-    od_df.to_csv(os.path.join(incoming_data_path,'road_ods','road_ods.csv'),index=False,encoding='utf-8-sig')
+    # od_df.to_csv(os.path.join(incoming_data_path,'road_ods','road_ods.csv'),index=False,encoding='utf-8-sig')
+    od_df.to_csv(os.path.join(data_path,'OD_data','road_nodes_daily_ods.csv'),index=False,encoding='utf-8-sig')
 
     od_df = pd.DataFrame(od_vals,columns=['origin_id','destination_id','origin_zone_id','destination_zone_id',
                                 'origin_province','destination_province','commodity_subgroup','commodity_group','industry_name','tons'])
-    province_ods = od_df.groupby(['origin_province','destination_province','industry_name'])['tons'].sum().reset_index() 
+    province_ods = od_df.groupby(['origin_province','destination_province','industry_name'])['tons'].sum().reset_index()
     province_ods.to_excel(province_excel_writer,'road',index=False,encoding='utf-8-sig')
     province_excel_writer.save()
 

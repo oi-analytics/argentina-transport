@@ -1,4 +1,5 @@
 cartopy
+colour
 fiona
 psycopg2
 GDAL

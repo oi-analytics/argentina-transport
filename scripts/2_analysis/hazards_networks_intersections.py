@@ -132,6 +132,7 @@ def networknode_hazard_intersection(node_shapefile, hazard_shapefile, output_sha
     """
     print ('* Starting {} and {} intersections'.format(node_shapefile,hazard_shapefile))
     point_gpd = gpd.read_file(node_shapefile)
+    point_gpd.rename(columns={'id':'node_id'},inplace=True)
     poly_gpd = gpd.read_file(hazard_shapefile)
 
     if len(point_gpd.index) > 0 and len(poly_gpd.index) > 0:
@@ -210,42 +211,50 @@ def main():
         'paths']['calc'], load_config()['paths']['output']
 
     # Supply input data and parameters
-    modes = ['road', 'rail', 'air', 'port']
-    modes = ['road', 'rail']
+    modes = ['road', 'rail', 'air', 'water']
+    climate_scenarios = ['Baseline','Future_Med','Future_High']
     national_results = 'Yes'
 
-    # Give the paths to the input data files
-    hazard_dir = os.path.join(data_path,'flood_data','FATHOM')
+    for sc in climate_scenarios:
+	    # Give the paths to the input data files
+	    hazard_dir = os.path.join(data_path,'flood_data','FATHOM',sc)
 
-    # Specify the output files and paths to be created
-    output_dir = os.path.join(output_path, 'networks_hazards_intersection_shapefiles')
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+	    # Specify the output files and paths to be created
+	    output_dir = os.path.join(output_path, 'networks_hazards_intersection_shapefiles')
+	    if not os.path.exists(output_dir):
+	        os.mkdir(output_dir)
 
-    if national_results == 'Yes':
-        for m in range(len(modes)):
-            if modes[m] in ['road', 'rail']:
-                edges_in = os.path.join(data_path,'network','{}_edges.shp'.format(modes[m]))
-                edges_name = '{}_edges'.format(modes[m])
+	    if national_results == 'Yes':
+	        for m in range(len(modes)):
+	            if modes[m] in ['road', 'rail']:
+	                edges_in = os.path.join(data_path,'network','{}_edges.shp'.format(modes[m]))
+	                edges_name = '{}_edges'.format(modes[m])
 
-                output_dir = os.path.join(output_path, 'networks_hazards_intersection_shapefiles','{}_hazard_intersections'.format(modes[m]))
-                if os.path.exists(output_dir) == False:
-                    os.mkdir(output_dir)
+	                output_dir = os.path.join(output_path, 'networks_hazards_intersection_shapefiles','{}_hazard_intersections'.format(modes[m]))
+	                if os.path.exists(output_dir) == False:
+	                    os.mkdir(output_dir)
 
-                print ('* Starting national {} and all hazards intersections'.format(modes[m]))
-                intersect_networks_and_all_hazards(hazard_dir,edges_in,edges_name,output_dir,network_type = 'edges')
+	                output_dir = os.path.join(output_path, 'networks_hazards_intersection_shapefiles','{}_hazard_intersections'.format(modes[m]),sc)
+	                if os.path.exists(output_dir) == False:
+	                    os.mkdir(output_dir)
 
-            elif modes[m] in ['air', 'port']:
-                for mode_file in os.listdir(mode_data_path):
-                    nodes_in = os.path.join(data_path,'network','{}_nodes.shp'.format(modes[m]))
-                    nodes_name = '{}_nodes'.format(modes[m])
+	                print ('* Starting national {} and all hazards intersections'.format(modes[m]))
+	                intersect_networks_and_all_hazards(hazard_dir,edges_in,edges_name,output_dir,network_type = 'edges')
 
-                output_dir = os.path.join(output_path, 'networks_hazards_intersection_shapefiles','{}_hazard_intersections'.format(modes[m]))
-                if os.path.exists(output_dir) == False:
-                    os.mkdir(output_dir)
+	            elif modes[m] in ['air', 'water']:
+	                nodes_in = os.path.join(data_path,'network','{}_nodes.shp'.format(modes[m]))
+	                nodes_name = '{}_nodes'.format(modes[m])
 
-                print ('* Starting national {} and all hazards intersections'.format(modes[m]))
-                intersect_networks_and_all_hazards(hazard_dir,nodes_in,nodes_name,output_dir,network_type = 'nodes')
+	                output_dir = os.path.join(output_path, 'networks_hazards_intersection_shapefiles','{}_hazard_intersections'.format(modes[m]))
+	                if os.path.exists(output_dir) == False:
+	                    os.mkdir(output_dir)
+
+	                output_dir = os.path.join(output_path, 'networks_hazards_intersection_shapefiles','{}_hazard_intersections'.format(modes[m]),sc)
+	                if os.path.exists(output_dir) == False:
+	                    os.mkdir(output_dir)
+
+	                print ('* Starting national {} and all hazards intersections'.format(modes[m]))
+	                intersect_networks_and_all_hazards(hazard_dir,nodes_in,nodes_name,output_dir,network_type = 'nodes')
 
 
 if __name__ == "__main__":

@@ -18,13 +18,13 @@ def main(config):
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
 
-    modes = ['road','rail']
-    od_output_excel = os.path.join(data_path,'OD_data','province_ods.xlsx')
-    province_excel_writer = pd.ExcelWriter(od_output_excel)
+    modes = ['road','rail','port']
+    
+    province_excel_writer = pd.ExcelWriter(os.path.join(data_path,'OD_data','province_ods.xlsx'))
 
     all_ods = []
     for m in range(len(modes)):
-        od_df = pd.read_excel(os.path.join(incoming_data_path,'{}_ods'.format(modes[m]),'province_ods.xlsx'),sheet_name='industries',encoding='utf-8-sig')
+        od_df = pd.read_csv(os.path.join(data_path,'OD_data','{}_province_annual_ods.csv'.format(modes[m])),encoding='utf-8-sig')
         all_ods.append(od_df)
 
         od_df.to_excel(province_excel_writer,modes[m],index=False,encoding='utf-8-sig')

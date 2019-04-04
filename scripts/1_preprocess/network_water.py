@@ -37,6 +37,8 @@ def main(config):
         'Latitud Sur': 'lat',
         'Longitud Oeste': 'lon'
     })
+    nodes = nodes.groupby(['province','region','locality','lat','lon'])['name'].apply(lambda x:'/'.join(x)).reset_index()
+
     nodes['geometry'] = list(zip(nodes.lon, nodes.lat))
     nodes['geometry'] = nodes['geometry'].apply(Point)
     nodes = gpd.GeoDataFrame(nodes, geometry='geometry').drop(['lat', 'lon'], axis=1)
@@ -48,8 +50,8 @@ def main(config):
     network = link_nodes_to_nearest_edge(network)
     network = add_topology(add_ids(network, edge_prefix='watere', node_prefix='watern'))
 
-    network.edges.to_file(out_edge_file)
-    network.nodes.to_file(out_node_file)
+    network.edges.to_file(out_edge_file,encoding='utf-8')
+    network.nodes.to_file(out_node_file,encoding='utf-8')
 
 
 

@@ -37,7 +37,7 @@ def replace_string_characters(x,replace_strings):
 
     return x_change
 
-def  set_reference_date(x,reference_date):
+def set_reference_date(x,reference_date):
     if x == 0:
         x = pd.Timestamp(reference_date)
 
@@ -497,7 +497,7 @@ def main(config):
 
     od_vals_group_industry = {}
     od_dfs = pd.concat(od_dfs,axis=0,sort='False', ignore_index=True)
-    od_dfs.to_csv(os.path.join(incoming_data_path,'rail_ods','all_ods.csv'),index=False,encoding='utf-8-sig')
+    od_dfs.to_csv(os.path.join(incoming_data_path,'rail_ods','od_flows_raw.csv'),index=False,encoding='utf-8-sig')
 
     # od_dfs = pd.read_csv(os.path.join(incoming_data_path,'rail_ods','all_ods.csv'),encoding='utf-8-sig')
 
@@ -535,7 +535,7 @@ def main(config):
     for key,values in od_vals_group_industry.items():
         od_list.append({**{'origin_id':key.split('-')[0],'destination_id':key.split('-')[1]},**values})
     od_df = pd.DataFrame(od_list).fillna(0)
-    od_df.to_csv(os.path.join(incoming_data_path,'rail_ods','rail_ods.csv'),index=False,encoding='utf-8-sig')
+    od_df.to_csv(os.path.join(data_path,'OD_data','rail_nodes_daily_ods.csv'),index=False,encoding='utf-8-sig')
     
     del od_list
     
@@ -562,7 +562,8 @@ def main(config):
     del od_list
 
     province_ods = od_df[['origin_province','destination_province']+industry_cols + ['total_tons']]
-    province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index()  
+    province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index()
+    province_ods.to_csv(os.path.join(data_path,'OD_data','rail_province_annual_ods.csv'),index=False,encoding='utf-8-sig')  
     province_ods.to_excel(province_excel_writer,'industries',index=False,encoding='utf-8-sig')
     province_excel_writer.save()
 
