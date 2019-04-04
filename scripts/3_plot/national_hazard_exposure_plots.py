@@ -19,6 +19,7 @@ def main():
     data_path = config['paths']['data']
     modes = ['road', 'rail']
     hazard_cols = ['hazard_type','climate_scenario','year']
+    return_periods = [10,100,1000]
     plot_set = [
         {
             'hazard': 'pluvial flooding',

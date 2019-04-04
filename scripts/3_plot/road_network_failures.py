@@ -100,6 +100,40 @@ def main():
         },
     ]
 
+    plot_set = [
+        {
+            'column': 'min_econ_impact',
+            'no_access':[0,1],
+            'title': 'Min Total Economic loss',
+            'legend_label': "Economic loss (million USD/day)",
+            'divisor': 1000000,
+            'significance': 0
+        },
+        {
+            'column': 'max_econ_impact',
+            'no_access':[0,1],
+            'title': 'Max Total Economic loss',
+            'legend_label': "Economic loss (million USD/day)",
+            'divisor': 1000000,
+            'significance': 0
+        },
+        {
+            'column': 'min_econ_loss',
+            'no_access':[1],
+            'title': 'Min Macroeconomic losses',
+            'legend_label': "Economic loss (million USD/day)",
+            'divisor': 1000000,
+            'significance': 0
+        },
+        {
+            'column': 'max_econ_loss',
+            'no_access':[1],
+            'title': 'Max Macroeconomic losses',
+            'legend_label': "Economic loss (million USD/day)",
+            'divisor': 1000000,
+            'significance': 0
+        }
+    ]
     data_path = config['paths']['data']
     region_file_path = os.path.join(config['paths']['data'], 'network',
                                    'road_edges.shp')
