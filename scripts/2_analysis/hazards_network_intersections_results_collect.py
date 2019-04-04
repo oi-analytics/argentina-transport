@@ -242,7 +242,7 @@ def main():
         # data_excel = os.path.join(
         #     output_dir,'national_scale_hazard_intersections.xlsx')
         data_excel = os.path.join(
-            output_dir,'bridge_hazard_intersections.xlsx')
+            output_dir,'national_scale_hazard_intersections.xlsx')
         nat_excel_writer = pd.ExcelWriter(data_excel)
         for m in range(len(modes)):
             mode_data_df = []
