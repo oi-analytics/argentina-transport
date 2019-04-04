@@ -9,4 +9,5 @@ config.json
 
 # Data
 *.xml
-.DS_Store.DS_Store
+
+.DS_Store

@@ -85,21 +85,37 @@ def main():
 
     plot_set = [
         {
-            'column': 'min_total_tons',
+            'column': 'min_econ_impact',
             'no_access':[0,1],
-            'title': 'Min Daily Tons disrupted',
-            'legend_label': "AADF disrupted ('000 tons/day)",
-            'divisor': 1000,
+            'title': 'Min Total Economic loss',
+            'legend_label': "Economic loss (million USD/day)",
+            'divisor': 1000000,
             'significance': 0
         },
         {
-            'column': 'max_total_tons',
+            'column': 'max_econ_impact',
             'no_access':[0,1],
-            'title': 'Max Daily Tons disrupted',
-            'legend_label': "AADF disrupted ('000 tons/day)",
-            'divisor': 1000,
+            'title': 'Max Total Economic loss',
+            'legend_label': "Economic loss (million USD/day)",
+            'divisor': 1000000,
             'significance': 0
         },
+        {
+            'column': 'min_econ_loss',
+            'no_access':[1],
+            'title': 'Min Macroeconomic losses',
+            'legend_label': "Economic loss (million USD/day)",
+            'divisor': 1000000,
+            'significance': 0
+        },
+        {
+            'column': 'max_econ_loss',
+            'no_access':[1],
+            'title': 'Max Macroeconomic losses',
+            'legend_label': "Economic loss (million USD/day)",
+            'divisor': 1000000,
+            'significance': 0
+        }
     ]
 
     color = '#006d2c'
