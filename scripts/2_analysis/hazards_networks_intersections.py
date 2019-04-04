@@ -43,7 +43,7 @@ from shapely.geometry import Polygon
 from oia.utils import *
 
 
-def networkedge_hazard_intersection(edge_shapefile, hazard_shapefile, output_shapefile):
+def networkedge_hazard_intersection(edge_shapefile, hazard_shapefile, output_shapefile,edge_id_column):
     """Intersect network edges and hazards and write results to shapefiles
 
     Parameters
@@ -99,11 +99,14 @@ def networkedge_hazard_intersection(edge_shapefile, hazard_shapefile, output_sha
                     poly_sindex.intersection(lines.geometry.bounds))]
                 for p_index, poly in intersected_polys.iterrows():
                     if (lines['geometry'].intersects(poly['geometry']) is True) and (poly.geometry.is_valid is True):
-                        data.append({'edge_id': lines['edge_id'], 'length': 1000.0*line_length(lines['geometry'].intersection(
-                            poly['geometry'])), 'geometry': lines['geometry'].intersection(poly['geometry'])})
+                        if line_length(lines['geometry']) > 1e-3:
+                            data.append({edge_id_column: lines[edge_id_column], 'length': 1000.0*line_length(lines['geometry'].intersection(
+                                poly['geometry'])), 'geometry': lines['geometry'].intersection(poly['geometry'])})
+                        else:
+                            data.append({edge_id_column: lines[edge_id_column], 'length': 0, 'geometry': lines['geometry']})
             if data:
                 intersections_data = gpd.GeoDataFrame(
-                    data, columns=['edge_id', 'length', 'geometry'], crs='epsg:4326')
+                    data, columns=[edge_id_column, 'length', 'geometry'], crs='epsg:4326')
                 intersections_data.to_file(output_shapefile)
 
                 del intersections_data
@@ -111,7 +114,7 @@ def networkedge_hazard_intersection(edge_shapefile, hazard_shapefile, output_sha
     del line_gpd, poly_gpd
 
 
-def networknode_hazard_intersection(node_shapefile, hazard_shapefile, output_shapefile):
+def networknode_hazard_intersection(node_shapefile, hazard_shapefile, output_shapefile,node_id_column):
     """Intersect network nodes and hazards and write results to shapefiles
 
     Parameters
@@ -132,7 +135,7 @@ def networknode_hazard_intersection(node_shapefile, hazard_shapefile, output_sha
     """
     print ('* Starting {} and {} intersections'.format(node_shapefile,hazard_shapefile))
     point_gpd = gpd.read_file(node_shapefile)
-    point_gpd.rename(columns={'id':'node_id'},inplace=True)
+    point_gpd.rename(columns={'id':node_id_column},inplace=True)
     poly_gpd = gpd.read_file(hazard_shapefile)
 
     if len(point_gpd.index) > 0 and len(poly_gpd.index) > 0:
@@ -145,17 +148,17 @@ def networknode_hazard_intersection(node_shapefile, hazard_shapefile, output_sha
             intersected_polys = poly_gpd.iloc[list(
                 poly_sindex.intersection(points.geometry.bounds))]
             if len(intersected_polys.index) > 0:
-                data.append({'node_id': points['node_id'], 'geometry': points['geometry']})
+                data.append({node_id_column: points[node_id_column], 'geometry': points['geometry']})
         if data:
             intersections_data = gpd.GeoDataFrame(
-                data, columns=['node_id', 'geometry'], crs='epsg:4326')
+                data, columns=[node_id_column, 'geometry'], crs='epsg:4326')
             intersections_data.to_file(output_shapefile)
 
             del intersections_data
 
     del point_gpd, poly_gpd
 
-def intersect_networks_and_all_hazards(hazard_dir,network_file_path,network_file_name,output_file_path,network_type = ''):
+def intersect_networks_and_all_hazards(hazard_dir,network_file_path,network_file_name,output_file_path,network_id_column,network_type = ''):
     """Walk through all hazard files and select network-hazard intersection criteria
 
     Parameters
@@ -184,9 +187,9 @@ def intersect_networks_and_all_hazards(hazard_dir,network_file_path,network_file
                 out_shp_name = network_file_name[:-4] + '_' + file
                 output_file = os.path.join(output_file_path,out_shp_name)
                 if network_type == 'edges':
-                    networkedge_hazard_intersection(network_file_path, hazard_file, output_file)
+                    networkedge_hazard_intersection(network_file_path, hazard_file, output_file,network_id_column)
                 elif network_type == 'nodes':
-                    networknode_hazard_intersection(network_file_path, hazard_file, output_file)
+                    networknode_hazard_intersection(network_file_path, hazard_file, output_file,network_id_column)
 
 
 def main():
@@ -211,7 +214,8 @@ def main():
         'paths']['calc'], load_config()['paths']['output']
 
     # Supply input data and parameters
-    modes = ['road', 'rail', 'air', 'water']
+    modes = ['road', 'rail','bridge', 'air', 'water']
+    modes_id_cols = ['edge_id','edge_id','bridge_id','node_id','node_id']
     climate_scenarios = ['Baseline','Future_Med','Future_High']
     national_results = 'Yes'
 
@@ -226,7 +230,7 @@ def main():
 
 	    if national_results == 'Yes':
 	        for m in range(len(modes)):
-	            if modes[m] in ['road', 'rail']:
+	            if modes[m] in ['road', 'rail','bridge']:
 	                edges_in = os.path.join(data_path,'network','{}_edges.shp'.format(modes[m]))
 	                edges_name = '{}_edges'.format(modes[m])
 
@@ -239,7 +243,7 @@ def main():
 	                    os.mkdir(output_dir)
 
 	                print ('* Starting national {} and all hazards intersections'.format(modes[m]))
-	                intersect_networks_and_all_hazards(hazard_dir,edges_in,edges_name,output_dir,network_type = 'edges')
+	                intersect_networks_and_all_hazards(hazard_dir,edges_in,edges_name,output_dir,modes_id_cols[m],network_type = 'edges')
 
 	            elif modes[m] in ['air', 'water']:
 	                nodes_in = os.path.join(data_path,'network','{}_nodes.shp'.format(modes[m]))
@@ -254,7 +258,7 @@ def main():
 	                    os.mkdir(output_dir)
 
 	                print ('* Starting national {} and all hazards intersections'.format(modes[m]))
-	                intersect_networks_and_all_hazards(hazard_dir,nodes_in,nodes_name,output_dir,network_type = 'nodes')
+	                intersect_networks_and_all_hazards(hazard_dir,nodes_in,nodes_name,output_dir,modes_id_cols[m],network_type = 'nodes')
 
 
 if __name__ == "__main__":

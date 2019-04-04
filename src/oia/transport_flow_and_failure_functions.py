@@ -17,7 +17,7 @@ import pandas as pd
 from oia.utils import *
 from tqdm import tqdm
 
-def spatial_scenario_selection(network_shapefile, polygon_dataframe, hazard_dictionary, data_dictionary, network_type ='nodes'):
+def spatial_scenario_selection(network_shapefile, polygon_dataframe, hazard_dictionary, data_dictionary,network_id_column,network_type ='nodes'):
     """Intersect network edges/nodes and boundary Polygons to collect boundary and hazard attributes
 
     Parameters
@@ -59,11 +59,12 @@ def spatial_scenario_selection(network_shapefile, polygon_dataframe, hazard_dict
             for p_index, poly in intersected_polys.iterrows():
                 if (lines['geometry'].intersects(poly['geometry']) is True) and (poly.geometry.is_valid is True) and (lines.geometry.is_valid is True):
                     if network_type == 'edges':
-                        value_dictionary = {'edge_id': lines['edge_id'], 'length': 1000.0*line_length(lines['geometry'].intersection(poly['geometry'])),
+                        value_dictionary = {network_id_column: lines[network_id_column], 
+                                            'length': 1000.0*line_length(lines['geometry'].intersection(poly['geometry'])),
                                             'province_id': poly['province_id'], 'province_name': poly['province_name'],
                                             'department_id': poly['department_id'], 'department_name': poly['department_name']}
                     elif network_type == 'nodes':
-                        value_dictionary = {'node_id': lines['node_id'],
+                        value_dictionary = {network_id_column: lines[network_id_column],
                                             'province_id': poly['province_id'], 'province_name': poly['province_name'],
                                             'department_id': poly['department_id'], 'department_name': poly['department_name']}
 
