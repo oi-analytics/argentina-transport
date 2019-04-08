@@ -202,6 +202,22 @@ def add_igraph_generalised_costs(G, vehicle_numbers, tonnage):
 
     return G
 
+def add_dataframe_generalised_costs(G, vehicle_numbers, tonnage):
+    # G.es['max_cost'] = list(cost_param*(np.array(G.es['length'])/np.array(G.es['max_speed'])))
+    # G.es['min_cost'] = list(cost_param*(np.array(G.es['length'])/np.array(G.es['min_speed'])))
+    # print (G.es['max_time'])
+    G['max_gcost'] = list(
+
+            vehicle_numbers * np.array(G['max_time_cost'])
+            + tonnage * np.array(G['max_tariff_cost'])
+    )
+    G['min_gcost'] = list(
+            vehicle_numbers * np.array(G['min_time_cost'])
+            + tonnage * np.array(G['min_tariff_cost'])
+    )
+
+    return G
+
 def network_od_path_estimations(graph,
     source, target, cost_criteria, time_criteria):
     """Estimate the paths, distances, times, and costs for given OD pair
@@ -578,10 +594,7 @@ def igraph_scenario_edge_failures(network_df_in, edge_failure_set,
 
         network_graph = ig.Graph.TupleList(network_df.itertuples(
             index=False), edge_attrs=list(network_df.columns)[2:])
-        if transport_mode != 'rail':
-            network_graph = add_igraph_generalised_costs(
-                network_graph, 1.0/vehicle_weight, 1)
-
+        
         nodes_name = np.asarray([x['name'] for x in network_graph.vs])
         select_flows = flow_dataframe[flow_dataframe.index.isin(edge_path_index)]
 

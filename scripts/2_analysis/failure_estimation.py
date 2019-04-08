@@ -261,6 +261,7 @@ def main():
             flow_df = pd.read_csv(os.path.join(flow_paths_data,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m]['sector'],int(perct))),encoding='utf-8')
 
             if modes[m]['sector'] == 'road':
+                G_df = add_dataframe_generalised_costs(G_df, 1.0/modes[m]['vehicle_wt'], 1)
                 e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct))))[['edge_id','max_total_tons']]
                 ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
                 ef_df = pd.merge(ef_df,G_df[['edge_id','road_type']],how='left',on=['edge_id'])
