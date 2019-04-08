@@ -424,7 +424,7 @@ def write_flow_paths_to_network_files(save_paths_df,
 
     if save_csv == True:
         gdf_edges.drop('geometry', axis=1, inplace=True)
-        gdf_edges.to_csv(csv_output_path,index=False,encoding='utf-8')
+        gdf_edges.to_csv(csv_output_path,index=False,encoding='utf-8-sig')
 
 
     del gdf_edges, save_paths_df
