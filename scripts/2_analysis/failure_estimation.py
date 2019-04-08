@@ -261,17 +261,17 @@ def main():
             flow_df = pd.read_csv(os.path.join(flow_paths_data,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m]['sector'],int(perct))),encoding='utf-8')
 
             if modes[m]['sector'] == 'road':
-                e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_national_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct))))[['edge_id','max_total_tons']]
+                e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct))))[['edge_id','max_total_tons']]
                 ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
                 ef_df = pd.merge(ef_df,G_df[['edge_id','road_type']],how='left',on=['edge_id'])
                 ef_df = pd.merge(ef_df,e_flow,how='left',on=['edge_id']).fillna(0)
                 ef_sc_list = ef_df[(ef_df['road_type'] != '0') & (ef_df['max_total_tons'] > 0)]['edge_id'].values.tolist()
             elif modes[m]['sector'] == 'rail':
-                e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_national_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct))))[['edge_id','max_total_tons']]
+                e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct))))[['edge_id','max_total_tons']]
                 ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
                 G_df = pd.merge(G_df,e_flow[['edge_id','max_total_tons']],how='left',on=['edge_id'])
                 G_df = G_df[G_df['max_total_tons'] > 0]
-                ef_df = pd.merge(ef_df,e_flow[['edge_id','max_total_tons']],how='left',on=['edge_id'])
+                ef_df = pd.merge(ef_df,e_flow,how='left',on=['edge_id'])
                 ef_sc_list = ef_df[ef_df['max_total_tons'] > 0]['edge_id'].values.tolist()
 
             print ('Number of failure scenarios',len(ef_sc_list))
@@ -310,13 +310,13 @@ def main():
                 flow_df_select.rename(columns={'tr_loss': tr_loss}, inplace=True)
 
                 if single_edge == True:
-                    file_name = 'single_edge_failures_all_national_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'single_edge_failures_all_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
                 else:
-                    file_name = 'multiple_edge_failures_all_national_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'multiple_edge_failures_all_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
 
                 df_path = os.path.join(all_fail_scenarios,file_name)
                 flow_df_select.drop('new_path',axis=1,inplace=True)
-                flow_df_select.to_csv(df_path, index=False,encoding='utf-8')
+                flow_df_select.to_csv(df_path, index=False,encoding='utf-8-sig')
 
                 print ('* Assembling {} {} failure isolation results'.format(types[t],modes[m]['sector']))
                 select_cols = ['edge_id','origin_province', 'destination_province','no_access'] + ic_cols
@@ -325,12 +325,12 @@ def main():
                 edge_impact = edge_impact.groupby(['edge_id', 'origin_province', 'destination_province'])[ic_cols].sum().reset_index()
 
                 if single_edge == True:
-                    file_name = 'single_edge_failures_od_losses_national_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'single_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
                 else:
-                    file_name = 'multiple_edge_failures_od_losses_national_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'multiple_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
 
                 df_path = os.path.join(isolated_ods,file_name)
-                edge_impact.to_csv(df_path, index = False,encoding='utf-8')
+                edge_impact.to_csv(df_path, index = False,encoding='utf-8-sig')
 
                 print ('* Assembling {} {} failure rerouting results'.format(types[t],modes[m]['sector']))
                 edge_impact = flow_df_select[select_cols+[tr_loss]]
@@ -338,12 +338,12 @@ def main():
                 edge_impact = edge_impact.groupby(['edge_id', 'origin_province', 'destination_province'])[tr_loss,modes[m]['{}_tons_column'.format(types[t])]].sum().reset_index()
 
                 if single_edge == True:
-                    file_name = 'single_edge_failures_rerout_losses_national_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'single_edge_failures_rerout_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
                 else:
-                    file_name = 'multiple_edge_failures_rerout_losses_national_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'multiple_edge_failures_rerout_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
 
                 df_path = os.path.join(rerouting,file_name)
-                edge_impact.to_csv(df_path, index = False,encoding='utf-8')
+                edge_impact.to_csv(df_path, index = False,encoding='utf-8-sig')
 
                 select_cols = ['edge_id','no_access',tr_loss,modes[m]['{}_tons_column'.format(types[t])]]
                 edge_impact = flow_df_select[select_cols]
@@ -362,12 +362,12 @@ def main():
 
             del edge_fail_ranges
             if single_edge == True:
-                file_name = 'single_edge_failures_minmax_national_{0}_{1}_percent_disrupt'.format(modes[m]['sector'],int(perct))
+                file_name = 'single_edge_failures_minmax_{0}_{1}_percent_disrupt'.format(modes[m]['sector'],int(perct))
             else:
-                file_name = 'multiple_edge_failures_minmax_national_{0}_{1}_percent_disrupt'.format(modes[m]['sector'],int(perct))
+                file_name = 'multiple_edge_failures_minmax_{0}_{1}_percent_disrupt'.format(modes[m]['sector'],int(perct))
 
             df_path = os.path.join(minmax_combine,file_name + '.csv')
-            edge_impact.to_csv(df_path, index = False,encoding='utf-8')
+            edge_impact.to_csv(df_path, index = False,encoding='utf-8-sig')
 
             # # Create network shapefiles with flows
             # print ('* Creating {} network shapefiles with failure results'.format(modes[m]))
