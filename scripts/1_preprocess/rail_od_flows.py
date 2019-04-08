@@ -334,7 +334,7 @@ def main(config):
     print (rail_nodes)
     rail_nodes.to_file(os.path.join(data_path,'network', 'rail_nodes.shp'),encoding = 'utf-8')
     rail_nodes.drop('geometry', axis=1, inplace=True)
-    rail_nodes.to_csv(os.path.join(data_path,'network','rail_nodes.csv'),encoding='utf-8',index=False)
+    rail_nodes.to_csv(os.path.join(data_path,'network','rail_nodes.csv'),encoding='utf-8-sig',index=False)
 
     rail_nodes = rail_nodes[rail_nodes['nombre'] != 0]
     rail_nodes = rail_nodes[['node_id','nombre','linea','provincia','operador']]
@@ -584,7 +584,7 @@ def main(config):
 
     rail_edges.to_file(os.path.join(data_path,'network','rail_edges.shp'),encoding = 'utf-8')
     rail_edges.drop('geometry', axis=1, inplace=True)
-    rail_edges.to_csv(os.path.join(data_path,'network','rail_edges.csv'),encoding='utf-8',index=False)
+    rail_edges.to_csv(os.path.join(data_path,'network','rail_edges.csv'),encoding='utf-8-sig',index=False)
 
 if __name__ == '__main__':
     CONFIG = load_config()

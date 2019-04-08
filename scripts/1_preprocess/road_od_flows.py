@@ -362,7 +362,8 @@ def main(config):
     province_ods.to_excel(province_excel_writer,'industries',index=False,encoding='utf-8-sig')
     province_excel_writer.save()
 
-    od_df[industry_cols + ['total_tons']] = 1.0*od_df[industry_cols + ['total_tons']]/365.0
+    val_cols = [c for c in od_df.columns.values.tolist() if c not in ['origin_id','origin_province','origin_zone_id','destination_id','destination_province','destination_zone_id']]
+    od_df[val_cols] = 1.0*od_df[val_cols]/365.0
     od_df = od_df[od_df['total_tons'] > 0.5]
     print ('Number of unique OD pairs',len(od_df.index))
     # od_df.to_csv(os.path.join(incoming_data_path,'road_ods','road_ods.csv'),index=False,encoding='utf-8-sig')

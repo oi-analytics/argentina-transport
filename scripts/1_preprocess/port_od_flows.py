@@ -133,6 +133,9 @@ def main(config):
     import_operations = ['Importación','Transbordo Impo','Vehículos Impo','Cabotaje Entrado']
     transit_operattions = ['Tránsito','Otros'] 
     port_df = gpd.read_file(os.path.join(data_path,'network','water_nodes.shp'),encoding='utf-8').fillna('none')
+    port_df.crs = {'init' :'epsg:4326'}
+    # port_df.rename(columns={'id':'node_id'},inplace=True)
+    port_df.to_file(os.path.join(data_path,'network','port_nodes.shp'),encoding = 'utf-8')
     port_names = port_df[['name','id','province']]
 
 
@@ -340,6 +343,7 @@ def main(config):
     cost_df = pd.read_excel(os.path.join(incoming_data_path,'5','Puertos','port_costs.xlsx'),sheet_name='costs')
     port_edges['min_gcost'] = cost_df['min_cost'].values[0]
     port_edges['max_gcost'] = cost_df['max_cost'].values[0]
+    port_edges.crs = {'init' :'epsg:4326'}
 
     port_edges.to_file(os.path.join(data_path,'network','port_edges.shp'),encoding = 'utf-8')
     port_edges.drop('geometry', axis=1, inplace=True)
