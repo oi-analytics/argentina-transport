@@ -12,6 +12,8 @@ import sys
 import json
 import igraph as ig
 import networkx as nx
+from collections import defaultdict
+from itertools import chain
 import numpy as np
 import pandas as pd
 from oia.utils import *
@@ -45,7 +47,7 @@ def spatial_scenario_selection(network_shapefile, polygon_dataframe, hazard_dict
 
 
     if len(line_gpd.index) > 0 and len(poly_gpd.index) > 0:
-        print (network_shapefile,len(line_gpd.index),len(poly_gpd.index))
+        # print (network_shapefile,len(line_gpd.index),len(poly_gpd.index))
         line_gpd.columns = map(str.lower, line_gpd.columns)
         poly_gpd.columns = map(str.lower, poly_gpd.columns)
 
@@ -445,6 +447,36 @@ def write_flow_paths_to_network_files(save_paths_df,
 
     del gdf_edges, save_paths_df
 
+def get_flow_paths_indexes_of_edges(flow_dataframe,path_criteria):
+    edge_path_index = []
+    for idx,flow in flow_dataframe.iterrows():
+        fp = ast.literal_eval(flow[path_criteria])
+        edge_path_index.append(dict(zip(fp,[idx]*len(fp))))
+
+    return {k: list(filter(None.__ne__, [d.get(k) for d in edge_path_index])) for k in set().union(*edge_path_index)}
+
+def get_flow_paths_indexes_of_edges_new_old(flow_dataframe,path_criteria):
+    edge_path_index = []
+    for idx,flow in flow_dataframe.iterrows():
+        fp = ast.literal_eval(flow[path_criteria])
+        edge_path_index.append(dict(zip(fp,[[idx]]*len(fp))))
+        edge_path_index = [{k: list(itertools.chain.from_iterable(list(filter(None.__ne__, [d.get(k) for d in edge_path_index])))) for k in set().union(*edge_path_index)}]
+        # print ('* Done with path:',idx)
+    return edge_path_index[0]
+
+def get_flow_paths_indexes_of_edges_new(flow_dataframe,path_criteria):
+    tqdm.pandas()
+    flow_dataframe[path_criteria] = flow_dataframe.progress_apply(lambda x:ast.literal_eval(x[path_criteria]),axis=1)
+    # dd = defaultdict(list)
+    # for k,v in zip(chain.from_iterable(flow_dataframe.path_criteria.ravel()), flow_dataframe.index.repeat(flow_dataframe.path_criteria.str.len()).tolist()):
+    #     dd[k].append(v)
+    
+    idx = np.arange(len(flow_dataframe)).repeat(flow_dataframe[path_criteria].str.len(), 0)
+    s = flow_dataframe.iloc[idx, ].assign(B=np.concatenate(flow_dataframe[path_criteria].values))['B']
+    edge_path_index = s.to_frame().reset_index().groupby('B')['index'].apply(list).to_dict()
+    
+    return edge_path_index
+
 def identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria):
     """Identify all paths that contain an edge
 
@@ -550,6 +582,93 @@ def igraph_scenario_edge_failures_changing_tonnages(network_df_in, edge_failure_
 
                     edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destination,
                                                  'new_path':new_path,'new_distance': new_dist, 'new_time': new_time, 'new_cost': new_gcost, 'no_access': 0})
+
+    return edge_fail_dictionary
+
+
+def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
+    flow_dataframe,edge_flow_path_indexes, vehicle_weight, path_criteria,
+    tons_criteria, cost_criteria, time_criteria,transport_mode):
+    """Estimate network impacts of each failures
+    When the tariff costs of each path are fixed by vehicle weight
+
+    Parameters
+    ---------
+    network_df_in - Pandas DataFrame of network
+    edge_failure_set - List of string edge ID's
+    flow_dataframe - Pandas DataFrame of list of edge paths
+    vehicle_weight - Float weight of vehcile weight
+    path_criteria - String name of column of edge paths in flow dataframe
+    tons_criteria - String name of column of path tons in flow dataframe
+    cost_criteria - String name of column of path costs in flow dataframe
+    time_criteria - String name of column of path travel time in flow dataframe
+
+
+    Returns
+    -------
+    edge_failure_dictionary : list[dict]
+        With attributes
+        edge_id - String name or list of failed edges
+        origin - String node ID of Origin of disrupted OD flow
+        destination - String node ID of Destination of disrupted OD flow
+        no_access - Boolean 1 (no reroutng) or 0 (rerouting)
+        new_cost - Float value of estimated cost of OD journey after disruption
+        new_distance - Float value of estimated distance of OD journey after disruption
+        new_path - List of string edge ID's of estimated new route of OD journey after disruption
+        new_time - Float value of estimated time of OD journey after disruption
+    """
+    edge_fail_dictionary = []
+    # network_df,edge_path_index = identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria)
+
+    edge_path_index = []
+    edge_path_index += list(itertools.chain.from_iterable([path_idx for path_key,path_idx in edge_flow_path_indexes.items() if path_key in edge_failure_set]))
+    # print ('* All Failure paths',len(edge_path_index))
+    # print ('* Unique Failure paths',len(edge_path_index))
+    if edge_path_index:
+        edge_path_index = list(set(edge_path_index))
+        network_graph = ig.Graph.TupleList(network_df_in[~network_df_in['edge_id'].isin(edge_failure_set)].itertuples(
+            index=False), edge_attrs=list(network_df_in.columns)[2:])
+        
+        if len(edge_failure_set) == 1:
+            edge_failure_set = edge_failure_set[0]
+
+        nodes_name = np.asarray([x['name'] for x in network_graph.vs])
+        select_flows = flow_dataframe[flow_dataframe.index.isin(edge_path_index)]
+
+        no_access = select_flows[(~select_flows['origin_id'].isin(nodes_name)) | (
+            ~select_flows['destination_id'].isin(nodes_name))]
+        if len(no_access.index) > 0:
+            for iter_, value in no_access.iterrows():
+                edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': value['origin_id'], 'destination_id': value['destination_id'],
+                                             'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
+
+        po_access = select_flows[(select_flows['origin_id'].isin(nodes_name)) & (
+            select_flows['destination_id'].isin(nodes_name))]
+        if len(po_access.index) > 0:
+            po_access = po_access.set_index('origin_id')
+            origins = list(set(po_access.index.values.tolist()))
+            for origin in origins:
+                destinations = po_access.loc[[origin], 'destination_id'].values.tolist()
+                tons = po_access.loc[[origin], tons_criteria].values.tolist()
+                paths = network_graph.get_shortest_paths(
+                    origin, destinations, weights=cost_criteria, output="epath")
+                for p in range(len(paths)):
+                    if len(paths[p]) > 0:
+                        new_dist = 0
+                        new_time = 0
+                        new_gcost = 0
+                        new_path = []
+                        for n in paths[p]:
+                            new_dist += network_graph.es[n]['length']
+                            new_time += network_graph.es[n][time_criteria]
+                            new_gcost += network_graph.es[n][cost_criteria]
+                            new_path.append(network_graph.es[n]['edge_id'])
+                        edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destinations[p],
+                                                     'new_path':new_path,'new_distance': new_dist, 'new_time': new_time,
+                                                     'new_cost': tons[p]*new_gcost, 'no_access': 0})
+                    else:
+                        edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destinations[p],
+                                                     'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
 
     return edge_fail_dictionary
 
@@ -722,7 +841,7 @@ def edge_failure_sampling(failure_scenarios,edge_column):
 
     return edge_failure_samples
 
-def merge_failure_results(flow_df_select,failure_df,tons_col,dist_col,time_col,cost_col):
+def merge_failure_results(flow_df_select,failure_df,id_col,tons_col,dist_col,time_col,cost_col):
     """Merge failure results with flow results
 
     Parameters
@@ -750,7 +869,7 @@ def merge_failure_results(flow_df_select,failure_df,tons_col,dist_col,time_col,c
     """
     flow_df_select = pd.merge(flow_df_select, failure_df, on=[
                               'origin_id', 'destination_id'], how='left').fillna(0)
-    flow_df_select = flow_df_select[(flow_df_select[tons_col] > 0) & (flow_df_select['edge_id'] != 0)]
+    flow_df_select = flow_df_select[(flow_df_select[tons_col] > 0) & (flow_df_select[id_col] != 0)]
 
     flow_df_select['dist_diff'] = (1 - flow_df_select['no_access'])*(flow_df_select['new_distance'] - flow_df_select[dist_col])
     flow_df_select['time_diff'] = (1 - flow_df_select['no_access'])*(flow_df_select['new_time'] - flow_df_select[time_col])

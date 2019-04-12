@@ -148,6 +148,7 @@ def main():
     modes = [
                 {
                 'sector':'road',
+                'id_column':'edge_id',
                 'vehicle_wt':15,
                 'min_tons_column':'total_tons',
                 'max_tons_column':'total_tons',
@@ -163,6 +164,7 @@ def main():
                     'Mineria','PESCA','Regionales','Semiterminados']},
                 {
                 'sector':'rail',
+                'id_column':'edge_id',
                 'vehicle_wt':1,
                 'min_tons_column':'min_total_tons',
                 'max_tons_column':'max_total_tons',
@@ -177,10 +179,31 @@ def main():
                 }
     ]
 
+    modes = [
+                {
+                'sector':'road',
+                'id_column':'edge_id',
+                'vehicle_wt':15,
+                'min_tons_column':'total_tons',
+                'max_tons_column':'total_tons',
+                'min_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                    'Carnes','Combustibles',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+                    'INDUSTRIA MANUFACTURERA','Industrializados',
+                    'Mineria','PESCA','Regionales','Semiterminados'],
+                'max_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                    'Carnes','Combustibles',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+                    'INDUSTRIA MANUFACTURERA','Industrializados',
+                    'Mineria','PESCA','Regionales','Semiterminados']},
+
+    ]
+
     # modes = [
     #             {
     #             'sector':'rail',
     #             'vehicle_wt':1,
+    #             'id_column':'edge_id',
     #             'min_tons_column':'min_total_tons',
     #             'max_tons_column':'max_total_tons',
     #             'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
@@ -200,14 +223,15 @@ def main():
     dist_types = ['min_distance', 'max_distance']
     time_types = ['min_time', 'max_time']
     cost_types = ['min_gcost', 'max_gcost']
+    event_id = 'event_id'
     percentage = [100.0]
-    single_edge = True
+    single_edge = False
 
     # Give the paths to the input data files
     network_data_path = os.path.join(data_path,'network')
     flow_paths_data = os.path.join(output_path, 'flow_mapping_paths')
     fail_scenarios_data = os.path.join(
-        output_path, 'hazard_scenarios', 'national_scale_hazard_intersections.xlsx')
+        output_path, 'hazard_scenarios')
 
     # Specify the output files and paths to be created
     shp_output_path = os.path.join(output_path, 'failure_shapefiles')
@@ -248,52 +272,56 @@ def main():
 
         # Create failure scenarios
         print ('* Creating {} failure scenarios'.format(modes[m]['sector']))
-        fail_df = pd.read_excel(fail_scenarios_data, sheet_name=modes[m]['sector'])
-        ef_sc_list = edge_failure_sampling(fail_df,'edge_id')
-        print ('Number of failure scenarios',len(ef_sc_list))
+        fail_df = pd.read_csv(os.path.join(fail_scenarios_data,'{}_event_set.csv'.format(modes[m]['sector']))).set_index(event_id)
+        fail_events = list(set(fail_df.index.values.tolist()))
+        fail_df = fail_df.reset_index()
+        print ('* Number of failure scenarios:',len(fail_events))
+        ef_sc_list = []
+        for fail_event in fail_events:
+            ef_sc_list.append((fail_event,edge_failure_sampling(fail_df[fail_df[event_id] == fail_event],modes[m]['id_column'])))
 
-
-        # ef_sc_list = ef_sc_list[0:10]
-
+        del fail_df
         for perct in percentage:
             # Load flow paths
             print ('* Loading {} flow paths'.format(modes[m]['sector']))
-            flow_df = pd.read_csv(os.path.join(flow_paths_data,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m]['sector'],int(perct))),encoding='utf-8')
-
+            flow_df = pd.read_csv(os.path.join(flow_paths_data,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m]['sector'],int(perct))),encoding='utf-8-sig')
+                
             if modes[m]['sector'] == 'road':
                 G_df = add_dataframe_generalised_costs(G_df, 1.0/modes[m]['vehicle_wt'], 1)
-                e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct))))[['edge_id','max_total_tons']]
-                ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
-                ef_df = pd.merge(ef_df,G_df[['edge_id','road_type']],how='left',on=['edge_id'])
-                ef_df = pd.merge(ef_df,e_flow,how='left',on=['edge_id']).fillna(0)
-                ef_sc_list = ef_df[(ef_df['road_type'] != '0') & (ef_df['max_total_tons'] > 0)]['edge_id'].values.tolist()
+                # e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct))))[['edge_id','max_total_tons']]
+                # ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
+                # ef_df = pd.merge(ef_df,G_df[['edge_id','road_type']],how='left',on=['edge_id'])
+                # ef_df = pd.merge(ef_df,e_flow,how='left',on=['edge_id']).fillna(0)
+                # ef_sc_list = ef_df[(ef_df['road_type'] != '0') & (ef_df['max_total_tons'] > 0)]['edge_id'].values.tolist()
             elif modes[m]['sector'] == 'rail':
                 e_flow = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct))))[['edge_id','max_total_tons']]
-                ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
+                # ef_df = pd.DataFrame(ef_sc_list,columns=['edge_id'])
                 G_df = pd.merge(G_df,e_flow[['edge_id','max_total_tons']],how='left',on=['edge_id'])
                 G_df = G_df[G_df['max_total_tons'] > 0]
-                ef_df = pd.merge(ef_df,e_flow,how='left',on=['edge_id'])
-                ef_sc_list = ef_df[ef_df['max_total_tons'] > 0]['edge_id'].values.tolist()
-
-            print ('Number of failure scenarios',len(ef_sc_list))
+                # ef_df = pd.merge(ef_df,e_flow,how='left',on=['edge_id'])
+                # ef_sc_list = ef_df[ef_df['max_total_tons'] > 0]['edge_id'].values.tolist()
 
             # Perform failure analysis
             edge_fail_ranges = []
             for t in range(len(types)):
+                edge_path_idx = get_flow_paths_indexes_of_edges_new(flow_df,path_types[t])
+                # print (edge_path_idx.keys())
                 print ('* Performing {} {} failure analysis'.format(types[t],modes[m]['sector']))
                 ef_list = []
                 for f_edge in range(len(ef_sc_list)):
-                    fail_edge = ef_sc_list[f_edge]
+                # for f_edge in range(0,1):
+                    fail_edge = ef_sc_list[f_edge][1]
                     if isinstance(fail_edge,list) == False:
                         fail_edge = [fail_edge]
-                    ef_dict = igraph_scenario_edge_failures(
-                            G_df, fail_edge, flow_df, modes[m]['vehicle_wt'],path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
+                    ef_dict = igraph_scenario_edge_failures_new(
+                            G_df, fail_edge, flow_df,edge_path_idx, modes[m]['vehicle_wt'],path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
                     if ef_dict:
-                        ef_list += ef_dict
+                        ef_list += [{**ef_d, **{event_id:ef_sc_list[f_edge][0]}} for ef_d in ef_dict]
 
-                    print('Done with mode {0} edge {1} out of {2} type {3}'.format(modes[m]['sector'], f_edge, len(ef_sc_list),types[t]))
+                    print('Done with mode {0} event {1} out of {2} type {3}'.format(modes[m]['sector'], f_edge, len(ef_sc_list),types[t]))
 
                 df = pd.DataFrame(ef_list)
+                df.drop('edge_id',axis=1,inplace=True)
 
                 print ('* Assembling {} {} failure results'.format(types[t],modes[m]['sector']))
                 ic_cols = modes[m]['{}_ind_cols'.format(types[t])]
@@ -302,7 +330,7 @@ def main():
                 select_cols = ['origin_id', 'destination_id', 'origin_province', 'destination_province', dist_types[t], time_types[t],
                                cost_types[t]] + ic_cols
                 flow_df_select = flow_df[select_cols]
-                flow_df_select = merge_failure_results(flow_df_select,df,'edge_id',modes[m]['{}_tons_column'.format(types[t])],
+                flow_df_select = merge_failure_results(flow_df_select,df,event_id,modes[m]['{}_tons_column'.format(types[t])],
                     dist_types[t],time_types[t],cost_types[t])
 
                 del df
@@ -320,10 +348,10 @@ def main():
                 flow_df_select.to_csv(df_path, index=False,encoding='utf-8-sig')
 
                 print ('* Assembling {} {} failure isolation results'.format(types[t],modes[m]['sector']))
-                select_cols = ['edge_id','origin_province', 'destination_province','no_access'] + ic_cols
+                select_cols = [event_id,'origin_province', 'destination_province','no_access'] + ic_cols
                 edge_impact = flow_df_select[select_cols]
                 edge_impact = edge_impact[edge_impact['no_access'] == 1]
-                edge_impact = edge_impact.groupby(['edge_id', 'origin_province', 'destination_province'])[ic_cols].sum().reset_index()
+                edge_impact = edge_impact.groupby([event_id, 'origin_province', 'destination_province'])[ic_cols].sum().reset_index()
 
                 if single_edge == True:
                     file_name = 'single_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
@@ -336,7 +364,7 @@ def main():
                 print ('* Assembling {} {} failure rerouting results'.format(types[t],modes[m]['sector']))
                 edge_impact = flow_df_select[select_cols+[tr_loss]]
                 edge_impact = edge_impact[edge_impact['no_access'] == 0]
-                edge_impact = edge_impact.groupby(['edge_id', 'origin_province', 'destination_province'])[tr_loss,modes[m]['{}_tons_column'.format(types[t])]].sum().reset_index()
+                edge_impact = edge_impact.groupby([event_id, 'origin_province', 'destination_province'])[tr_loss,modes[m]['{}_tons_column'.format(types[t])]].sum().reset_index()
 
                 if single_edge == True:
                     file_name = 'single_edge_failures_rerout_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
@@ -346,9 +374,9 @@ def main():
                 df_path = os.path.join(rerouting,file_name)
                 edge_impact.to_csv(df_path, index = False,encoding='utf-8-sig')
 
-                select_cols = ['edge_id','no_access',tr_loss,modes[m]['{}_tons_column'.format(types[t])]]
+                select_cols = [event_id,'no_access',tr_loss,modes[m]['{}_tons_column'.format(types[t])]]
                 edge_impact = flow_df_select[select_cols]
-                edge_impact = edge_impact.groupby(['edge_id', 'no_access'])[
+                edge_impact = edge_impact.groupby([event_id, 'no_access'])[
                     select_cols[2:]].sum().reset_index()
 
                 if modes[m]['min_tons_column'] == modes[m]['max_tons_column']:
@@ -359,7 +387,7 @@ def main():
             print ('* Assembling {} min-max failure results'.format(modes[m]['sector']))
             edge_impact = edge_fail_ranges[0]
             edge_impact = pd.merge(edge_impact, edge_fail_ranges[1], how='left', on=[
-                                   'edge_id', 'no_access']).fillna(0)
+                                   event_id, 'no_access']).fillna(0)
 
             del edge_fail_ranges
             if single_edge == True:

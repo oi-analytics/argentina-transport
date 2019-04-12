@@ -332,7 +332,7 @@ def main():
                     file_name = 'multiple_edge_failures_all_{0}_{1}_{2}_percent_disrupt_multi_modal.csv'.format(modes[m]['sector'], types[t],int(perct))
 
                 df_path = os.path.join(all_fail_scenarios,file_name)
-                flow_df_select.drop('new_path',axis=1,inplace=True)
+                # flow_df_select.drop('new_path',axis=1,inplace=True)
                 flow_df_select.to_csv(df_path, index=False,encoding='utf-8-sig')
 
                 print ('* Assembling {} {} failure isolation results'.format(types[t],modes[m]['sector']))

@@ -71,8 +71,8 @@ from oia.transport_flow_and_failure_functions import *
 from tqdm import tqdm
 
 
-def create_hazard_attributes_for_network(intersection_dir,climate_scenario,year,sector,hazard_files,
-    hazard_df,thresholds,commune_shape,network_id_column,network_type=''):
+def create_hazard_event_attributes_for_network(intersection_dir,climate_scenario,year,sector,hazard_files,
+    hazard_df,thresholds,commune_shape,network_id_column,hazard_event_id,network_type=''):
     """Extract results of network edges/nodes and hazard intersections to collect
     network-hazard intersection attributes
 
@@ -129,6 +129,7 @@ def create_hazard_attributes_for_network(intersection_dir,climate_scenario,year,
         for file in files:
             if file.endswith(".shp"):
                 hazard_dict = {}
+                hazard_dict['event_id'] = hazard_event_id
                 hazard_dict['sector'] = sector
                 hazard_shp = os.path.join(root, file)
                 hz_file = file.split('_')
@@ -154,7 +155,7 @@ def create_hazard_attributes_for_network(intersection_dir,climate_scenario,year,
                             network_id_column,
                             network_type = network_type)
 
-                print ('Done with file',file)
+                print ('Done with file {} in event {}'.format(file,hazard_event_id))
 
     data_df = pd.DataFrame(data_dict)
     data_df_cols = data_df.columns.values.tolist()
@@ -196,14 +197,6 @@ def main():
     national_results = 'Yes'
     climate_scenarios = ['Baseline','Future_Med','Future_High']
     years = [2016,2050,2050]
-
-    # Give the paths to the input data files
-    # load provinces and get geometry of the right province
-    print('* Reading provinces dataframe')
-    province_path = os.path.join(incoming_data_path,'2','provincia','Provincias.shp')
-    provinces = gpd.read_file(province_path,encoding='utf-8')
-    provinces = provinces.to_crs({'init': 'epsg:4326'})
-    sindex_provinces = provinces.sindex
     
     '''Assign provinces to zones
     '''
@@ -213,58 +206,59 @@ def main():
     zones = gpd.read_file(zones_path,encoding='utf-8')
     zones = zones.to_crs({'init': 'epsg:4326'})
     zones.rename(columns={'OBJECTID':'department_id','Name':'department_name','Geometry':'geom_type'},inplace=True)
+    sindex_zones = zones.sindex
 
-    zones['province_name'] = zones.progress_apply(lambda x: extract_value_from_gdf(
-        x, sindex_provinces, provinces,'nombre'), axis=1)
-    zones['province_id'] = zones.progress_apply(lambda x: extract_value_from_gdf(
-        x, sindex_provinces, provinces,'OBJECTID'), axis=1)
-
-
-    hazard_description_file = os.path.join(
-        data_path, 'flood_data', 'hazard_data_folder_data_info.xlsx')
-    hazard_sheet = 'file_contents'
+    print('* Reading event dataframe')
+    events_path = os.path.join(data_path, 'flood_data',
+                                'Darthmouth_events', 'darthmouth_event_set_arg.shp')
+    events = gpd.read_file(events_path,encoding='utf-8')
+    events = events.to_crs({'init': 'epsg:4326'})
 
     # Specify the output files and paths to be created
     output_dir = os.path.join(output_path, 'hazard_scenarios')
     if os.path.exists(output_dir) == False:
         os.mkdir(output_dir)
 
-    # Read hazard datasets desciptions
-    print ('* Reading hazard datasets desciptions')
-    hazard_df = pd.read_excel(hazard_description_file, sheet_name=hazard_sheet)
-    hazard_files = hazard_df['file_name'].values.tolist()
-
-
-
     # Process national scale results
     if national_results == 'Yes':
         print ('* Processing national scale results')
-        data_excel = os.path.join(
-            output_dir,'national_scale_hazard_intersections.xlsx')
-        nat_excel_writer = pd.ExcelWriter(data_excel)
         for m in range(len(modes)):
+            mode_df = pd.read_excel(os.path.join(output_dir,'national_scale_hazard_intersections.xlsx'),sheet_name=modes[m],encoding='utf-8-sig')
             mode_data_df = []
-            for cl_sc in range(len(climate_scenarios)):
-                intersection_dir = os.path.join(
-                    output_path,
-                    'networks_hazards_intersection_shapefiles',
-                    '{}_hazard_intersections'.format(modes[m]),climate_scenarios[cl_sc])
+            event_set = []
+            for event_idx,event_val in events.iterrows():
+                intersected_zones = zones.iloc[list(sindex_zones.intersection(event_val['geometry'].bounds))].reset_index()
+                intersected_zones = intersected_zones[['department_id']]
+                intersected_zones['event_id'] = [event_val['id']]*len(intersected_zones.index)
+                intersected_zones = pd.merge(intersected_zones,mode_df,how='left',on=['department_id']).fillna(0)
+                intersected_zones = intersected_zones[intersected_zones[modes_id_cols[m]] != 0]
+                
+                event_df = intersected_zones[[modes_id_cols[m],'event_id','climate_scenario','probability']].set_index(['event_id','climate_scenario','probability'])
+                events_select = list(set(event_df.index.values.tolist()))
+                for e in events_select:
+                    event_desc = '{}_1in{}_{}'.format(e[0],int(1.0/e[2]),e[1])
+                    event_mode_ids = list(set(event_df.loc[[e],modes_id_cols[m]].values.tolist()))
+                    # print (event_mode_ids)
+                    event_set += list(zip([event_desc]*len(event_mode_ids),event_mode_ids))
+                    # print (event_set) 
 
-                if modes[m] in ['road','rail','bridge']:
-                    ntype = 'edges'
-                else:
-                    ntype = 'nodes'
-                data_df = create_hazard_attributes_for_network(
-                    intersection_dir,climate_scenarios[cl_sc],years[cl_sc],modes[m],hazard_files,hazard_df,
-                    thresholds,zones,modes_id_cols[m],network_type=ntype)
+                mode_data_df.append(intersected_zones)
+                print ('* Done with event {} for {}'.format(event_val['id'],modes[m]))
+            mode_data_df = pd.concat(mode_data_df,axis=0,sort='False', ignore_index=True)
+            mode_data_df = mode_data_df[mode_data_df[modes_id_cols[m]] != 0]
+            mode_data_df.to_csv(os.path.join(output_dir,'{}_event_intersections.csv'.format(modes[m])),index=False,encoding='utf-8-sig')
+            '''Create events
+            '''
+            # event_df = mode_data_df[[modes_id_cols[m],'event_id','climate_scenario','probability']].set_index(['event_id','climate_scenario','probability'])
+            # events = list(set(event_df.index.values.tolist()))
+            # event_set = []
+            # for e in events:
+            #     event_desc = '{}_1in{}_{}'.format(e[0],int(1.0/e[2]),e[1])
+            #     event_set.append((event_desc,list(set(event_df.loc[[e],modes_id_cols[m]].values.tolist())))) 
 
-                mode_data_df.append(data_df)
-                del data_df
-
-            mode_data_df = pd.concat(mode_data_df,axis=0,sort='False', ignore_index=True)    
-            mode_data_df.to_excel(nat_excel_writer, modes[m], index=False,encoding='utf-8-sig')
-            nat_excel_writer.save()
-            del mode_data_df
+            event_set = pd.DataFrame(event_set,columns=['event_id',modes_id_cols[m]])
+            event_set.to_csv(os.path.join(output_dir,'{}_event_set.csv'.format(modes[m])),index=False,encoding='utf-8-sig')
+            del mode_data_df, event_set
 
 
 
