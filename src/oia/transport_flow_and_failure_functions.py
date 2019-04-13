@@ -448,34 +448,11 @@ def write_flow_paths_to_network_files(save_paths_df,
     del gdf_edges, save_paths_df
 
 def get_flow_paths_indexes_of_edges(flow_dataframe,path_criteria):
-    edge_path_index = []
-    for idx,flow in flow_dataframe.iterrows():
-        fp = ast.literal_eval(flow[path_criteria])
-        edge_path_index.append(dict(zip(fp,[idx]*len(fp))))
-
-    return {k: list(filter(None.__ne__, [d.get(k) for d in edge_path_index])) for k in set().union(*edge_path_index)}
-
-def get_flow_paths_indexes_of_edges_new_old(flow_dataframe,path_criteria):
-    edge_path_index = []
-    for idx,flow in flow_dataframe.iterrows():
-        fp = ast.literal_eval(flow[path_criteria])
-        edge_path_index.append(dict(zip(fp,[[idx]]*len(fp))))
-        edge_path_index = [{k: list(itertools.chain.from_iterable(list(filter(None.__ne__, [d.get(k) for d in edge_path_index])))) for k in set().union(*edge_path_index)}]
-        # print ('* Done with path:',idx)
-    return edge_path_index[0]
-
-def get_flow_paths_indexes_of_edges_new(flow_dataframe,path_criteria):
     tqdm.pandas()
     flow_dataframe[path_criteria] = flow_dataframe.progress_apply(lambda x:ast.literal_eval(x[path_criteria]),axis=1)
-    # dd = defaultdict(list)
-    # for k,v in zip(chain.from_iterable(flow_dataframe.path_criteria.ravel()), flow_dataframe.index.repeat(flow_dataframe.path_criteria.str.len()).tolist()):
-    #     dd[k].append(v)
-    
-    idx = np.arange(len(flow_dataframe)).repeat(flow_dataframe[path_criteria].str.len(), 0)
-    s = flow_dataframe.iloc[idx, ].assign(B=np.concatenate(flow_dataframe[path_criteria].values))['B']
-    edge_path_index = s.to_frame().reset_index().groupby('B')['index'].apply(list).to_dict()
-    
-    return edge_path_index
+    edge_path_index = defaultdict(list)
+    for k,v in zip(chain.from_iterable(flow_dataframe[path_criteria].ravel()), flow_dataframe.index.repeat(flow_dataframe[path_criteria].str.len()).tolist()):
+        edge_path_index[k].append(v)
 
 def identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria):
     """Identify all paths that contain an edge
@@ -620,55 +597,62 @@ def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
     edge_fail_dictionary = []
     # network_df,edge_path_index = identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria)
 
-    edge_path_index = []
-    edge_path_index += list(itertools.chain.from_iterable([path_idx for path_key,path_idx in edge_flow_path_indexes.items() if path_key in edge_failure_set]))
-    # print ('* All Failure paths',len(edge_path_index))
-    # print ('* Unique Failure paths',len(edge_path_index))
+    edge_path_index = list(set(list(chain.from_iterable([path_idx for path_key,path_idx in edge_path_idx.items() if path_key in edge_failure_set]))))
+    
     if edge_path_index:
-        edge_path_index = list(set(edge_path_index))
+        select_flows = flow_df[flow_df.index.isin(edge_path_index)]
+
         network_graph = ig.Graph.TupleList(network_df_in[~network_df_in['edge_id'].isin(edge_failure_set)].itertuples(
             index=False), edge_attrs=list(network_df_in.columns)[2:])
-        
-        if len(edge_failure_set) == 1:
-            edge_failure_set = edge_failure_set[0]
 
-        nodes_name = np.asarray([x['name'] for x in network_graph.vs])
-        select_flows = flow_dataframe[flow_dataframe.index.isin(edge_path_index)]
+        A = sorted(network_graph.clusters().subgraphs(),key=lambda l:len(l.es['edge_id']),reverse=True)
+        access_flows = []
+        edge_fail_dictionary = []
+        for i in range(len(A)):
+            network_graph = A[i]
+            nodes_name = np.asarray([x['name'] for x in network_graph.vs])
+            po_access = select_flows[(select_flows['origin_id'].isin(nodes_name)) & (
+                    select_flows['destination_id'].isin(nodes_name))]
 
-        no_access = select_flows[(~select_flows['origin_id'].isin(nodes_name)) | (
-            ~select_flows['destination_id'].isin(nodes_name))]
-        if len(no_access.index) > 0:
-            for iter_, value in no_access.iterrows():
-                edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': value['origin_id'], 'destination_id': value['destination_id'],
-                                             'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
-
-        po_access = select_flows[(select_flows['origin_id'].isin(nodes_name)) & (
-            select_flows['destination_id'].isin(nodes_name))]
-        if len(po_access.index) > 0:
-            po_access = po_access.set_index('origin_id')
-            origins = list(set(po_access.index.values.tolist()))
-            for origin in origins:
-                destinations = po_access.loc[[origin], 'destination_id'].values.tolist()
-                tons = po_access.loc[[origin], tons_criteria].values.tolist()
-                paths = network_graph.get_shortest_paths(
-                    origin, destinations, weights=cost_criteria, output="epath")
-                for p in range(len(paths)):
-                    if len(paths[p]) > 0:
+            if len(po_access.index) > 0:
+                po_access['access'] = 1
+                po_access = po_access.set_index('origin_id')
+                origins = list(set(po_access.index.values.tolist()))
+                for o in range(len(origins)):
+                    origin = origins[o]
+                    destinations = po_access.loc[[origin], 'destination_id'].values.tolist()
+                    tons = po_access.loc[[origin], 'total_tons'].values.tolist()
+                    paths = network_graph.get_shortest_paths(
+                        origin, destinations, weights='min_gcost', output="epath")
+                    for p in range(len(paths)):
                         new_dist = 0
                         new_time = 0
                         new_gcost = 0
                         new_path = []
                         for n in paths[p]:
                             new_dist += network_graph.es[n]['length']
-                            new_time += network_graph.es[n][time_criteria]
-                            new_gcost += network_graph.es[n][cost_criteria]
+                            new_time += network_graph.es[n]['min_time']
+                            new_gcost += network_graph.es[n]['min_gcost']
                             new_path.append(network_graph.es[n]['edge_id'])
                         edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destinations[p],
                                                      'new_path':new_path,'new_distance': new_dist, 'new_time': new_time,
                                                      'new_cost': tons[p]*new_gcost, 'no_access': 0})
-                    else:
-                        edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destinations[p],
-                                                     'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
+
+                po_access = po_access.reset_index()
+                access_flows.append(po_access[['origin_id','destination_id','access']])
+            del po_access
+
+        access_flows = pd.concat(access_flows,axis=0,sort='False', ignore_index=True)
+        select_flows = pd.merge(select_flows,access_flows,how='left',on=['origin_id','destination_id']).fillna(0)
+
+        no_access = select_flows[select_flows['access'] == 0]
+
+        if len(no_access.index) > 0:
+            for value in no_access.itertuples():
+                edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': getattr(value,'origin_id'), 'destination_id': getattr(value,'destination_id'),
+                                             'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
+
+        del no_access
 
     return edge_fail_dictionary
 
