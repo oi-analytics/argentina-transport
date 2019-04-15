@@ -74,10 +74,12 @@ import subprocess
 import sys
 import copy
 
+import ast
 import geopandas as gpd
 import igraph as ig
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from oia.transport_flow_and_failure_functions import *
 from oia.utils import *
 
@@ -187,6 +189,7 @@ def main():
 
     4. Specify the output files and paths to be created
     """
+    tqdm.pandas()
     incoming_data_path, data_path, calc_path, output_path = load_config()['paths']['incoming_data'],load_config()['paths']['data'], load_config()[
         'paths']['calc'], load_config()['paths']['output']
 
@@ -241,6 +244,24 @@ def main():
                 }
     ]
 
+    modes = [
+                {
+                'sector':'road',
+                'vehicle_wt':15,
+                'min_tons_column':'total_tons',
+                'max_tons_column':'total_tons',
+                'min_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                    'Carnes','Combustibles',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+                    'INDUSTRIA MANUFACTURERA','Industrializados',
+                    'Mineria','PESCA','Regionales','Semiterminados'],
+                'max_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                    'Carnes','Combustibles',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+                    'INDUSTRIA MANUFACTURERA','Industrializados',
+                    'Mineria','PESCA','Regionales','Semiterminados']},
+    ]
+
     # Give the paths to the input data files
     network_data_path = os.path.join(data_path,'network')
 
@@ -293,11 +314,13 @@ def main():
             # Create network shapefiles with flows
             print ('* Creating {} network shapefiles and csv files with flows'.format(modes[m]['sector']))
 
-            # all_paths = pd.read_csv(os.path.join(flow_paths_dir,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m],int(perct))),encoding='utf-8-sig')
+            all_paths = pd.read_csv(os.path.join(flow_paths_dir,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m]['sector'],int(perct))),encoding='utf-8-sig')
+            all_paths['min_edge_path'] = all_paths.progress_apply(lambda x:ast.literal_eval(x['min_edge_path']),axis=1)
+            all_paths['max_edge_path'] = all_paths.progress_apply(lambda x:ast.literal_eval(x['max_edge_path']),axis=1)
+
             shp_output_path = os.path.join(flow_shp_dir,'weighted_flows_{}_{}_percent.shp'.format(modes[m]['sector'],int(perct)))
             csv_output_path = os.path.join(flow_csv_dir,'weighted_flows_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct)))
 
-            min_max_exist = []
             write_flow_paths_to_network_files(all_paths,
                 modes[m]['min_ind_cols'],modes[m]['max_ind_cols'],gdf_edges,
                 save_csv=True, save_shapes=True, shape_output_path=shp_output_path,csv_output_path=csv_output_path)

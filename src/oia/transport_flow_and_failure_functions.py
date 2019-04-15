@@ -290,7 +290,9 @@ def network_od_path_estimations(graph,
     return edge_path_list, path_dist_list, path_time_list, path_gcost_list
 
 def write_flow_paths_to_network_files(save_paths_df,
-    min_industry_columns,max_industry_columns,gdf_edges, save_csv=True, save_shapes=True, shape_output_path='',csv_output_path=''):
+    min_industry_columns,
+    max_industry_columns,
+    gdf_edges, save_csv=True, save_shapes=True, shape_output_path='',csv_output_path=''):
     """Write results to Shapefiles
 
     Outputs ``gdf_edges`` - a shapefile with minimum and maximum tonnage flows of all
@@ -316,49 +318,27 @@ def write_flow_paths_to_network_files(save_paths_df,
         Path where the output csv file will be stored
 
     """
+    edge_min_path_index = defaultdict(list)
+    edge_max_path_index = defaultdict(list)
+    for row in save_paths_df.itertuples():
+        for item in row.min_edge_path:
+            edge_min_path_index[item].append(row.Index)
+        for item in row.max_edge_path:
+            edge_max_path_index[item].append(row.Index)
+
     edge_flows_min = []
     edge_flows_max = []
-    for iter_, path in save_paths_df.iterrows():
-        path_ind_list_min = []
-        path_ind_list_max = []
+    for vals in edge_min_path_index.keys():
+        edge_flows = pd.DataFrame(list(zip([vals]*len(edge_min_path_index[vals]),edge_min_path_index[vals])),columns=['edge_id','path_index']).set_index('path_index')
+        edge_flows = edge_flows.join(save_paths_df, how='left').fillna(0)
+        edge_flows_min.append(edge_flows[['edge_id'] + min_industry_columns].groupby('edge_id')[min_industry_columns].sum().reset_index())
+        print ('Done with edge {} for min'.format(vals))
 
-        # min_path = ast.literal_eval(path['min_edge_path'])
-        # max_path = ast.literal_eval(path['max_edge_path'])
-
-        min_path = path['min_edge_path']
-        max_path = path['max_edge_path']
-        path_ind_list_min.append(min_path)
-        path_ind_list_max.append(max_path)
-        if min_industry_columns == max_industry_columns: 
-            for ind in min_industry_columns:
-                path_ind_list_min.append([path[ind]]*len(min_path))
-                path_ind_list_max.append([path[ind]]*len(max_path))
-        else:
-            for ind in min_industry_columns:
-                path_ind_list_min.append([path[ind]]*len(min_path))
-            for ind in max_industry_columns:
-                path_ind_list_max.append([path[ind]]*len(max_path))
-
-
-
-        # print (path_ind_list)
-        path_ind_list_min = list(zip(*path_ind_list_min))
-        path_ind_list_max = list(zip(*path_ind_list_max))
-        # print (path_ind_list)
-        # path_ind_list_df = pd.DataFrame(path_ind_list,columns=['edge_id'] + industry_columns)
-        edge_flows_min.append(pd.DataFrame(path_ind_list_min,columns=['edge_id'] + min_industry_columns))
-        if len(edge_flows_min) > 1:
-            edge_flows_min = [pd.concat(edge_flows_min,axis=0,sort='False', ignore_index=True).groupby('edge_id')[min_industry_columns].sum().reset_index()]
-
-        edge_flows_max.append(pd.DataFrame(path_ind_list_max,columns=['edge_id'] + max_industry_columns))
-        if len(edge_flows_max) > 1:
-            edge_flows_max = [pd.concat(edge_flows_max,axis=0,sort='False', ignore_index=True).groupby('edge_id')[max_industry_columns].sum().reset_index()]
-    
-
-        print ('Done with path',iter_)
-
-        # if iter_ > 1000:
-        #     break
+    for vals in edge_max_path_index.keys():
+        edge_flows = pd.DataFrame(list(zip([vals]*len(edge_max_path_index[vals]),edge_max_path_index[vals])),columns=['edge_id','path_index']).set_index('path_index')
+        edge_flows = edge_flows.join(save_paths_df, how='left').fillna(0)
+        edge_flows_max.append(edge_flows[['edge_id'] + max_industry_columns].groupby('edge_id')[max_industry_columns].sum().reset_index())
+        print ('Done with edge {} for max'.format(vals))
 
     if len(edge_flows_min) == 1:
         edge_flows_min = edge_flows_min[0]
@@ -373,7 +353,6 @@ def write_flow_paths_to_network_files(save_paths_df,
         edge_flows_max = pd.concat(edge_flows_max,axis=0,sort='False', ignore_index=True).groupby('edge_id')[max_industry_columns].sum().reset_index()
 
     # print (edge_flows_max)
-
     if min_industry_columns == max_industry_columns:
         for ind in min_industry_columns:
             edge_flows_min.rename(columns={ind:'min_'+ind},inplace=True)
@@ -392,50 +371,6 @@ def write_flow_paths_to_network_files(save_paths_df,
         edge_flows.drop('swap', axis=1, inplace=True)
 
     gdf_edges = pd.merge(gdf_edges,edge_flows,how='left',on=['edge_id']).fillna(0)
-
-    # gdf_edges = gdf_edges.set_index('edge_id')
-
-    # min_ind_cols = []
-    # max_ind_cols = []
-    # ch_min_ind_cols = []
-    # ch_max_ind_cols = []
-    # for ind in industry_columns:
-    #     min_ind_cols.append('min_{}'.format(ind))
-    #     max_ind_cols.append('max_{}'.format(ind))
-    #     if ind in min_max_exist:
-    #         ch_min_ind_cols.append('min_{}'.format(ind))
-    #         ch_max_ind_cols.append('max_{}'.format(ind))
-    #     else:
-    #         ch_min_ind_cols.append(ind)
-    #         ch_max_ind_cols.append(ind)
-
-    # for i in range(len(min_ind_cols)):
-    #     gdf_edges[min_ind_cols[i]] = 0
-    #     gdf_edges[max_ind_cols[i]] = 0
-
-    # # print (gdf_edges)
-    # for iter_, path in save_paths_df.iterrows():
-    #     min_path = ast.literal_eval(path['min_edge_path']) 
-    #     max_path = ast.literal_eval(path['max_edge_path'])
-
-    #     # gdf_edges.loc[gdf_edges['edge_id'].isin(min_path), min_ind_cols] += path[ch_min_ind_cols].values
-    #     # gdf_edges.loc[gdf_edges['edge_id'].isin(max_path), max_ind_cols] += path[ch_max_ind_cols].values
-    #     # print (min_path)
-    #     gdf_edges.loc[min_path, min_ind_cols] += path[ch_min_ind_cols].values
-    #     gdf_edges.loc[max_path, max_ind_cols] += path[ch_max_ind_cols].values
-
-    #     print ('Done with path',iter_)
-
-    #     if iter_ > 1000:
-    #         break
-
-    # tqdm.pandas()
-    # for ind in industry_columns:
-    #     gdf_edges['swap'] = gdf_edges.progress_apply(lambda x: swap_min_max(x,'min_{}'.format(ind),'max_{}'.format(ind)), axis = 1)
-    #     gdf_edges[['min_{}'.format(ind),'max_{}'.format(ind)]] = gdf_edges['swap'].progress_apply(pd.Series)
-    #     gdf_edges.drop('swap', axis=1, inplace=True)
-
-    # gdf_edges = gdf_edges.reset_index()
 
     if save_shapes == True:
         gdf_edges.to_file(shape_output_path,encoding='utf-8')

@@ -280,14 +280,18 @@ def main():
             # Perform failure analysis
             edge_fail_ranges = []
             for t in range(len(types)):
+                edge_path_idx = get_flow_paths_indexes_of_edges(flow_df,path_types[t])
                 print ('* Performing {} {} failure analysis'.format(types[t],modes[m]['sector']))
                 ef_list = []
                 for f_edge in range(len(ef_sc_list)):
                     fail_edge = ef_sc_list[f_edge]
                     if isinstance(fail_edge,list) == False:
                         fail_edge = [fail_edge]
-                    ef_dict = igraph_scenario_edge_failures(
-                            G_df, fail_edge, flow_df, modes[m]['vehicle_wt'],path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
+                    # ef_dict = igraph_scenario_edge_failures(
+                    #         G_df, fail_edge, flow_df, modes[m]['vehicle_wt'],path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
+                    ef_dict = igraph_scenario_edge_failures_new(
+                            G_df, fail_edge, flow_df,edge_path_idx, modes[m]['vehicle_wt'],path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
+                    
                     if ef_dict:
                         ef_list += ef_dict
 

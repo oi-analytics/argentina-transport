@@ -217,7 +217,7 @@ def main(config):
     '''Assign provinces to roads
     '''
     print('* Reading nodes dataframe and adding provinces and zone ids')
-    road_nodes_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','combined_roads_nodes_4326.shp')
+    road_nodes_path = os.path.join(data_path,'network','road_nodes.shp')
     road_nodes = gpd.read_file(road_nodes_path,encoding='utf-8').fillna(0)
     road_nodes = road_nodes.to_crs({'init': 'epsg:4326'})
     road_nodes.columns = map(str.lower, road_nodes.columns)

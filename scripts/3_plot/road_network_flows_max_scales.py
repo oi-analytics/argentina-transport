@@ -20,7 +20,7 @@ def main():
     mode_file_path = os.path.join(config['paths']['data'], 'network',
                                    'road_edges.shp')
     flow_file_path = os.path.join(config['paths']['output'], 'flow_mapping_combined',
-                                   'weighted_flows_national_road_100_percent.csv')
+                                   'weighted_flows_road_100_percent.csv')
 
 
     mode_file = gpd.read_file(mode_file_path,encoding='utf-8')
@@ -70,31 +70,50 @@ def main():
         },
     ]
 
+    plot_sets = [
+        {
+            'file_tag': 'commodities',
+            'legend_label': "AADF ('000 tons/day)",
+            'divisor': 1000,
+            'columns': ['max_{}'.format(x) for x in ['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                    'Carnes','Combustibles',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+                    'INDUSTRIA MANUFACTURERA','Industrializados',
+                    'Mineria','PESCA','Regionales','Semiterminados']],
+            'title_cols': ['Total tonnage','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                    'Carnes','Combustibles',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+                    'INDUSTRIA MANUFACTURERA','Industrializados',
+                    'Mineria','PESCA','Regionales','Semiterminados'],
+            'significance':0
+        },
+    ]
+
     '''scatter plot of flows and tonnages
     '''
-    veh_tons = mode_file[mode_file['road_type'] == 'national']
-    vt = [(int(str(record['tmda'])),record['max_total_tons']) 
-                        for iter_, record in veh_tons.iterrows() if str(record['tmda']).isdigit() is True]
-    v,t = zip(*vt)
-    mpl.style.use('ggplot')
-    mpl.rcParams['font.size'] = 10.
-    mpl.rcParams['font.family'] = 'tahoma'
-    mpl.rcParams['axes.labelsize'] = 10.
-    mpl.rcParams['xtick.labelsize'] = 9.
-    mpl.rcParams['ytick.labelsize'] = 9.
+    # veh_tons = mode_file[mode_file['road_type'] == 'national']
+    # vt = [(int(str(record['tmda'])),record['max_total_tons']) 
+    #                     for iter_, record in veh_tons.iterrows() if str(record['tmda']).isdigit() is True]
+    # v,t = zip(*vt)
+    # mpl.style.use('ggplot')
+    # mpl.rcParams['font.size'] = 10.
+    # mpl.rcParams['font.family'] = 'tahoma'
+    # mpl.rcParams['axes.labelsize'] = 10.
+    # mpl.rcParams['xtick.labelsize'] = 9.
+    # mpl.rcParams['ytick.labelsize'] = 9.
 
-    fig, ax = plt.subplots(figsize=(8, 4))
-    plt.scatter(np.array(v),np.array(t),color='black')
-    ax.set_yscale('symlog')
-    ax.set_xscale('symlog')
-    plt.xlabel('AADT (Vehicles/day)', fontweight='bold')
-    plt.ylabel('AADF (tons/day)', fontweight='bold')
-    plt.tight_layout()
-    plot_file_path = os.path.join(
-                config['paths']['figures'],
-                'road-vehicle-tons-correlations.png')
-    plt.savefig(plot_file_path, dpi=500)
-    plt.close()
+    # fig, ax = plt.subplots(figsize=(8, 4))
+    # plt.scatter(np.array(v),np.array(t),color='black')
+    # ax.set_yscale('symlog')
+    # ax.set_xscale('symlog')
+    # plt.xlabel('AADT (Vehicles/day)', fontweight='bold')
+    # plt.ylabel('AADF (tons/day)', fontweight='bold')
+    # plt.tight_layout()
+    # plot_file_path = os.path.join(
+    #             config['paths']['figures'],
+    #             'road-vehicle-tons-correlations.png')
+    # plt.savefig(plot_file_path, dpi=500)
+    # plt.close()
 
 
     for plot_set in plot_sets:
