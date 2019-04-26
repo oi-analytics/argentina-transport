@@ -17,23 +17,23 @@ def main(config):
     # - NOMBRE => name
     def transform_node(record):
         record['properties'] = {
-            'id': "air_{}".format(record['properties']['CODIG_IATA']),
-            'name': record['properties']['NOMBRE'],
-            'iata': record['properties']['CODIG_IATA'],
+            'node_id': "air_{}".format(record['properties']['local']),
+            'name': record['properties']['denominacion'],
+            'iata': record['properties']['local'],
         }
         return record
 
     node_schema = {
         'geometry': 'Point',
         'properties': [
-            ('id', 'str'),
+            ('node_id', 'str'),
             ('name', 'str'),
             ('iata', 'str'),
         ]
     }
 
     transform_geo_file(
-        source_file=os.path.join(incoming_data_path, '5', 'aeropuertos', 'aeropuerto.shp'),
+        source_file=os.path.join(incoming_data_path, 'argentina-geoserver-gml', 'observ-_3.4.4.1.5_aerodromos_anac_2018.view.gml'),
         sink_file=os.path.join(data_path, 'network', 'air_nodes.shp'),
         sink_schema=node_schema,
         transform_record=transform_node
@@ -52,21 +52,21 @@ def main(config):
     def transform_edge(record):
         orig_props = record['properties']
         record['properties'] = {
-            'id': "air_{}-{}".format(
+            'edge_id': "air_{}-{}".format(
                 record['properties']['Cod_Orig'], record['properties']['Cod_Dest']),
-            'from_id': "air_{}".format(
+            'from_node': "air_{}".format(
                 record['properties']['Cod_Orig']),
-            'to_id': "air_{}".format(
+            'to_node': "air_{}".format(
                 record['properties']['Cod_Dest']),
             'from_iata': record['properties']['Cod_Orig'],
             'to_iata': record['properties']['Cod_Dest'],
         }
-        if record['properties']['id'] == 'air_BAR-MDP' and orig_props['Long'] == 898:
+        if record['properties']['edge_id'] == 'air_BAR-MDP' and orig_props['Long'] == 898:
             print("Correcting", orig_props)
-            record['properties']['id'] = 'air_MDP-DRY'
-            record['properties']['from_id'] = 'air_MDP'
+            record['properties']['edge_id'] = 'air_MDP-DRY'
+            record['properties']['from_node'] = 'air_MDP'
             record['properties']['from_iata'] = 'MDP'
-            record['properties']['to_id'] = 'air_DRY'
+            record['properties']['to_node'] = 'air_DRY'
             record['properties']['to_iata'] = 'DRY'
 
         return record
@@ -74,10 +74,10 @@ def main(config):
     edge_schema = {
         'geometry': 'LineString',
         'properties': [
-            ('id', 'str'),
-            ('from_id', 'str'),
+            ('edge_id', 'str'),
+            ('from_node', 'str'),
             ('from_iata', 'str'),
-            ('to_id', 'str'),
+            ('to_node', 'str'),
             ('to_iata', 'str'),
         ]
     }
@@ -94,7 +94,7 @@ def main(config):
     with fiona.open(edge_input_file) as source:
         with open(os.path.join(data_path, 'usage', 'air_passenger.csv'), 'w', newline='') as fh:
             w = csv.writer(fh)
-            w.writerow(('id', 'from_id', 'to_id', 'from_iata', 'to_iata', 'passengers_2016'))
+            w.writerow(('edge_id', 'from_node', 'to_node', 'from_iata', 'to_iata', 'passengers_2016'))
             for record in source:
                 props = record['properties']
                 row = (

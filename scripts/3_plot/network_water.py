@@ -18,15 +18,15 @@ def main(config):
 
     # data
     output_file = os.path.join(config['paths']['figures'], 'network-water-map.png')
-    water_edge_file = os.path.join(data_path, 'network', 'water_edges.shp')
-    water_node_file = os.path.join(data_path, 'network', 'water_nodes.shp')
+    water_edge_file = os.path.join(data_path, 'network', 'port_edges.shp')
+    water_node_file = os.path.join(data_path, 'network', 'port_nodes.shp')
 
     # basemap
     proj_lat_lon = ccrs.PlateCarree()
     ax = get_axes()
     plot_basemap(ax, data_path)
     scale_bar(ax, location=(0.8, 0.05))
-    plot_basemap_labels(ax, data_path, include_regions=False)
+    plot_basemap_labels(ax, data_path, include_regions=True)
 
     colors = {
         'Waterway': '#045a8d',
@@ -45,6 +45,7 @@ def main(config):
 
     # nodes
     nodes = geopandas.read_file(water_node_file)
+    nodes = nodes[nodes['name']!='none']
     ax.scatter(
         list(nodes.geometry.x),
         list(nodes.geometry.y),

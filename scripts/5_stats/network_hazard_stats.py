@@ -95,40 +95,136 @@ def main():
         'paths']['calc'], load_config()['paths']['output']
 
     # Supply input data and parameters
-    modes = ['road','rail']
-    out_modes = ['national_roads', 'national_rail', 'air_ports', 'inland_ports', 'sea_ports']
-    national_results = 'Yes'
+    modes = ['road','rail','bridge','port','air']
+    boundary_cols = ['department_id','department_name','province_id','province_name']
+    hazard_cols = ['climate_scenario','hazard_type','model','probability','year']
 
     # Give the paths to the input data files
     hazard_path = os.path.join(output_path, 'hazard_scenarios')
 
+    # Give the paths to the input data files
+    national_file = os.path.join(output_path,
+            'network_stats',
+            'national_scale_boundary_stats.xlsx')
+
+    national_hazard_file = os.path.join(output_path,
+            'hazard_scenarios',
+            'national_scale_hazard_intersections.xlsx')
 
     # Specify the output files and paths to be created
     output_dir = os.path.join(output_path, 'network_stats')
     if os.path.exists(output_dir) == False:
         os.mkdir(output_dir)
 
-    # Process national scale results
-    if national_results == 'Yes':
-        print ('* Processing national scale results')
-        data_excel = os.path.join(
-            output_dir,'national_scale_hazard_intersection_summary_stats.xlsx')
-        nat_excel_writer = pd.ExcelWriter(data_excel)
-        for m in range(len(modes)):
-            national_data = pd.read_csv(
-                os.path.join(
-                    data_path,
-                    'network',
-                    '{}_edges.csv'.format(modes[m])
-                    ),encoding='utf-8'
-                )
-            hazard_data = pd.read_csv(os.path.join(
-                hazard_path,
-                'national_{}_hazard_intersections_risks.csv'.format(modes[m])))
-            data_df = hazard_data_summary(hazard_data,national_data)
-            data_df.to_excel(nat_excel_writer, modes[m], index=False)
-            nat_excel_writer.save()
-            del data_df
+
+    data_excel = os.path.join(
+            output_dir,'national_scale_hazard_intersections_summary.xlsx')
+    nat_excel_writer = pd.ExcelWriter(data_excel)
+
+    data_excel = os.path.join(
+            output_dir,'national_scale_hazard_intersections_boundary_summary.xlsx')
+    bd_excel_writer = pd.ExcelWriter(data_excel)
+    '''Flood stats
+    '''
+    for m in range(len(modes)):
+        flood_df = pd.read_excel(national_hazard_file,sheet_name=modes[m],encoding='utf-8-sig')
+        network_stats = pd.read_excel(national_file,sheet_name=modes[m],encoding='utf-8-sig')
+        if modes[m] in ['road','rail']:
+            edges = pd.read_csv(os.path.join(data_path,'network','{}_edges.csv'.format(modes[m])),encoding='utf-8-sig')
+            if modes[m] == 'road':
+                edges = edges[(edges['road_type'] == 'national') | (edges['road_type'] == 'province') | (edges['road_type'] == 'rural')]
+            else:
+                flow_df = pd.read_csv(os.path.join(output_path,'flow_mapping_combined','weighted_flows_rail_100_percent.csv'))
+                edges = pd.merge(edges,flow_df,how='left',on=['edge_id'])
+                edges = edges[edges['max_total_tons'] > 0]
+                del flow_df
+
+            flood_df = flood_df[flood_df['edge_id'].isin(edges['edge_id'].values.tolist())]
+            network_stats = network_stats[network_stats['edge_id'].isin(edges['edge_id'].values.tolist())]
+            
+            network_stats = network_stats.groupby(boundary_cols)['length'].sum().reset_index()
+            network_stats.rename(columns={'length':'total_length_m'},inplace=True)
+            hazard_stats = flood_df.groupby(boundary_cols+hazard_cols)['length'].sum().reset_index()
+            hazard_stats.rename(columns={'length':'exposure_length_m'},inplace=True)
+            hazard_stats = pd.merge(hazard_stats,network_stats,how='left', on=boundary_cols).fillna(0)
+            hazard_stats['percentage'] = 100.0*hazard_stats['exposure_length_m']/hazard_stats['total_length_m']
+            hazard_stats.to_excel(bd_excel_writer, modes[m], index=False,encoding='utf-8-sig')
+            bd_excel_writer.save()
+
+            total_length = edges['length'].values.sum()
+
+            flood_df = flood_df[['hazard_type','climate_scenario','probability','length']].groupby(['hazard_type','climate_scenario','probability'])['length'].sum().reset_index()
+            flood_df['length'] = 0.001*flood_df['length']
+            flood_df.rename(columns={'length':'exposure_length_km'},inplace=True)
+            flood_df['return period'] = 1/flood_df['probability']
+
+            flood_df['percentage_exposure'] = 1.0*flood_df['exposure_length_km']/total_length
+            # flood_df.to_csv(os.path.join(output_path,'network_stats','{}_flood_exposure.csv'.format(modes[m])))
+            del edges, network_stats, hazard_stats
+        else:
+            if modes[m] == 'port':
+                flood_df = flood_df.sort_values(by=['min_depth'],ascending=False)
+                flood_df.drop_duplicates(subset=['node_id','hazard_type','climate_scenario','probability'],keep='first',inplace=True)
+                nodes = gpd.read_file(os.path.join(data_path,'network','port_nodes.shp'),encoding='utf-8')
+                nodes = nodes[~nodes['name'].isin([0,'0','none'])]
+                node_id = 'node_id'
+            elif modes[m] == 'air':
+                flood_df = flood_df.sort_values(by=['min_depth'],ascending=False)
+                flood_df.drop_duplicates(subset=['node_id','hazard_type','climate_scenario','probability'],keep='first',inplace=True)
+                nodes = gpd.read_file(os.path.join(data_path,'network','air_nodes.shp'),encoding='utf-8')
+                flow_df = pd.read_csv(os.path.join(output_path,'network_stats','air_ranked_flows.csv'),encoding='utf-8-sig')
+                nodes = pd.merge(nodes,flow_df,how='left',on=['node_id']).fillna(0)
+                nodes = nodes[nodes['passengers_2016'] > 0]
+                node_id = 'node_id'
+                del flow_df
+            elif modes[m] == 'bridge':
+                flood_df = flood_df.sort_values(by=['min_depth'],ascending=False)
+                flood_df.drop_duplicates(subset=['bridge_id','department_id','hazard_type','climate_scenario','probability'],keep='first',inplace=True)
+                nodes = gpd.read_file(os.path.join(data_path,'network','bridges.shp'),encoding='utf-8')
+                node_id = 'bridge_id'
+
+            flood_df = flood_df[flood_df[node_id].isin(nodes[node_id].values.tolist())]
+            network_stats = network_stats[network_stats[node_id].isin(nodes[node_id].values.tolist())]
+
+            network_stats = network_stats.groupby(boundary_cols).size().reset_index(name='total_counts')
+            hazard_stats = flood_df.groupby(boundary_cols+hazard_cols).size().reset_index(name='counts')
+            hazard_stats = pd.merge(hazard_stats,network_stats,how='left', on=boundary_cols).fillna(0)
+            hazard_stats['percentage'] = 100.0*hazard_stats['counts']/hazard_stats['total_counts']
+            hazard_stats.to_excel(bd_excel_writer, modes[m], index=False,encoding='utf-8-sig')
+            bd_excel_writer.save()
+
+
+            total_nodes = len(nodes.index)
+            flood_df = flood_df[['hazard_type','climate_scenario','probability']].groupby(['hazard_type','climate_scenario','probability']).size().reset_index(name='counts')
+            flood_df['percentage_exposure'] = 1.0*flood_df['counts']/total_nodes
+            # flood_df.to_csv(os.path.join(output_path,'network_stats','{}_flood_exposure.csv'.format(modes[m])))
+            del nodes, network_stats, hazard_stats
+
+        flood_df.to_excel(nat_excel_writer, modes[m], index=False,encoding='utf-8-sig')
+        nat_excel_writer.save()
+        print ('* Done with mode:',modes[m])
+
+    # # Process national scale results
+    # if national_results == 'Yes':
+    #     print ('* Processing national scale results')
+    #     data_excel = os.path.join(
+    #         output_dir,'national_scale_hazard_intersection_summary_stats.xlsx')
+    #     nat_excel_writer = pd.ExcelWriter(data_excel)
+    #     for m in range(len(modes)):
+    #         national_data = pd.read_csv(
+    #             os.path.join(
+    #                 data_path,
+    #                 'network',
+    #                 '{}_edges.csv'.format(modes[m])
+    #                 ),encoding='utf-8'
+    #             )
+    #         hazard_data = pd.read_csv(os.path.join(
+    #             hazard_path,
+    #             'national_{}_hazard_intersections_risks.csv'.format(modes[m])))
+    #         data_df = hazard_data_summary(hazard_data,national_data)
+    #         data_df.to_excel(nat_excel_writer, modes[m], index=False)
+    #         nat_excel_writer.save()
+    #         del data_df
 
 
 

@@ -77,9 +77,8 @@ def main():
         'paths']['calc'], load_config()['paths']['output']
 
     # Supply input data and parameters
-    modes = ['road','rail']
-    out_modes = ['national_roads', 'national_rail', 'air_ports', 'inland_ports', 'sea_ports']
-    national_results = 'Yes'
+    modes = ['road', 'rail','bridge', 'air', 'port']
+    modes_id_cols = ['edge_id','edge_id','bridge_id','node_id','node_id']
 
     # Give the paths to the input data files
     # load provinces and get geometry of the right province
@@ -111,34 +110,33 @@ def main():
 
 
     # Process national scale results
-    if national_results == 'Yes':
-        print ('* Processing national scale results')
-        data_excel = os.path.join(
-            output_dir,'national_scale_stats.xlsx')
-        nat_excel_writer = pd.ExcelWriter(data_excel)
-        for m in range(len(modes)):
-            if modes[m] in ['road','rail']:
-                ntype = 'edges'
-                network_shp = os.path.join(
-                    data_path,
-                    'network',
-                    '{}_edges.shp'.format(modes[m]))
-            else:
-                ntype = 'nodes'
-                network_shp = os.path.join(
-                    data_path,
-                    'network',
-                    '{}_nodes.shp'.format(modes[m]))
+    data_excel = os.path.join(
+        output_dir,'national_scale_boundary_stats.xlsx')
+    nat_excel_writer = pd.ExcelWriter(data_excel)
+    for m in range(len(modes)):
+        if modes[m] in ['road','rail','bridge']:
+            ntype = 'edges'
+            network_shp = os.path.join(
+                data_path,
+                'network',
+                '{}_edges.shp'.format(modes[m]))
+        else:
+            ntype = 'nodes'
+            network_shp = os.path.join(
+                data_path,
+                'network',
+                '{}_nodes.shp'.format(modes[m]))
 
-            data_dict = []
-            data_dict = spatial_scenario_selection(
-                            network_shp, zones, {}, data_dict,
-                            network_type = ntype)
-            data_df = pd.DataFrame(data_dict)
+        data_dict = []
+        data_dict = spatial_scenario_selection(
+                        network_shp, zones, {}, data_dict,
+                        modes_id_cols[m],
+                        network_type = ntype)
+        data_df = pd.DataFrame(data_dict)
 
-            data_df.to_excel(nat_excel_writer, modes[m], index=False)
-            nat_excel_writer.save()
-            del data_df
+        data_df.to_excel(nat_excel_writer, modes[m], index=False)
+        nat_excel_writer.save()
+        del data_df
 
 
 

@@ -520,11 +520,11 @@ def main(config):
 
     edges.to_file(os.path.join(data_path,'network','road_edges.shp'),encoding = 'utf-8')
     edges.drop('geometry', axis=1, inplace=True)
-    edges.to_csv(os.path.join(data_path,'network','road_edges.csv'),encoding='utf-8',index=False)
+    edges.to_csv(os.path.join(data_path,'network','road_edges.csv'),encoding='utf-8-sig',index=False)
 
     nodes.to_file(os.path.join(data_path,'network', 'road_nodes.shp'),encoding = 'utf-8')
     nodes.drop('geometry', axis=1, inplace=True)
-    nodes.to_csv(os.path.join(data_path,'network','road_nodes.csv'),encoding='utf-8',index=False)
+    nodes.to_csv(os.path.join(data_path,'network','road_nodes.csv'),encoding='utf-8-sig',index=False)
 
 if __name__ == '__main__':
     CONFIG = load_config()

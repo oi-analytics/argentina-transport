@@ -24,16 +24,15 @@ def assign_veh_to_roads(x,veh_list):
         String value of terrain as flat or mountain
     """
     veh_no = 0
-    road_no = x.road_no
-    if str(road_no).isdigit():
-        road_no = int(road_no)
+    road_no = str(x.road_name).split(',')
+    road_no = [int(y) for y in road_no if y.isdigit() is True] + [y for y in road_no if y.isdigit() is False]
 
     for vals in veh_list:
-        rn = vals.ruta
-        if str(rn).isdigit():
+        rn = str(vals.ruta)
+        if rn.isdigit() is True:
             rn = int(rn)
 
-        if road_no == rn and x.inicio_km >= vals.inicio and x.fin_km <= vals.fin:
+        if rn in road_no and x.prog_min >= vals.inicio and x.prog_max <= vals.fin:
             veh_no = 0.01*(vals.ca + vals.semi)*vals.tmd
             break
 
@@ -45,7 +44,7 @@ def main():
     config = load_config()
     data_path = config['paths']['data']
     incoming_data_path = config['paths']['incoming_data']
-    road_file_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','combined_roads_edges_4326.shp')
+    road_file_path = os.path.join(data_path,'network','road_edges.shp')
     # road_file_path = os.path.join(config['paths']['data'], 'network',
     #                                'road_edges.shp')
 

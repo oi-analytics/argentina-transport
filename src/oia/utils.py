@@ -52,11 +52,15 @@ def transform_geo_file(source_file, sink_file, sink_schema, transform_record):
         function that accepts a fiona record and returns a fiona record or None
     """
     with fiona.open(source_file) as source:
+        if any(source.crs):
+            crs = source.crs
+        else:
+            crs = {'init': 'epsg:4326'}
         with fiona.open(
                 sink_file,
                 'w',
                 driver=source.driver,
-                crs=source.crs,
+                crs=crs,
                 schema=sink_schema) as sink:
             for record in source:
                 out_record = transform_record(record)

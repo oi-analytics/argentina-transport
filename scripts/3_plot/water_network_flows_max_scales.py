@@ -1,14 +1,15 @@
-"""Road network flow maps
+"""Coastal network flows map
 """
 import os
 import sys
 from collections import OrderedDict
 
-import geopandas as gpd
 import pandas as pd
+import geopandas as gpd
 import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
+import numpy as np
 from shapely.geometry import LineString
 from oia.utils import *
 
@@ -16,53 +17,39 @@ from oia.utils import *
 def main():
     config = load_config()
     data_path = config['paths']['data']
-    mode_file_path = os.path.join(config['paths']['data'], 'network',
-                                   'rail_edges.shp')
-    flow_file_path = os.path.join(config['paths']['output'], 'flow_mapping_combined',
-                                   'weighted_flows_rail_100_percent.csv')
+    coastal_edge_file_path = os.path.join(
+        config['paths']['data'], 'network', 'port_edges.shp')
+    coastal_flow_file_path = os.path.join(config['paths']['output'], 'flow_mapping_combined',
+                                   'weighted_flows_port_100_percent.csv')
+    coastal_node_file = os.path.join(config['paths']['data'],
+                                 'network', 'port_nodes.shp')
 
 
-    mode_file = gpd.read_file(mode_file_path,encoding='utf-8')
-    flow_file = pd.read_csv(flow_file_path)
+    mode_file = gpd.read_file(coastal_edge_file_path,encoding='utf-8')
+    flow_file = pd.read_csv(coastal_flow_file_path,encoding='utf-8-sig')
     mode_file = pd.merge(mode_file,flow_file,how='left', on=['edge_id']).fillna(0)
 
-    flow_color = '#006d2c'
-    no_flow_color = '#636363'
+    color = '#045a8d'
+    color_by_type = {'coastal Line': color}
+
     plot_sets = [
         {
             'file_tag': 'commodities',
             'legend_label': "AADF ('000 tons/day)",
             'divisor': 1000,
-            'columns': ['max_total_tons','max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
-                        'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
-                        'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES' 
-                        ],
+            'columns': ['max_{}'.format(x) for x in ['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                    'COMERCIO',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS',
+                    'INDUSTRIA MANUFACTURERA',
+                    'PESCA','TRANSPORTE Y COMUNICACIONES']],
             'title_cols': ['Total tonnage','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                    'COMERCIO','EXPLOTACIÓN DE MINAS Y CANTERAS',
-                    'INDUSTRIA MANUFACTURERA','TRANSPORTE Y COMUNICACIONES'
-                    ],
+                    'COMERCIO',
+                    'EXPLOTACIÓN DE MINAS Y CANTERAS',
+                    'INDUSTRIA MANUFACTURERA',
+                    'PESCA','TRANSPORTE Y COMUNICACIONES'],
             'significance':0
         },
     ]
-
-    plot_sets = [
-        {
-            'file_tag': 'commodities',
-            'legend_label': "AADF ('000 tons/day)",
-            'divisor': 1000,
-            'columns': ['max_total_tons'
-                        ],
-            'title_cols': ['Total tonnage'
-                    ],
-            'significance':0
-        },
-    ]
-
-    styles = OrderedDict([
-                ('1',  Style(color='#006d2c', zindex=6, label='Flow')),
-                ('2', Style(color='#636363', zindex=8, label='No flow')),
-            ])
-    tot_length = 0
     for plot_set in plot_sets:
         for c in range(len(plot_set['columns'])):
             # basemap
@@ -70,52 +57,40 @@ def main():
             ax = get_axes()
             plot_basemap(ax, data_path)
             scale_bar(ax, location=(0.8, 0.05))
-            plot_basemap_labels(ax, data_path, include_regions=False)
+            plot_basemap_labels(ax, data_path, include_regions=True)
 
-            # generate weight bins
-            column = plot_set['columns'][c]
+            column = 'max_total_tons'
             weights = [
-                record['max_total_tons']
-                for iter_, record in mode_file.iterrows() if record['max_total_tons'] > 0
+                record[column]
+                for iter_, record in mode_file.iterrows()
             ]
             max_weight = max(weights)
-            width_by_range = generate_weight_bins(weights, n_steps=9, width_step=0.015, interpolation='log')
+            width_by_range = generate_weight_bins(weights, n_steps=7, width_step=0.02)
 
             geoms_by_range = {}
             for value_range in width_by_range:
                 geoms_by_range[value_range] = []
 
+            column = plot_set['columns'][c]
             for iter_, record in mode_file.iterrows():
                 val = record[column]
                 geom = record.geometry
-                if val > 0:
-                    tot_length += line_length(geom)
-                    for nmin, nmax in geoms_by_range:
-                        if nmin <= val and val < nmax:
-                            geoms_by_range[(nmin, nmax)].append(geom)
-                else:
-                    ax.add_geometries(
-                    [geom],
-                    crs=proj_lat_lon,
-                    linewidth=0.5,
-                    edgecolor=no_flow_color,
-                    facecolor='none',
-                    zorder=1)
+                for nmin, nmax in geoms_by_range:
+                    if nmin <= val and val < nmax:
+                        geoms_by_range[(nmin, nmax)].append(geom)
 
-            print ('Operational network {} kms'.format(tot_length))
-
-                        # plot
+            # plot
             for range_, width in width_by_range.items():
                 ax.add_geometries(
                     [geom.buffer(width) for geom in geoms_by_range[range_]],
                     crs=proj_lat_lon,
                     edgecolor='none',
-                    facecolor=flow_color,
+                    facecolor=color,
                     zorder=2)
 
-            x_l = -62.4
+            x_l = -58.4
             x_r = x_l + 0.4
-            base_y = -42.1
+            base_y = -45.1
             y_step = 0.8
             y_text_nudge = 0.2
             x_text_nudge = 0.2
@@ -145,15 +120,15 @@ def main():
 
             for (i, ((nmin, nmax), width)) in enumerate(width_by_range.items()):
                 y = base_y - (i*y_step)
-                line = LineString([(x_l, y), (x_r, y)]).buffer(width)
+                line = LineString([(x_l, y), (x_r, y)])
                 ax.add_geometries(
-                    [line],
+                    [line.buffer(width)],
                     crs=proj_lat_lon,
                     linewidth=0,
-                    edgecolor='#000000',
-                    facecolor='#000000',
+                    edgecolor=color,
+                    facecolor=color,
                     zorder=2)
-                if abs(nmin - max_weight) < 1e-5:
+                if nmin == max_weight:
                     value_template = '>{:.' + str(significance_ndigits) + 'f}'
                     label = value_template.format(
                         round(max_weight/divisor, significance_ndigits))
@@ -162,7 +137,6 @@ def main():
                         'f}-{:.' + str(significance_ndigits) + 'f}'
                     label = value_template.format(
                         round(nmin/divisor, significance_ndigits), round(nmax/divisor, significance_ndigits))
-
                 ax.text(
                     x_r + x_text_nudge,
                     y - y_text_nudge,
@@ -172,10 +146,8 @@ def main():
                     size=10)
 
             plt.title('Max AADF - {}'.format(plot_set['title_cols'][c]), fontsize=10)
-            legend_from_style_spec(ax, styles)
-            output_file = os.path.join(
-                config['paths']['figures'],
-                'rail_flow-map-{}-{}-max-scale.png'.format(plot_set['file_tag'], column))
+            output_file = os.path.join(config['paths']['figures'],
+                                       'water_flow-map-{}-max-scale.png'.format(column))
             save_fig(output_file)
             plt.close()
 

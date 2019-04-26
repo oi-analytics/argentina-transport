@@ -47,7 +47,7 @@ def spatial_scenario_selection(network_shapefile, polygon_dataframe, hazard_dict
 
 
     if len(line_gpd.index) > 0 and len(poly_gpd.index) > 0:
-        # print (network_shapefile,len(line_gpd.index),len(poly_gpd.index))
+        print (network_shapefile,len(line_gpd.index),len(poly_gpd.index))
         line_gpd.columns = map(str.lower, line_gpd.columns)
         poly_gpd.columns = map(str.lower, poly_gpd.columns)
 

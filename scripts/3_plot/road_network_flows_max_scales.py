@@ -37,7 +37,7 @@ def main():
             'file_tag': 'tmda',
             'legend_label': "AADT ('000 vehicles/day)",
             'divisor': 1000,
-            'columns': ['tmda'],
+            'columns': ['tmda_count'],
             'title_cols': ['Vehicle Count'],
             'significance':0
         },
@@ -62,58 +62,32 @@ def main():
     plot_sets = [
         {
             'file_tag': 'tmda',
-            'legend_label': "AADT ('000 vehicles/day)",
-            'divisor': 1000,
-            'columns': ['tmda'],
+            'legend_label': "AADT (vehicles/day)",
+            'divisor': 365.0,
+            'columns': ['tmda_count'],
             'title_cols': ['Vehicle Count'],
             'significance':0
         },
     ]
 
-    plot_sets = [
-        {
-            'file_tag': 'commodities',
-            'legend_label': "AADF ('000 tons/day)",
-            'divisor': 1000,
-            'columns': ['max_{}'.format(x) for x in ['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                    'Carnes','Combustibles',
-                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-                    'INDUSTRIA MANUFACTURERA','Industrializados',
-                    'Mineria','PESCA','Regionales','Semiterminados']],
-            'title_cols': ['Total tonnage','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                    'Carnes','Combustibles',
-                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-                    'INDUSTRIA MANUFACTURERA','Industrializados',
-                    'Mineria','PESCA','Regionales','Semiterminados'],
-            'significance':0
-        },
-    ]
-
-    '''scatter plot of flows and tonnages
-    '''
-    # veh_tons = mode_file[mode_file['road_type'] == 'national']
-    # vt = [(int(str(record['tmda'])),record['max_total_tons']) 
-    #                     for iter_, record in veh_tons.iterrows() if str(record['tmda']).isdigit() is True]
-    # v,t = zip(*vt)
-    # mpl.style.use('ggplot')
-    # mpl.rcParams['font.size'] = 10.
-    # mpl.rcParams['font.family'] = 'tahoma'
-    # mpl.rcParams['axes.labelsize'] = 10.
-    # mpl.rcParams['xtick.labelsize'] = 9.
-    # mpl.rcParams['ytick.labelsize'] = 9.
-
-    # fig, ax = plt.subplots(figsize=(8, 4))
-    # plt.scatter(np.array(v),np.array(t),color='black')
-    # ax.set_yscale('symlog')
-    # ax.set_xscale('symlog')
-    # plt.xlabel('AADT (Vehicles/day)', fontweight='bold')
-    # plt.ylabel('AADF (tons/day)', fontweight='bold')
-    # plt.tight_layout()
-    # plot_file_path = os.path.join(
-    #             config['paths']['figures'],
-    #             'road-vehicle-tons-correlations.png')
-    # plt.savefig(plot_file_path, dpi=500)
-    # plt.close()
+    # plot_sets = [
+    #     {
+    #         'file_tag': 'commodities',
+    #         'legend_label': "AADF ('000 tons/day)",
+    #         'divisor': 1000,
+    #         'columns': ['max_{}'.format(x) for x in ['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+    #                 'Carnes','Combustibles',
+    #                 'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+    #                 'INDUSTRIA MANUFACTURERA','Industrializados',
+    #                 'Mineria','PESCA','Regionales','Semiterminados']],
+    #         'title_cols': ['Total tonnage','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+    #                 'Carnes','Combustibles',
+    #                 'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
+    #                 'INDUSTRIA MANUFACTURERA','Industrializados',
+    #                 'Mineria','PESCA','Regionales','Semiterminados'],
+    #         'significance':0
+    #     },
+    # ]
 
 
     for plot_set in plot_sets:
@@ -131,7 +105,8 @@ def main():
                 weights = [int(str(record[column])) 
                         for iter_, record in mode_file.iterrows() if str(record[column]).isdigit() is True and int(str(record[column])) > 0]
                 max_weight = max(weights)
-                width_by_range = generate_weight_bins(weights, n_steps=9, width_step=0.01, interpolation='log')
+                width_by_range = generate_weight_bins(weights, n_steps=7, width_step=0.02)
+                # width_by_range = generate_weight_bins(weights, n_steps=9, width_step=0.01, interpolation='log')
             else:
                 column = 'max_total_tons'
                 weights = [

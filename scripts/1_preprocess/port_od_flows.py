@@ -347,7 +347,10 @@ def main(config):
 
     port_edges.to_file(os.path.join(data_path,'network','port_edges.shp'),encoding = 'utf-8')
     port_edges.drop('geometry', axis=1, inplace=True)
-    port_edges.to_csv(os.path.join(data_path,'network','port_edges.csv'),encoding='utf-8',index=False)
+    port_edges.to_csv(os.path.join(data_path,'network','port_edges.csv'),encoding='utf-8-sig',index=False)
+
+    port_nodes.drop('geometry', axis=1, inplace=True)
+    port_nodes.to_csv(os.path.join(data_path,'network','port_nodes.csv'),encoding='utf-8-sig',index=False)
 
 if __name__ == '__main__':
     CONFIG = load_config()

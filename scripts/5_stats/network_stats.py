@@ -81,33 +81,103 @@ def main():
     
     '''Road stats
     '''
-    road_edges = pd.read_csv(os.path.join(data_path,'network','road_edges.csv'),encoding='utf-8')
+    road_edges = pd.read_csv(os.path.join(data_path,'network','road_edges.csv'),encoding='utf-8-sig')
+    road_nodes = pd.read_csv(os.path.join(data_path,'network','road_nodes.csv'),encoding='utf-8-sig')
+    print ('* Number of road edges:',len(road_edges.index))
+    print ('* Number of road nodes:',len(road_nodes.index))
+
+
+    road_quality = road_edges[road_edges['road_type'] == 'national'][['road_quality','length']]
+    road_quality['score'] = 0
+    mask = (road_quality['road_quality'] > 0) & (road_quality['road_quality'] <= 3)
+    road_quality.loc[mask, 'score'] = 1
+    mask = (road_quality['road_quality'] > 3) & (road_quality['road_quality'] <= 5)
+    road_quality.loc[mask, 'score'] = 2
+    mask = (road_quality['road_quality'] > 5) & (road_quality['road_quality'] <= 7)
+    road_quality.loc[mask, 'score'] = 3
+    mask = (road_quality['road_quality'] > 7)
+    road_quality.loc[mask, 'score'] = 4
+    road_quality_lengths = road_quality[['score','length']].groupby(['score'])['length'].sum().reset_index().to_csv(os.path.join(output_path,'network_stats','national_road_quality.csv'))
+
+    road_service = road_edges[road_edges['road_type'] == 'national'][['road_service','length']]
+    road_service['score'] = 0
+    mask = (road_service['road_service'] > 0) & (road_service['road_service'] <= 1)
+    road_service.loc[mask, 'score'] = 1
+    mask = (road_service['road_service'] > 1) & (road_service['road_service'] <= 2)
+    road_service.loc[mask, 'score'] = 2
+    mask = (road_service['road_service'] > 2) & (road_service['road_service'] <= 3)
+    road_service.loc[mask, 'score'] = 3
+    mask = (road_service['road_service'] > 3)
+    road_service.loc[mask, 'score'] = 4
+    road_service_lengths = road_service[['score','length']].groupby(['score'])['length'].sum().reset_index().to_csv(os.path.join(output_path,'network_stats','national_road_service.csv'))
+
+    road_edge_types = road_edges[['road_type']].groupby(['road_type']).size().reset_index(name='counts').to_csv(os.path.join(output_path,'network_stats','road_numbers.csv'))
+    road_edge_lengths = road_edges[['road_type','length']].groupby(['road_type'])['length'].sum().reset_index().to_csv(os.path.join(output_path,'network_stats','road_lengths.csv'))
+
     road_conditions = road_edges[['road_type',
                                 'road_cond','length']].groupby(['road_type',
-                                    'road_cond'])['length'].sum().to_csv(os.path.join(output_path,'network_stats','road_conditions.csv'))
+                                    'road_cond'])['length'].sum().reset_index().to_csv(os.path.join(output_path,'network_stats','road_conditions.csv'))
+
+    road_surface = road_edges[['road_type',
+                                'surface','length']].groupby(['road_type',
+                                    'surface'])['length'].sum().reset_index().to_csv(os.path.join(output_path,'network_stats','road_surface.csv'))
+
+    
+    '''National bridge stats
+    '''
+    road_bridges = pd.read_csv(os.path.join(data_path,'network','bridges.csv'),encoding='utf-8-sig')
+    print ('* Number of road bridges:',len(road_bridges.index))
+
+    bridge_numbers = road_bridges[['structure_type']].groupby(['structure_type']).size().reset_index(name='counts').to_csv(os.path.join(output_path,'network_stats','bridge_numbers.csv'))
+
 
     '''Rail stats
     '''
-    rail_edges = pd.read_csv(os.path.join(data_path,'network','rail_edges.csv'),encoding='utf-8')
-    rail_speeds_min = rail_edges[['linea','min_speed']].groupby(['linea'])['min_speed'].min().reset_index()
-    rail_speeds_max = rail_edges[['linea','max_speed']].groupby(['linea'])['max_speed'].max().reset_index()
-    rail_speeds = pd.merge(rail_speeds_min,rail_speeds_max,how='left',on=['linea']).to_csv(os.path.join(output_path,'network_stats','rail_speeds.csv'))
+    rail_edges = pd.read_csv(os.path.join(data_path,'network','rail_edges.csv'),encoding='utf-8-sig')
+    rail_nodes = pd.read_csv(os.path.join(data_path,'network','rail_nodes.csv'),encoding='utf-8-sig')
+    print ('* Number of rail edges:',len(rail_edges.index))
+    print ('* Number of rail nodes:',len(rail_nodes.index))
+    print ('* Number of rail stations:',len(rail_nodes[rail_nodes['nombre']!='0'].index))     
 
-    '''Flood stats
+    '''Port stats
     '''
-    for m in range(len(modes)):
-        flood_df = pd.read_excel(os.path.join(output_path,'hazard_scenarios','national_scale_hazard_intersections.xlsx'),sheet_name=modes[m])
-        flood_df = flood_df[['hazard_type','probability','length']].groupby(['hazard_type','probability'])['length'].sum().reset_index()
-        flood_df['length'] = 0.001*flood_df['length']
-        flood_df['return period'] = 1/flood_df['probability']
+    port_edges = pd.read_csv(os.path.join(data_path,'network','port_edges.csv'),encoding='utf-8-sig')
+    port_nodes = gpd.read_file(os.path.join(data_path,'network','port_nodes.shp'),encoding='utf-8').fillna('none')
+    port_nodes.drop('geometry', axis=1, inplace=True)
+    port_nodes.to_csv(os.path.join(data_path,'network','port_nodes.csv'),encoding='utf-8-sig',index=False)
+    print ('* Number of port edges:',len(port_edges.index))
+    print ('* Number of port nodes:',len(port_nodes.index))
+    print ('* Number of named ports:',len(port_nodes[port_nodes['name']!='none'].index))
 
-        if modes[m] == 'road':
-            total_length = road_edges['length'].values.sum()
-        elif modes[m] == 'rail':
-            total_length = rail_edges['length'].values.sum()
 
-        flood_df['percentage_exposure'] = 1.0*flood_df['length']/total_length
-        flood_df.to_csv(os.path.join(output_path,'network_stats','{}_flood_exposure.csv'.format(modes[m])))
+    '''Airline stats
+    '''
+    air_edges = gpd.read_file(os.path.join(data_path,'network','air_edges.shp'),encoding='utf-8')
+    air_nodes = gpd.read_file(os.path.join(data_path,'network','air_nodes.shp'),encoding='utf-8').fillna('none')
+    air_nodes.drop('geometry', axis=1, inplace=True)
+    air_nodes.to_csv(os.path.join(data_path,'network','air_nodes.csv'),encoding='utf-8-sig',index=False)
+    air_edges.drop('geometry', axis=1, inplace=True)
+    air_edges.to_csv(os.path.join(data_path,'network','air_edges.csv'),encoding='utf-8-sig',index=False)
+    print ('* Number of airline routes:',len(air_edges.index))
+    print ('* Number of airports:',len(air_nodes.index))
+
+
+
+    # '''Flood stats
+    # '''
+    # for m in range(len(modes)):
+    #     flood_df = pd.read_excel(os.path.join(output_path,'hazard_scenarios','national_scale_hazard_intersections.xlsx'),sheet_name=modes[m])
+    #     flood_df = flood_df[['hazard_type','climate_scenario','probability','length']].groupby(['hazard_type','climate_scenario','probability'])['length'].sum().reset_index()
+    #     flood_df['length'] = 0.001*flood_df['length']
+    #     flood_df['return period'] = 1/flood_df['probability']
+
+    #     if modes[m] == 'road':
+    #         total_length = road_edges['length'].values.sum()
+    #     elif modes[m] == 'rail':
+    #         total_length = rail_edges['length'].values.sum()
+
+    #     flood_df['percentage_exposure'] = 1.0*flood_df['length']/total_length
+    #     flood_df.to_csv(os.path.join(output_path,'network_stats','{}_flood_exposure.csv'.format(modes[m])))
 
 
 if __name__ == "__main__":
