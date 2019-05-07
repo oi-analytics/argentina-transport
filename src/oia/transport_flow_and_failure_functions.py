@@ -75,7 +75,7 @@ def spatial_scenario_selection(network_shapefile, polygon_dataframe, hazard_dict
     del line_gpd, poly_gpd
     return data_dictionary
 
-def combine_hazards_and_network_attributes_and_impacts(hazard_dataframe, network_dataframe):
+def combine_hazards_and_network_attributes_and_impacts(hazard_dataframe, network_dataframe,network_id_column):
     hazard_dataframe.rename(columns={
         'length': 'exposure_length',
         'min_depth': 'min_flood_depth',
@@ -86,7 +86,7 @@ def combine_hazards_and_network_attributes_and_impacts(hazard_dataframe, network
     network_dataframe['edge_length'] = 1000.0*network_dataframe['edge_length']
 
     all_edge_fail_scenarios = pd.merge(hazard_dataframe, network_dataframe, on=[
-        'edge_id'], how='left').fillna(0)
+        network_id_column], how='left').fillna(0)
 
     all_edge_fail_scenarios['percent_exposure'] = 100.0 * \
         all_edge_fail_scenarios['exposure_length']/all_edge_fail_scenarios['edge_length']

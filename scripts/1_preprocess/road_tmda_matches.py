@@ -68,11 +68,13 @@ def main(config):
 
     '''Get road edge network
     '''
-    road_edges_path = os.path.join(data_path,'network','road_edges.shp')
+    edges_geom = gpd.read_file(os.path.join(data_path,'network','road_edges.shp'),encoding='utf-8').fillna(0)
+    edges_geom = edges_geom[['edge_id','geometry']]
 
-    edges_in = road_edges_path
-    edges = gpd.read_file(edges_in,encoding='utf-8').fillna(0)
+    edges = pd.read_csv(os.path.join(data_path,'network','road_edges.csv'),encoding='utf-8-sig')
+    edges = pd.merge(edges,edges_geom,how='left',on=['edge_id'])
     
+    del edges_geom
     '''Add the tmda data
     '''
     for a in attributes_desc:

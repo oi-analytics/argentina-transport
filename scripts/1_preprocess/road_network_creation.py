@@ -118,9 +118,14 @@ def assign_road_terrain_and_width(x,width_terrain_list):
     Returns
         String value of terrain as flat or mountain
     """
-    road_no = x.road_no
-    if str(road_no).isdigit():
-        road_no = int(road_no)
+    road_names = str(x.road_name).split(',')
+    road_no = []
+    for rn in road_names:
+        if str(rn).isdigit():
+            road_no.append(int(rn))
+        else:
+            road_no.append(rn)
+
     terrain = 'flat'
     assumed_width = 0
     if x.road_type == 'national':
@@ -128,7 +133,7 @@ def assign_road_terrain_and_width(x,width_terrain_list):
             rn = vals.road_no
             if str(vals.road_no).isdigit():
                 rn = int(rn)
-            if road_no == rn and x.prog_min >= vals.inital_km and x.prog_max <= vals.final_km:
+            if rn in road_no and x.prog_min >= vals.inital_km and x.prog_max <= vals.final_km:
                 assumed_width = vals.left_width + vals.right_width
                 terrain = vals.terrain
                 break
@@ -249,15 +254,14 @@ def road_shapefile_to_dataframe(edges,road_properties_dataframe,
         'min_tariff_cost','max_tariff_cost'
         ]
 
+    # assign road name
+    edges['road_name'] = edges.progress_apply(assign_road_name, axis=1)
 
     # assgin asset terrain
     road_properties_dataframe = list(road_properties_dataframe.itertuples(index=False))
     edges['width_terrain'] = edges.progress_apply(lambda x: assign_road_terrain_and_width(x,road_properties_dataframe), axis=1)
     edges[['width', 'terrain']] = edges['width_terrain'].apply(pd.Series)
     edges.drop('width_terrain', axis=1, inplace=True)
-
-    # assign road surface
-    edges['road_name'] = edges.progress_apply(assign_road_name, axis=1)
 
     # assign road surface
     edges['surface'] = edges.progress_apply(assign_road_surface, axis=1)
