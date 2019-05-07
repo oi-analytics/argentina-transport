@@ -50,14 +50,14 @@ def main():
             for m_mod in multi_modal:
                 if m_mod == True:
                     if single_edge == True:
-                        file_name = 'single_edge_failures_minmax_national_{0}_{1}_percent_disrupt_multi_modal'.format(modes[m],int(perct))
+                        file_name = 'single_edge_failures_minmax_{0}_{1}_percent_disrupt_multi_modal'.format(modes[m],int(perct))
                     else:
-                        file_name = 'multiple_edge_failures_minmax_national_{0}_{1}_percent_disrupt_multi_modal'.format(modes[m],int(perct))
+                        file_name = 'multiple_edge_failures_minmax_{0}_{1}_percent_disrupt_multi_modal'.format(modes[m],int(perct))
                 else:
                     if single_edge == True:
-                        file_name = 'single_edge_failures_minmax_national_{0}_{1}_percent_disrupt'.format(modes[m],int(perct))
+                        file_name = 'single_edge_failures_minmax_{0}_{1}_percent_disrupt'.format(modes[m],int(perct))
                     else:
-                        file_name = 'multiple_edge_failures_minmax_national_{0}_{1}_percent_disrupt'.format(modes[m],int(perct))
+                        file_name = 'multiple_edge_failures_minmax_{0}_{1}_percent_disrupt'.format(modes[m],int(perct))
 
                 if file_name + '.csv' in os.listdir(csv_data_path):
                     all_results = pd.read_csv(os.path.join(csv_data_path,file_name + '.csv'))
@@ -66,14 +66,14 @@ def main():
                     for t in range(len(types)):
                         if m_mod == True:
                             if single_edge == True:
-                                f_name = 'single_edge_failures_od_losses_national_{0}_{1}_{2}_percent_disrupt_multi_modal_summarized.csv'.format(modes[m], types[t],int(perct))
+                                f_name = 'single_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt_multi_modal_summarized.csv'.format(modes[m], types[t],int(perct))
                             else:
-                                f_name = 'multiple_edge_failures_od_losses_national_{0}_{1}_{2}_percent_disrupt_multi_modal_summarized.csv'.format(modes[m], types[t],int(perct))
+                                f_name = 'multiple_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt_multi_modal_summarized.csv'.format(modes[m], types[t],int(perct))
                         else:
                             if single_edge == True:
-                                f_name = 'single_edge_failures_od_losses_national_{0}_{1}_{2}_percent_disrupt_summarized.csv'.format(modes[m], types[t],int(perct))
+                                f_name = 'single_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt_summarized.csv'.format(modes[m], types[t],int(perct))
                             else:
-                                f_name = 'multiple_edge_failures_od_losses_national_{0}_{1}_{2}_percent_disrupt_summarized.csv'.format(modes[m], types[t],int(perct))
+                                f_name = 'multiple_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt_summarized.csv'.format(modes[m], types[t],int(perct))
 
                         if f_name in os.listdir(econ_data_path):
                             df_path = os.path.join(

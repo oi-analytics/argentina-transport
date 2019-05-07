@@ -65,7 +65,9 @@ def networkedge_hazard_intersection(edge_shapefile, hazard_shapefile, output_sha
     """
     print ('* Starting {} and {} intersections'.format(edge_shapefile,hazard_shapefile))
     line_gpd = gpd.read_file(edge_shapefile)
+    line_gpd.to_crs({'init': 'epsg:4326'})
     poly_gpd = gpd.read_file(hazard_shapefile)
+    poly_gpd.to_crs({'init': 'epsg:4326'})
 
     if len(line_gpd.index) > 0 and len(poly_gpd.index) > 0:
         line_gpd.columns = map(str.lower, line_gpd.columns)
@@ -135,8 +137,10 @@ def networknode_hazard_intersection(node_shapefile, hazard_shapefile, output_sha
     """
     print ('* Starting {} and {} intersections'.format(node_shapefile,hazard_shapefile))
     point_gpd = gpd.read_file(node_shapefile)
+    point_gpd.to_crs({'init': 'epsg:4326'})
     point_gpd.rename(columns={'id':node_id_column},inplace=True)
     poly_gpd = gpd.read_file(hazard_shapefile)
+    poly_gpd.to_crs({'init': 'epsg:4326'})
 
     if len(point_gpd.index) > 0 and len(poly_gpd.index) > 0:
         point_gpd.columns = map(str.lower, point_gpd.columns)
@@ -214,7 +218,7 @@ def main():
         'paths']['calc'], load_config()['paths']['output']
 
     # Supply input data and parameters
-    modes = ['road', 'rail','bridge', 'air', 'water']
+    modes = ['road', 'rail','bridge', 'air', 'port']
     modes_id_cols = ['edge_id','edge_id','bridge_id','node_id','node_id']
     climate_scenarios = ['Baseline','Future_Med','Future_High']
     national_results = 'Yes'
@@ -245,7 +249,7 @@ def main():
 	                print ('* Starting national {} and all hazards intersections'.format(modes[m]))
 	                intersect_networks_and_all_hazards(hazard_dir,edges_in,edges_name,output_dir,modes_id_cols[m],network_type = 'edges')
 
-	            elif modes[m] in ['air', 'water']:
+	            elif modes[m] in ['air', 'port']:
 	                nodes_in = os.path.join(data_path,'network','{}_nodes.shp'.format(modes[m]))
 	                nodes_name = '{}_nodes'.format(modes[m])
 

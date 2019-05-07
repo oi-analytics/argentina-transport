@@ -135,15 +135,19 @@ def main():
     #     }
     # ]
     data_path = config['paths']['data']
-    region_file_path = os.path.join(config['paths']['data'], 'network',
+    road_file_path = os.path.join(config['paths']['data'], 'network',
                                    'road_edges.shp')
-    flow_file_path = os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
-                               'single_edge_failures_minmax_road_100_percent_disrupt.csv')
+    road_file = gpd.read_file(road_file_path,encoding='utf-8')
+    road_file = road_file[road_file['road_type'] == 'national']
 
+    flow_file_path = os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
+                               'single_edge_failures_minmax_bridge_100_percent_disrupt.csv')
+
+    region_file_path = os.path.join(config['paths']['data'], 'network',
+                                   'bridge_edges.shp')
     region_file = gpd.read_file(region_file_path,encoding='utf-8')
     flow_file = pd.read_csv(flow_file_path)
-    region_file = pd.merge(region_file,flow_file,how='left', on=['edge_id']).fillna(0)
-    region_file = region_file[(region_file['road_type'] == 'national') | (region_file['road_type'] == 'province') | (region_file['road_type'] == 'rural')]
+    region_file = pd.merge(region_file,flow_file,how='left', on=['bridge_id']).fillna(0)
 
     for c in range(len(plot_set)):
         proj_lat_lon = ccrs.PlateCarree()
@@ -152,6 +156,14 @@ def main():
         scale_bar(ax, location=(0.8, 0.05))
         plot_basemap_labels(ax, data_path, include_regions=False)
 
+        ax.add_geometries(
+            list(road_file.geometry),
+            crs=proj_lat_lon,
+            linewidth=1.0,
+            edgecolor='#969696',
+            facecolor='none',
+            zorder=5
+        )
         column = plot_set[c]['column']
 
         weights = [
@@ -161,21 +173,18 @@ def main():
         ]
 
         max_weight = max(weights)
-        width_by_range = generate_weight_bins(weights)
+        width_by_range = generate_weight_bins(weights, width_step=0.04, n_steps=5)
 
         road_geoms_by_category = {
                 'national': [],
-                'province': [],
-                'rural': [],
                 'none':[]
         }
         for record in region_file.itertuples():
-            cat = str(record.road_type)
-            if cat not in road_geoms_by_category:
-                raise Exception
             geom = record.geometry
             val = getattr(record,column)
-            if val == 0:
+            if val > 0:
+                cat = 'national'
+            else:
                 cat = 'none'
 
             buffered_geom = None
@@ -190,8 +199,6 @@ def main():
 
         styles = OrderedDict([
                 ('national',  Style(color='#e41a1c', zindex=9, label='National')),  # red
-                ('province', Style(color='#377eb8', zindex=8, label='Provincial')),  # orange
-                ('rural', Style(color='#4daf4a', zindex=7, label='Rural')),  # blue
                 ('none', Style(color='#969696', zindex=6, label='No hazard exposure/effect'))
         ])
 
@@ -266,7 +273,7 @@ def main():
         print ('* Plotting ',plot_set[c]['title'])
         legend_from_style_spec(ax, styles,loc='lower left')
         output_file = os.path.join(
-            config['paths']['figures'], 'road_failure-map-{}.png'.format(column))
+            config['paths']['figures'], 'bridge_failure-map-{}.png'.format(column))
         save_fig(output_file)
         plt.close()
 

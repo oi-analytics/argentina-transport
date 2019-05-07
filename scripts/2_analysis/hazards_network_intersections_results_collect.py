@@ -190,7 +190,7 @@ def main():
         'paths']['calc'], load_config()['paths']['output']
 
     # Supply input data and parameters
-    modes = ['road', 'rail','bridge', 'air', 'water']
+    modes = ['road', 'rail','bridge', 'air', 'port']
     modes_id_cols = ['edge_id','edge_id','bridge_id','node_id','node_id']
     thresholds = [1, 2, 3, 4, 999]
     national_results = 'Yes'

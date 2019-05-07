@@ -1,4 +1,4 @@
-"""rail network risks and adaptation maps
+"""Road network risks and adaptation maps
 """
 import os
 import sys
@@ -53,49 +53,33 @@ def main():
     ]
     data_path = config['paths']['data']
 
+    road_file_path = os.path.join(config['paths']['data'], 'network',
+                                   'road_edges.shp')
+    road_file = gpd.read_file(road_file_path,encoding='utf-8')
+    road_file = road_file[road_file['road_type'] == 'national']
+
     region_file_path = os.path.join(config['paths']['data'], 'network',
-                                   'rail_edges.shp')
-    flow_file_path = os.path.join(config['paths']['output'], 'flow_mapping_combined',
-                                   'weighted_flows_rail_100_percent.csv')
+                               'bridge_edges.shp')
     region_file = gpd.read_file(region_file_path,encoding='utf-8')
-    flow_file = pd.read_csv(flow_file_path)
-    region_file = pd.merge(region_file,flow_file,how='left', on=['edge_id']).fillna(0)
-
-    region_file = region_file[region_file['max_total_tons'] > 0]
-    # select_edges = region_file['edge_id'].values.tolist()
-    del flow_file
-
-    # flow_file_path = os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
-    #                            'single_edge_failures_minmax_rail_100_percent_disrupt.csv')
-
-    # region_file = gpd.read_file(region_file_path,encoding='utf-8')
-    # flow_file = pd.read_csv(flow_file_path)
-    # region_file = pd.merge(region_file,flow_file,how='left', on=['edge_id']).fillna(0)
-    # region_file = region_file[region_file['edge_id'].isin(select_edges)]
-
-    # region_file_path = os.path.join(config['paths']['data'], 'network',
-    #                            'rail_edges.shp')
-    # region_file = gpd.read_file(region_file_path,encoding='utf-8')
-
 
     flow_file_path = os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
-                               'single_edge_failures_minmax_rail_100_percent_disrupt.csv')
+                               'single_edge_failures_minmax_bridge_100_percent_disrupt.csv')
     flow_file = pd.read_csv(flow_file_path)
 
     flow_file_path = os.path.join(config['paths']['output'], 'network_stats',
-                               'national_rail_hazard_intersections_risks.csv')
+                               'national_bridge_hazard_intersections_risks.csv')
 
     fail_sc = pd.read_csv(flow_file_path)
-    fail_scenarios = pd.merge(fail_sc,flow_file,how='left', on=['edge_id']).fillna(0)
+    fail_scenarios = pd.merge(fail_sc,flow_file,how='left', on=['bridge_id']).fillna(0)
     del flow_file, fail_sc
 
     fail_scenarios['min_eael'] = duration*fail_scenarios['risk_wt']*fail_scenarios['min_econ_impact']
     fail_scenarios['max_eael'] = duration*fail_scenarios['risk_wt']*fail_scenarios['max_econ_impact']
-    all_edge_fail_scenarios = fail_scenarios[hazard_cols + ['edge_id','min_eael','max_eael']]
-    all_edge_fail_scenarios = all_edge_fail_scenarios.groupby(hazard_cols + ['edge_id'])['min_eael','max_eael'].max().reset_index()
+    all_edge_fail_scenarios = fail_scenarios[hazard_cols + ['bridge_id','min_eael','max_eael']]
+    all_edge_fail_scenarios = all_edge_fail_scenarios.groupby(hazard_cols + ['bridge_id'])['min_eael','max_eael'].max().reset_index()
 
     # Climate change effects
-    all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(['hazard_type','edge_id'])
+    all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(['hazard_type','bridge_id'])
     scenarios = list(set(all_edge_fail_scenarios.index.values.tolist()))
     change_tup = []
     for sc in scenarios:
@@ -116,11 +100,11 @@ def main():
             fut = [p for (c,p,y) in vals[1:]]
             change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),cl,yrs,[vals[0][1]]*len(cl),fut,change))
 
-    change_df = pd.DataFrame(change_tup,columns=['hazard_type','edge_id','climate_scenario','year','current','future','change']).fillna('inf')
+    change_df = pd.DataFrame(change_tup,columns=['hazard_type','bridge_id','climate_scenario','year','current','future','change']).fillna('inf')
     change_df = change_df[change_df['change'] != 'inf']
     change_df.to_csv(os.path.join(config['paths']['output'],
         'network_stats',
-        'national_rail_eael_climate_change.csv'
+        'national_bridge_eael_climate_change.csv'
         ), index=False
     )
 
@@ -132,9 +116,9 @@ def main():
         climate_scenario = sc[1]
         year = sc[2]
         percentage = change_df.loc[[sc], 'change'].values.tolist()
-        edges = change_df.loc[[sc], 'edge_id'].values.tolist()
-        edges_df = pd.DataFrame(list(zip(edges,percentage)),columns=['edge_id','change'])
-        edges_vals = pd.merge(region_file,edges_df,how='left',on=['edge_id']).fillna(0)
+        edges = change_df.loc[[sc], 'bridge_id'].values.tolist()
+        edges_df = pd.DataFrame(list(zip(edges,percentage)),columns=['bridge_id','change'])
+        edges_vals = pd.merge(region_file,edges_df,how='left',on=['bridge_id']).fillna(0)
         del percentage,edges,edges_df
 
         proj_lat_lon = ccrs.PlateCarree()
@@ -142,6 +126,15 @@ def main():
         plot_basemap(ax, data_path)
         scale_bar(ax, location=(0.8, 0.05))
         plot_basemap_labels(ax, data_path, include_regions=False)
+
+        ax.add_geometries(
+            list(road_file.geometry),
+            crs=proj_lat_lon,
+            linewidth=1.0,
+            edgecolor='#969696',
+            facecolor='none',
+            zorder=5
+        )
 
         name = [c['name'] for c in hazard_set if c['hazard'] == hazard_type][0]
         for record in edges_vals.itertuples():
@@ -151,11 +144,11 @@ def main():
                 cl = [c for c in range(len((change_ranges))) if region_val >= change_ranges[c][0] and region_val < change_ranges[c][1]]
                 if cl:
                     c = cl[0]
-                    ax.add_geometries([geom],crs=proj_lat_lon,linewidth=2.0,edgecolor=change_colors[c],facecolor='none',zorder=8)
-                    # ax.add_geometries([geom.buffer(0.1)],crs=proj_lat_lon,linewidth=0,facecolor=change_colors[c],edgecolor='none',zorder=8)
+                    # ax.add_geometries([geom],crs=proj_lat_lon,linewidth=1.5,edgecolor=change_colors[c],facecolor='none',zorder=8)
+                    ax.add_geometries([geom.buffer(0.1)],crs=proj_lat_lon,linewidth=0,facecolor=change_colors[c],edgecolor='none',zorder=8)
             else:
-                ax.add_geometries([geom], crs=proj_lat_lon, linewidth=1.5,edgecolor=change_colors[-1],facecolor='none',zorder=7)
-                # ax.add_geometries([geom.buffer(0.1)], crs=proj_lat_lon, linewidth=0,facecolor=change_colors[-1],edgecolor='none',zorder=7)
+                # ax.add_geometries([geom], crs=proj_lat_lon, linewidth=1.5,edgecolor=change_colors[-1],facecolor='none',zorder=7)
+                ax.add_geometries([geom.buffer(0.1)], crs=proj_lat_lon, linewidth=0,facecolor=change_colors[-1],edgecolor='none',zorder=7)
         # Legend
         legend_handles = []
         for c in range(len(change_colors)):
@@ -178,9 +171,14 @@ def main():
 
         plt.title(title, fontsize=10)
         output_file = os.path.join(config['paths']['figures'],
-                                   'national-rail-{}-{}-{}-risks-change-percentage.png'.format(name,climate_scenario.replace('-',' ').title(),year))
+                                   'national-bridges-{}-{}-{}-risks-change-percentage.png'.format(name,climate_scenario.replace('-',' ').title(),year))
         save_fig(output_file)
         plt.close()
+
+
+
+
+
 
     # # Absolute effects
     # all_edge_fail_scenarios = all_edge_fail_scenarios.reset_index()
@@ -196,9 +194,9 @@ def main():
     #     year = sc[2]
     #     min_eael = all_edge_fail_scenarios.loc[[sc], 'min_eael'].values.tolist()
     #     max_eael = all_edge_fail_scenarios.loc[[sc], 'max_eael'].values.tolist()
-    #     edges = all_edge_fail_scenarios.loc[[sc], 'edge_id'].values.tolist()
-    #     edges_df = pd.DataFrame(list(zip(edges,min_eael,max_eael)),columns=['edge_id','min_eael','max_eael'])
-    #     edges_vals = pd.merge(region_file,edges_df,how='left',on=['edge_id']).fillna(0)
+    #     edges = all_edge_fail_scenarios.loc[[sc], 'bridge_id'].values.tolist()
+    #     edges_df = pd.DataFrame(list(zip(edges,min_eael,max_eael)),columns=['bridge_id','min_eael','max_eael'])
+    #     edges_vals = pd.merge(region_file,edges_df,how='left',on=['bridge_id']).fillna(0)
     #     del edges_df
 
     #     for c in range(len(eael_set)):
@@ -208,6 +206,14 @@ def main():
     #         scale_bar(ax, location=(0.8, 0.05))
     #         plot_basemap_labels(ax, data_path, include_regions=False)
 
+    #         ax.add_geometries(
+    #             list(road_file.geometry),
+    #             crs=proj_lat_lon,
+    #             linewidth=1.0,
+    #             edgecolor='#969696',
+    #             facecolor='none',
+    #             zorder=5
+    #         )
     #         # generate weight bins
     #         column = eael_set[c]['column']
     #         weights = [record[column] for iter_, record in edges_vals.iterrows()]
@@ -215,18 +221,18 @@ def main():
     #         max_weight = max(weights)
     #         width_by_range = generate_weight_bins(weights, width_step=0.04, n_steps=5)
 
-    #         rail_geoms_by_category = {
-    #             '1': [],
-    #             '2': []
+    #         road_geoms_by_category = {
+    #             'national': [],
+    #             'none':[]
     #         }
 
     #         for iter_,record in edges_vals.iterrows():
     #             geom = record.geometry
-    #             val = record[column]
-    #             if val == 0:
-    #                 cat = '2'
+    #             val = getattr(record,column)
+    #             if val > 0:
+    #                 cat = 'national'
     #             else:
-    #                 cat = '1'
+    #                 cat = 'none'
 
     #             buffered_geom = None
     #             for (nmin, nmax), width in width_by_range.items():
@@ -234,17 +240,17 @@ def main():
     #                     buffered_geom = geom.buffer(width)
 
     #             if buffered_geom is not None:
-    #                 rail_geoms_by_category[cat].append(buffered_geom)
+    #                 road_geoms_by_category[cat].append(buffered_geom)
     #             else:
     #                 print("Feature was outside range to plot", iter_)
 
     #         styles = OrderedDict([
-    #             ('1',  Style(color='#006d2c', zindex=9, label='Hazard failure effect')),  # green
-    #             ('2', Style(color='#969696', zindex=7, label='No hazard exposure/effect'))
+    #             ('national',  Style(color='#e41a1c', zindex=9, label='National')),  # red
+    #             ('none', Style(color='#969696', zindex=6, label='No hazard exposure/effect'))
     #         ])
 
             
-    #         for cat, geoms in rail_geoms_by_category.items():
+    #         for cat, geoms in road_geoms_by_category.items():
     #             cat_style = styles[cat]
     #             ax.add_geometries(
     #                 geoms,
@@ -316,7 +322,7 @@ def main():
     #         if climate_scenario == 'none':
     #             climate_scenario = 'Current'
             
-    #         title = 'Railways ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario,year)
+    #         title = 'Bridges ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario.replace('_',' ').title(),year)
     #         print ('* Plotting ',title)
 
     #         plt.title(title, fontsize=14)
@@ -324,7 +330,7 @@ def main():
 
     #         # output
     #         output_file = os.path.join(
-    #             config['paths']['figures'], 'national-rail-{}-{}-{}-{}.png'.format(name.replace(' ',''),climate_scenario.replace('.',''),year,eael_set[c]['column']))
+    #             config['paths']['figures'], 'national-bridges-{}-{}-{}-{}.png'.format(name.replace(' ',''),climate_scenario.replace('.',''),year,eael_set[c]['column']))
     #         save_fig(output_file)
     #         plt.close()
 

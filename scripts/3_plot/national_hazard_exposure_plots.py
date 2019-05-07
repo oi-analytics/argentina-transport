@@ -12,8 +12,10 @@ import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
 from oia.utils import *
+from tqdm import tqdm
 
 def main():
+    tqdm.pandas()
     config = load_config()
 
     data_path = config['paths']['data']
@@ -36,7 +38,7 @@ def main():
     national_pth = os.path.join(config['paths']['output'],
             'network_stats',
             'national_scale_hazard_intersections_boundary_summary.xlsx')
-    
+
     # Give the paths to the input data files
     # load provinces and get geometry of the right province
     print('* Reading provinces dataframe')
@@ -52,12 +54,15 @@ def main():
                                 'departamento', 'Departamentos.shp')
     zones = gpd.read_file(zones_path,encoding='utf-8')
     zones = zones.to_crs({'init': 'epsg:4326'})
+    zones['province_name'] = zones.progress_apply(lambda x: extract_value_from_gdf(
+        x, sindex_provinces, provinces,'nombre'), axis=1)
+
     zones.rename(columns={'OBJECTID':'department_id','Name':'department_name'},inplace=True)
 
     labels = ['0 to 10', '10 to 20', '20 to 30', '30 to 40', '40 to 100', 'No value']
     change_colors = ['#1a9850','#66bd63','#a6d96a','#d9ef8b','#fee08b','#fdae61','#f46d43','#d73027','#d9d9d9']
-    change_labels = ['< -40','-40 to -20','-20 to -10','-10 to 0','0 to 10','10 to 20','20 to 40','> 40','No change/value']
-    change_ranges = [(-1e10,-40),(-40,-20),(-20,-10),(-10,0),(0.001,10),(10,20),(20,40),(40,1e10)]
+    change_labels = ['< -100','-100 to -50','-50 to -10','-10 to 0','0 to 10','10 to 50','50 to 100','> 100','No change/value']
+    change_ranges = [(-1e10,-100),(-50,-20),(-50,-10),(-10,0),(0.001,10),(10,50),(50,100),(100,1e10)]
 
     for rp in return_periods:
         for mode in modes:
@@ -66,7 +71,7 @@ def main():
 
             # Climate change effects
             if climate_change == True:
-                all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(['hazard_type','department_id','probability'])
+                all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(['hazard_type','department_id','department_name','province_name','probability'])
                 scenarios = list(set(all_edge_fail_scenarios.index.values.tolist()))
                 change_tup = []
                 for sc in scenarios:
@@ -74,20 +79,22 @@ def main():
                     yrs = all_edge_fail_scenarios.loc[[sc], 'year'].values.tolist()
                     cl = all_edge_fail_scenarios.loc[[sc], 'climate_scenario'].values.tolist()
                     if 2016 not in yrs:
-                        change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),[sc[2]]*len(cl),cl,yrs,[1e9]*len(cl)))
+                        change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),[sc[2]]*len(cl),[sc[3]]*len(cl),[sc[4]]*len(cl),cl,yrs,perc,[1e9]*len(cl)))
                     elif len(cl) > 1:
                         vals = list(zip(cl,perc,yrs))
                         vals = sorted(vals, key=lambda pair: pair[-1])
                         change = np.array([p for (c,p,y) in vals[1:]]) - vals[0][1]
                         cl = [c for (c,p,y) in vals[1:]]
                         yrs = [y for (c,p,y) in vals[1:]]
-                        change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),[sc[2]]*len(cl),cl,yrs,change))
+                        change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),[sc[2]]*len(cl),[sc[3]]*len(cl),[sc[4]]*len(cl),cl,yrs,[vals[0][1]]*len(cl),change))
 
-                change_df = pd.DataFrame(change_tup,columns=['hazard_type','department_id','probability','climate_scenario','year','change'])
+                change_df = pd.DataFrame(change_tup,columns=['hazard_type','department_id','department_name','province_name','probability','climate_scenario','year','baseline','change'])
                 change_df.to_csv(os.path.join(config['paths']['output'],
                     'network_stats',
                     '{}_exposure_climate_change.csv'.format(mode)
-                    ), index=False
+                    ), 
+                    index=False,
+                    encoding='utf-8-sig'
                 )
 
                 # Change effects
@@ -132,13 +139,13 @@ def main():
                     ax.legend(
                         handles=legend_handles,
                         title='Percentage change in exposure',
-                        loc=(0.48,0.2),
+                        loc=(0.5,0.2),
                         fancybox=True,
                         framealpha=1.0
                     )
                     
                     climate_scenario = climate_scenario.replace('_',' ')
-                    plt.title('Percentage change for {}-year {} {} {}'.format(rp,name,climate_scenario,year), fontsize=9)
+                    plt.title('{} - Percentage change for {}-year {} {} {}'.format(mode.title(),rp,name,climate_scenario,year), fontsize=9)
                     output_file = os.path.join(config['paths']['figures'],
                                                '{}-{}-year-{}-{}-{}-exposure-change-percentage.png'.format(mode.replace(' ',''),rp,name,climate_scenario.replace('.',''),year))
                     save_fig(output_file)
@@ -206,7 +213,7 @@ def main():
                 )
                 climate_scenario = climate_scenario.replace('_',' ')
 
-                plt.title('Percentage exposure for {}-year {} {} {}'.format(rp,name,climate_scenario,year), fontsize=9)
+                plt.title('{} - Percentage exposure for {}-year {} {} {}'.format(mode.title(),rp,name,climate_scenario,year), fontsize=9)
                 output_file = os.path.join(config['paths']['figures'],
                                            '{}-{}-year-{}-{}-{}-exposure-percentage.png'.format(mode.replace(' ',''),rp,name,climate_scenario.replace('.',''),year))
                 save_fig(output_file)

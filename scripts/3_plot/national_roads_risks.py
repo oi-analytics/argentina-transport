@@ -32,8 +32,8 @@ def main():
         }
     ]
     change_colors = ['#1a9850','#66bd63','#a6d96a','#d9ef8b','#fee08b','#fdae61','#f46d43','#d73027','#969696']
-    change_labels = ['< -40','-40 to -20','-20 to -10','-10 to 0','0 to 10','10 to 20','20 to 40',' > 40','No change/value']
-    change_ranges = [(-1e10,-40),(-40,-20),(-20,-10),(-10,0),(0.001,10),(10,20),(20,40),(40,1e10)]
+    change_labels = ['< -100','-100 to -50','-50 to -10','-10 to 0','0 to 10','10 to 50','50 to 100',' > 100','No change/value']
+    change_ranges = [(-1e10,-100),(-100,-50),(-50,-10),(-10,0),(0.001,10),(10,50),(50,100),(100,1e10)]
 
     eael_set = [
         {
@@ -51,6 +51,7 @@ def main():
             'significance': 0
         }
     ]
+
     data_path = config['paths']['data']
 
     region_file_path = os.path.join(config['paths']['data'], 'network',
@@ -60,10 +61,10 @@ def main():
 
 
     flow_file_path = os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
-                               'single_edge_failures_minmax_national_road_100_percent_disrupt.csv')
+                               'single_edge_failures_minmax_road_100_percent_disrupt.csv')
     flow_file = pd.read_csv(flow_file_path)
 
-    flow_file_path = os.path.join(config['paths']['output'], 'hazard_scenarios',
+    flow_file_path = os.path.join(config['paths']['output'], 'network_stats',
                                'national_road_hazard_intersections_risks.csv')
 
     fail_sc = pd.read_csv(flow_file_path)
@@ -74,6 +75,94 @@ def main():
     fail_scenarios['max_eael'] = duration*fail_scenarios['risk_wt']*fail_scenarios['max_econ_impact']
     all_edge_fail_scenarios = fail_scenarios[hazard_cols + ['edge_id','min_eael','max_eael']]
     all_edge_fail_scenarios = all_edge_fail_scenarios.groupby(hazard_cols + ['edge_id'])['min_eael','max_eael'].max().reset_index()
+
+    # Climate change effects
+    all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(['hazard_type','edge_id'])
+    scenarios = list(set(all_edge_fail_scenarios.index.values.tolist()))
+    change_tup = []
+    for sc in scenarios:
+        eael = all_edge_fail_scenarios.loc[[sc], 'max_eael'].values.tolist()
+        yrs = all_edge_fail_scenarios.loc[[sc], 'year'].values.tolist()
+        cl = all_edge_fail_scenarios.loc[[sc], 'climate_scenario'].values.tolist()
+        if 2016 not in yrs:
+            for e in range(len(eael)):
+                if eael[e] > 0: 
+                    # change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),cl,yrs,[0]*len(cl),eael,[1e9]*len(cl)))
+                    change_tup += [(sc[0],sc[1],cl[e],yrs[e],0,eael[e],1e9)]
+        elif len(yrs) > 1:
+            vals = list(zip(cl,eael,yrs))
+            vals = sorted(vals, key=lambda pair: pair[-1])
+            change = 100.0*(np.array([p for (c,p,y) in vals[1:]]) - vals[0][1])/vals[0][1]
+            cl = [c for (c,p,y) in vals[1:]]
+            yrs = [y for (c,p,y) in vals[1:]]
+            fut = [p for (c,p,y) in vals[1:]]
+            change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),cl,yrs,[vals[0][1]]*len(cl),fut,change))
+
+    change_df = pd.DataFrame(change_tup,columns=['hazard_type','edge_id','climate_scenario','year','current','future','change']).fillna('inf')
+    change_df = change_df[change_df['change'] != 'inf']
+    change_df.to_csv(os.path.join(config['paths']['output'],
+        'network_stats',
+        'national_road_eael_climate_change.csv'
+        ), index=False
+    )
+
+    # Change effects
+    change_df = change_df.set_index(hazard_cols)
+    scenarios = list(set(change_df.index.values.tolist()))
+    for sc in scenarios:
+        hazard_type = sc[0]
+        climate_scenario = sc[1]
+        year = sc[2]
+        percentage = change_df.loc[[sc], 'change'].values.tolist()
+        edges = change_df.loc[[sc], 'edge_id'].values.tolist()
+        edges_df = pd.DataFrame(list(zip(edges,percentage)),columns=['edge_id','change'])
+        edges_vals = pd.merge(region_file,edges_df,how='left',on=['edge_id']).fillna(0)
+        del percentage,edges,edges_df
+
+        proj_lat_lon = ccrs.PlateCarree()
+        ax = get_axes()
+        plot_basemap(ax, data_path)
+        scale_bar(ax, location=(0.8, 0.05))
+        plot_basemap_labels(ax, data_path, include_regions=False)
+
+        name = [c['name'] for c in hazard_set if c['hazard'] == hazard_type][0]
+        for record in edges_vals.itertuples():
+            geom = record.geometry
+            region_val = record.change
+            if region_val:
+                cl = [c for c in range(len((change_ranges))) if region_val >= change_ranges[c][0] and region_val < change_ranges[c][1]]
+                if cl:
+                    c = cl[0]
+                    # ax.add_geometries([geom],crs=proj_lat_lon,linewidth=2.0,edgecolor=change_colors[c],facecolor='none',zorder=8)
+                    ax.add_geometries([geom.buffer(0.02)],crs=proj_lat_lon,linewidth=0,facecolor=change_colors[c],edgecolor='none',zorder=8)
+            else:
+                # ax.add_geometries([geom], crs=proj_lat_lon, linewidth=0.5,edgecolor=change_colors[-1],facecolor='none',zorder=7)
+                ax.add_geometries([geom.buffer(0.01)], crs=proj_lat_lon, linewidth=0,facecolor=change_colors[-1],edgecolor='none',zorder=7)
+        # Legend
+        legend_handles = []
+        for c in range(len(change_colors)):
+            legend_handles.append(mpatches.Patch(color=change_colors[c], label=change_labels[c]))
+
+        ax.legend(
+            handles=legend_handles,
+            title='Percentage change in EAEL',
+            loc=(0.55,0.2),
+            fancybox=True,
+            framealpha=1.0
+        )
+        if climate_scenario == 'none':
+            climate_scenario = 'current'
+        else:
+            climate_scenario = climate_scenario.upper()
+
+        title = 'Percentage change in EAEL for {} {} {}'.format(name,climate_scenario.replace('_',' ').title(),year)
+        print(" * Plotting {}".format(title))
+
+        plt.title(title, fontsize=10)
+        output_file = os.path.join(config['paths']['figures'],
+                                   'national-roads-{}-{}-{}-risks-change-percentage.png'.format(name,climate_scenario.replace('-',' ').title(),year))
+        save_fig(output_file)
+        plt.close()
 
     # Absolute effects
     all_edge_fail_scenarios = all_edge_fail_scenarios.reset_index()
@@ -214,7 +303,7 @@ def main():
             if climate_scenario == 'none':
                 climate_scenario = 'Current'
             
-            title = 'Roads ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario,year)
+            title = 'Roads ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario.replace('_',' ').title(),year)
             print ('* Plotting ',title)
 
             plt.title(title, fontsize=14)
