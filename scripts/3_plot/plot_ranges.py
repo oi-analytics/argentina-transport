@@ -52,6 +52,17 @@ def plot_ranges(input_data, division_factor,x_label, y_label,plot_title,plot_col
         facecolor=plot_color
     )
 
+    if 'BCR' in y_label:
+        ax.plot(np.arange(0,100),
+            np.array([1]*100),
+            linewidth=0.5,
+            color='red',
+            label = 'BCR = 1'
+        )
+        # ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.legend(loc='upper left')
+
     # ax.tick_params(axis='x', rotation=45)
     plt.xlabel(x_label, fontweight='bold')
     plt.ylabel(y_label, fontweight='bold')
@@ -109,6 +120,7 @@ def plot_many_ranges(input_dfs, division_factor,x_label, y_label,plot_title,plot
             color='red',
             label = 'BCR = 1'
         )
+        # ax.set_xscale('log')
         ax.set_yscale('log')
 
     # ax.tick_params(axis='x', rotation=45)
@@ -207,7 +219,7 @@ def main():
     adapt_labels = ['Benefits','Initial investments','Total investments', 'BCR']
     adapt_units = ['million USD','million USD','million USD','ratio']
     adapt_divisor = [1000000,1000000,1000000,1]
-    duration = 10
+    duration = 30
     for m in range(len(modes)):
         flow_file_path = os.path.join(config['paths']['output'], 'flow_mapping_combined',
                                        'weighted_flows_{}_100_percent.csv'.format(modes[m]))
@@ -244,37 +256,20 @@ def main():
             fail_scenarios['min_eael'] = duration*fail_scenarios['risk_wt']*fail_scenarios['min_econ_impact']
             fail_scenarios['max_eael'] = duration*fail_scenarios['risk_wt']*fail_scenarios['max_econ_impact']
 
-            # fail_flu = fail_scenarios[fail_scenarios['hazard_type'] == 'fluvial flooding']
-            # fail_flu.rename(columns={'min_eael':'min_eael_flu','max_eael':'max_eael_flu'},inplace=True)
-            # # fail_rcp45_min = fail_rcp45.groupby([modes_id[m]])['min_eael_rcp45'].min().reset_index()
-            # # fail_rcp45_max = fail_rcp45.groupby([modes_id[m]])['max_eael_rcp45'].max().reset_index()
-            # # fail_rcp45 = pd.merge(fail_rcp45_min,fail_rcp45_max,how='left',on=[modes_id[m]]).fillna(0)
-            # fail_flu = fail_flu.sort_values(['max_eael_flu'], ascending=True)
-
-            # fail_plu = fail_scenarios[fail_scenarios['hazard_type'] == 'pluvial flooding']
-            # fail_plu.rename(columns={'min_eael':'min_eael_plu','max_eael':'max_eael_plu'},inplace=True)
-            # # fail_rcp45_min = fail_rcp45.groupby([modes_id[m]])['min_eael_rcp45'].min().reset_index()
-            # # fail_rcp45_max = fail_rcp45.groupby([modes_id[m]])['max_eael_rcp45'].max().reset_index()
-            # # fail_rcp45 = pd.merge(fail_rcp45_min,fail_rcp45_max,how='left',on=[modes_id[m]]).fillna(0)
-            # fail_plu = fail_plu.sort_values(['max_eael_plu'], ascending=True)
-
-            # fail_dfs = [fail_flu[['min_eael_flu','max_eael_flu']],fail_plu[['min_eael_plu','max_eael_plu']]]
-            # print (fail_scenarios)
-
             for flooding in ['fluvial flooding','pluvial flooding']: 
-                fail_rcp45 = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_Med')]
-                fail_rcp45.rename(columns={'min_eael':'min_eael_rcp45','max_eael':'max_eael_rcp45'},inplace=True)
-                fail_rcp45_min = fail_rcp45.groupby([modes_id[m]])['min_eael_rcp45'].min().reset_index()
-                fail_rcp45_max = fail_rcp45.groupby([modes_id[m]])['max_eael_rcp45'].max().reset_index()
-                fail_rcp45 = pd.merge(fail_rcp45_min,fail_rcp45_max,how='left',on=[modes_id[m]]).fillna(0)
-                fail_rcp45 = fail_rcp45.sort_values(['max_eael_rcp45'], ascending=True)
+                fail_futmed = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_Med')]
+                fail_futmed.rename(columns={'min_eael':'min_eael_futmed','max_eael':'max_eael_futmed'},inplace=True)
+                fail_futmed_min = fail_futmed.groupby([modes_id[m]])['min_eael_futmed'].min().reset_index()
+                fail_futmed_max = fail_futmed.groupby([modes_id[m]])['max_eael_futmed'].max().reset_index()
+                fail_futmed = pd.merge(fail_futmed_min,fail_futmed_max,how='left',on=[modes_id[m]]).fillna(0)
+                fail_futmed = fail_futmed.sort_values(['max_eael_futmed'], ascending=True)
 
-                fail_rcp85 = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_High')]
-                fail_rcp85.rename(columns={'min_eael':'min_eael_rcp85','max_eael':'max_eael_rcp85'},inplace=True)
-                fail_rcp85_min = fail_rcp85.groupby([modes_id[m]])['min_eael_rcp85'].min().reset_index()
-                fail_rcp85_max = fail_rcp85.groupby([modes_id[m]])['max_eael_rcp85'].max().reset_index()
-                fail_rcp85 = pd.merge(fail_rcp85_min,fail_rcp85_max,how='left',on=[modes_id[m]]).fillna(0)
-                fail_rcp85 = fail_rcp85.sort_values(['max_eael_rcp85'], ascending=True)
+                fail_futhigh = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_High')]
+                fail_futhigh.rename(columns={'min_eael':'min_eael_futhigh','max_eael':'max_eael_futhigh'},inplace=True)
+                fail_futhigh_min = fail_futhigh.groupby([modes_id[m]])['min_eael_futhigh'].min().reset_index()
+                fail_futhigh_max = fail_futhigh.groupby([modes_id[m]])['max_eael_futhigh'].max().reset_index()
+                fail_futhigh = pd.merge(fail_futhigh_min,fail_futhigh_max,how='left',on=[modes_id[m]]).fillna(0)
+                fail_futhigh = fail_futhigh.sort_values(['max_eael_futhigh'], ascending=True)
 
                 fail_cur = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] == 2016)]
                 fail_min = fail_cur.groupby([modes_id[m]])['min_eael'].min().reset_index()
@@ -282,7 +277,7 @@ def main():
                 fail_cur = pd.merge(fail_min,fail_max,how='left',on=[modes_id[m]]).fillna(0)
                 fail_cur = fail_cur.sort_values(['max_eael'], ascending=True)
 
-                fail_dfs = [fail_cur[['min_eael','max_eael']],fail_rcp45[['min_eael_rcp45','max_eael_rcp45']],fail_rcp85[['min_eael_rcp85','max_eael_rcp85']]]
+                fail_dfs = [fail_cur[['min_eael','max_eael']],fail_futmed[['min_eael_futmed','max_eael_futmed']],fail_futhigh[['min_eael_futhigh','max_eael_futhigh']]]
                 # print (fail_dfs)
 
                 plt_file_path = os.path.join(config['paths']['figures'],'national-{}-{}-eael-ranges.png'.format(modes[m],flooding.replace(' ','-')))
@@ -292,50 +287,56 @@ def main():
                             flooding.title()),
                         flood_colors_change,flood_labels_change,plt_file_path)
 
-        # if modes[m] == 'road':
-        #     flow_file_path = os.path.join(config['paths']['output'], 'adaptation_results',
-        #                            'output_adaptation_national_road_10_days_max_disruption_fixed_parameters.csv')
-        #     fail_scenarios = pd.read_csv(flow_file_path)
-        #     fail_scenarios = fail_scenarios[fail_scenarios['max_econ_impact'] > 0]
+        if modes[m] in ['road','bridge']:
+            flow_file_path = os.path.join(config['paths']['output'], 'adaptation_results',
+                                   'output_adaptation_{}_10_days_max_disruption_fixed_parameters.csv'.format(modes[m]))
+            fail_scenarios = pd.read_csv(flow_file_path)
+            fail_scenarios = fail_scenarios[fail_scenarios['max_econ_impact'] > 0]
 
-        #     for cols in ['min_ini_adap_cost','max_ini_adap_cost']:
-        #         fail_scenarios[cols] = fail_scenarios[cols].apply(lambda x: np.max(np.array(ast.literal_eval(x))))
+            for c in range(len(adapt_groups)):
+                cols = adapt_groups[c]
+                all_vals_min = fail_scenarios.groupby(modes_id[m])[cols[0]].min().reset_index() 
+                all_vals_max = fail_scenarios.groupby(modes_id[m])[cols[1]].max().reset_index()
+                all_vals = pd.merge(all_vals_min,all_vals_max,how='left',on=modes_id[m]).fillna(0)
+                plt_file_path = os.path.join(config['paths']['figures'],'all-{}-{}-flooding-ranges-fixed-paramters.png'.format(modes[m],adapt_names[c]))
+                plot_ranges(all_vals[cols],adapt_divisor[c], "Percentile rank (%)",
+                        "{} ({})".format(adapt_labels[c],adapt_units[c]),
+                        "{} - Range of {} of adaptation".format(modes[m].title(),adapt_labels[c]),
+                        modes_colors[m],plt_file_path)
+                if 'min_bc_ratio' in cols: 
+                    all_vals.to_csv(os.path.join(config['paths']['output'],'network_stats','{}_{}.csv'.format(modes[m],adapt_names[c])),index=False)
 
-        #     # fail_scenarios = fail_scenarios.groupby([modes_id[m]])[adapt_cols].max().reset_index()
+                new_cols = ['{}_futmed'.format(cols[0]),'{}_futmed'.format(cols[1])]
+                fail_futmed = fail_scenarios[(fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_Med')]
+                fail_futmed = fail_futmed.groupby([modes_id[m]])[cols].max().reset_index()
+                fail_futmed.rename(columns={cols[0]:new_cols[0],cols[1]:new_cols[1]},inplace=True)
+                fail_futmed_min = fail_futmed.groupby([modes_id[m]])[new_cols[0]].min().reset_index()
+                fail_futmed_max = fail_futmed.groupby([modes_id[m]])[new_cols[1]].max().reset_index()
+                fail_futmed = pd.merge(fail_futmed_min,fail_futmed_max,how='left',on=[modes_id[m]]).fillna(0)
+                fail_futmed = fail_futmed.sort_values([new_cols[1]], ascending=True)
+                fail_futmed = fail_futmed[new_cols]
 
-        #     for c in range(len(adapt_groups)):
-        #         cols = adapt_groups[c]
-        #         new_cols = ['{}_rcp45'.format(cols[0]),'{}_rcp45'.format(cols[1])]
-        #         fail_rcp45 = fail_scenarios[(fail_scenarios['hazard_type'] == 'flooding') & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'rcp 4.5')]
-        #         fail_rcp45 = fail_rcp45.groupby([modes_id[m]])[cols].max().reset_index()
-        #         fail_rcp45.rename(columns={cols[0]:new_cols[0],cols[1]:new_cols[1]},inplace=True)
-        #         fail_rcp45_min = fail_rcp45.groupby([modes_id[m]])[new_cols[0]].min().reset_index()
-        #         fail_rcp45_max = fail_rcp45.groupby([modes_id[m]])[new_cols[1]].max().reset_index()
-        #         fail_rcp45 = pd.merge(fail_rcp45_min,fail_rcp45_max,how='left',on=[modes_id[m]]).fillna(0)
-        #         fail_rcp45 = fail_rcp45.sort_values([new_cols[1]], ascending=True)
-        #         fail_rcp45 = fail_rcp45[new_cols]
+                new_cols = ['{}_futhigh'.format(cols[0]),'{}_futhigh'.format(cols[1])]
+                fail_futhigh = fail_scenarios[(fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_High')]
+                fail_futhigh = fail_futhigh.groupby([modes_id[m]])[cols].max().reset_index()
+                fail_futhigh.rename(columns={cols[0]:new_cols[0],cols[1]:new_cols[1]},inplace=True)
+                fail_futhigh_min = fail_futhigh.groupby([modes_id[m]])[new_cols[0]].min().reset_index()
+                fail_futhigh_max = fail_futhigh.groupby([modes_id[m]])[new_cols[1]].max().reset_index()
+                fail_futhigh = pd.merge(fail_futhigh_min,fail_futhigh_max,how='left',on=[modes_id[m]]).fillna(0)
+                fail_futhigh = fail_futhigh.sort_values([new_cols[1]], ascending=True)
+                fail_futhigh = fail_futhigh[new_cols]
 
-        #         new_cols = ['{}_rcp85'.format(cols[0]),'{}_rcp85'.format(cols[1])]
-        #         fail_rcp85 = fail_scenarios[(fail_scenarios['hazard_type'] == 'flooding') & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'rcp 4.5')]
-        #         fail_rcp85 = fail_rcp85.groupby([modes_id[m]])[cols].max().reset_index()
-        #         fail_rcp85.rename(columns={cols[0]:new_cols[0],cols[1]:new_cols[1]},inplace=True)
-        #         fail_rcp85_min = fail_rcp85.groupby([modes_id[m]])[new_cols[0]].min().reset_index()
-        #         fail_rcp85_max = fail_rcp85.groupby([modes_id[m]])[new_cols[1]].max().reset_index()
-        #         fail_rcp85 = pd.merge(fail_rcp85_min,fail_rcp85_max,how='left',on=[modes_id[m]]).fillna(0)
-        #         fail_rcp85 = fail_rcp85.sort_values([new_cols[1]], ascending=True)
-        #         fail_rcp85 = fail_rcp85[new_cols]
+                fail_cur = fail_scenarios[fail_scenarios['year'] == 2016]
+                fail_cur = fail_cur.groupby([modes_id[m]])[cols].max().reset_index()
+                fail_min = fail_cur.groupby([modes_id[m]])[cols[0]].min().reset_index()
+                fail_max = fail_cur.groupby([modes_id[m]])[cols[1]].max().reset_index()
+                fail_cur = pd.merge(fail_min,fail_max,how='left',on=[modes_id[m]]).fillna(0)
+                fail_cur = fail_cur.sort_values([cols[1]], ascending=True)
+                fail_cur = fail_cur[cols]
 
-        #         fail_cur = fail_scenarios[(fail_scenarios['hazard_type'] == 'flooding') & (fail_scenarios['year'] == 2016)]
-        #         fail_cur = fail_cur.groupby([modes_id[m]])[cols].max().reset_index()
-        #         fail_min = fail_cur.groupby([modes_id[m]])[cols[0]].min().reset_index()
-        #         fail_max = fail_cur.groupby([modes_id[m]])[cols[1]].max().reset_index()
-        #         fail_cur = pd.merge(fail_min,fail_max,how='left',on=[modes_id[m]]).fillna(0)
-        #         fail_cur = fail_cur.sort_values([cols[1]], ascending=True)
-        #         fail_cur = fail_cur[cols]
-
-        #         fail_dfs = [fail_cur,fail_rcp45,fail_rcp85]
-        #         plt_file_path = os.path.join(config['paths']['figures'],'national-road-{}-flooding-ranges-fixed-paramters.png'.format(adapt_names[c]))
-        #         plot_many_ranges(fail_dfs,adapt_divisor[c], "Percentile rank".format(adapt_labels[c]),
-        #                 "{} ({})".format(adapt_labels[c],adapt_units[c]),"Range of {} of adaptation".format(adapt_labels[c]),flood_colors,flood_labels,plt_file_path)
+                fail_dfs = [fail_cur,fail_futmed,fail_futhigh]
+                plt_file_path = os.path.join(config['paths']['figures'],'national-{}-{}-flooding-ranges-fixed-paramters.png'.format(modes[m],adapt_names[c]))
+                plot_many_ranges_subplots(fail_dfs,adapt_divisor[c], "Percentile rank(%)".format(adapt_labels[c]),
+                        "{} ({})".format(adapt_labels[c],adapt_units[c]),"{} - Range of {} of adaptation".format(modes[m].title(),adapt_labels[c]),flood_colors_change,flood_labels_change,plt_file_path)
 if __name__ == '__main__':
     main()

@@ -73,6 +73,26 @@ def risk_results_reorganise(risk_dataframe,id_column):
 
     return all_ids, risk_columns
 
+def change_matrix(risk_dataframe,value_threshold,change_threshold):
+    total_counts_df = risk_dataframe.groupby(['hazard_type','climate_scenario']).size().reset_index(name='total_counts')
+    # print (total_counts_df)
+    scenario_df = risk_dataframe[risk_dataframe['change'] >= change_threshold].groupby(['hazard_type','climate_scenario']).size().reset_index(name='change_counts')
+    # print (change_df)
+    total_counts_df = pd.merge(total_counts_df,scenario_df,how='left',on=['hazard_type','climate_scenario']).fillna(0)
+    total_counts_df['percent'] = 100.0*total_counts_df['change_counts']/total_counts_df['total_counts']
+    
+    scenario_df = risk_dataframe[risk_dataframe['future'] >= value_threshold].groupby(['hazard_type','climate_scenario']).size().reset_index(name='future_counts')
+    total_counts_df = pd.merge(total_counts_df,scenario_df,how='left',on=['hazard_type','climate_scenario']).fillna(0)
+    total_counts_df['percent_future'] = 100.0*total_counts_df['future_counts']/total_counts_df['total_counts']
+
+    scenario_df = risk_dataframe[risk_dataframe['current'] >= value_threshold].groupby(['hazard_type','climate_scenario']).size().reset_index(name='current_counts')
+    total_counts_df = pd.merge(total_counts_df,scenario_df,how='left',on=['hazard_type','climate_scenario']).fillna(0)
+    total_counts_df['percent_current'] = 100.0*total_counts_df['current_counts']/total_counts_df['total_counts']
+    scenario_df = risk_dataframe[(risk_dataframe['future'] >= value_threshold) & (risk_dataframe['change'] >= change_threshold)].groupby(['hazard_type','climate_scenario']).size().reset_index(name='future_percent_counts')
+    total_counts_df = pd.merge(total_counts_df,scenario_df,how='left',on=['hazard_type','climate_scenario']).fillna(0)
+
+    print (total_counts_df)    
+
 
 def main():
     """Summarise
@@ -110,6 +130,9 @@ def main():
 
     od_output_excel = os.path.join(os.path.join(output_path,'network_stats','network_risks_ranked.xlsx'))
     risk_excel_writer = pd.ExcelWriter(od_output_excel)
+
+    od_output_excel = os.path.join(os.path.join(output_path,'network_stats','network_adaptations_ranked.xlsx'))
+    adapt_excel_writer = pd.ExcelWriter(od_output_excel)
     
 
     for m in range(len(modes)):
@@ -144,10 +167,12 @@ def main():
                 del roads
                 edge_id = 'bridge_id'
 
+                print ('* Changes for {}'.format(modes[m]))
+                change_matrix(risk_results,0.1,100)
+
                 risk_results = risk_results[risk_results['future'] > 0.1]
                 risk_vals,risk_cols = risk_results_reorganise(risk_results,edge_id)
                 risk_vals = pd.merge(risk_vals,edges,how='left',on=[edge_id])
-                # del edges
                 risk_vals = pd.merge(risk_vals,network_stats[[edge_id,'department_name','province_name']],how='left',on=[edge_id])
                 risk_vals.drop_duplicates(subset=['bridge_id'],keep='first',inplace=True)
                 risk_vals['totals'] = risk_vals[[cols for cols in risk_cols if 'future' in cols]].sum(axis=1)
@@ -163,17 +188,36 @@ def main():
                 failure_results.drop(['bridge_id','edge_id'],axis=1,inplace=True)
                 failure_results.set_index(['road_name','structure_type','province_name']+val_cols+['department_name']).to_excel(failure_excel_writer,modes[m],encoding='utf-8-sig')
 
-
+                duration = [10,20,30]
+                for dur in duration:
+                    adapt_results = pd.read_csv(os.path.join(output_path, 'adaptation_results',
+                                'output_adaptation_{}_{}_days_max_disruption_fixed_parameters.csv'.format(modes[m],dur)),encoding='utf-8-sig')
+                    adapt_results = pd.merge(adapt_results,network_stats[[edge_id,'department_name','province_name']],how='left',on=[edge_id])
+                    adapt_results['min_eael'] = dur*adapt_results['risk_wt']*adapt_results['min_econ_impact']
+                    adapt_results['max_eael'] = dur*adapt_results['risk_wt']*adapt_results['max_econ_impact']
+                    adapt_results = adapt_results.sort_values(by='max_bc_ratio',ascending=False)
+                    adapt_results.drop_duplicates(subset=[edge_id],keep='first',inplace=True)
+                    adapt_results.to_csv(os.path.join(output_path,'network_stats','{}_adaptation_summary_{}_days_disruption.csv'.format(modes[m],dur)),encoding='utf-8-sig')
+                    adapt_results = adapt_results.head(50)
+                    adapt_results.set_index(['road_name','structure_type',
+                                            'province_name','department_name','climate_scenario','max_exposure_length',
+                                            'max_ini_adap_cost','max_tot_adap_cost',
+                                            'min_benefit','max_benefit','min_bc_ratio',
+                                            'max_bc_ratio']).to_excel(adapt_excel_writer,'{}_{}_days'.format(modes[m],dur),encoding='utf-8-sig')
+                    adapt_excel_writer.save()
+                    del adapt_results
 
             elif modes[m] == 'road':
                 edges = pd.read_csv(os.path.join(data_path,'network','road_edges.csv'),encoding='utf-8-sig')
                 edges = edges[['edge_id','road_name','road_type']]
                 edge_id = 'edge_id'
 
+                print ('* Changes for {}'.format(modes[m]))
+                change_matrix(risk_results,0.1,100)
+
                 risk_results = risk_results[risk_results['future'] > 0.1]
                 risk_vals,risk_cols = risk_results_reorganise(risk_results,edge_id)
                 risk_vals = pd.merge(risk_vals,edges,how='left',on=[edge_id])
-                # del edges
                 risk_vals = pd.merge(risk_vals,network_stats[[edge_id,'department_name','province_name']],how='left',on=[edge_id])
                 risk_vals['totals'] = risk_vals[[cols for cols in risk_cols if 'future' in cols]].sum(axis=1)
                 risk_vals = risk_vals.sort_values(by='totals',ascending=False)
@@ -186,11 +230,34 @@ def main():
                 failure_results = pd.merge(failure_results,network_stats[[edge_id,'department_name','province_name']],how='left',on=[edge_id])
                 failure_results.drop(edge_id,axis=1,inplace=True)
                 failure_results.set_index(['road_name','road_type','province_name']+val_cols+['department_name']).to_excel(failure_excel_writer,modes[m],encoding='utf-8-sig')
+
+                duration = [10,20,30]
+                for dur in duration:
+                    adapt_results = pd.read_csv(os.path.join(output_path, 'adaptation_results',
+                                'output_adaptation_{}_{}_days_max_disruption_fixed_parameters.csv'.format(modes[m],dur)),encoding='utf-8-sig')
+                    adapt_results = pd.merge(adapt_results,network_stats[[edge_id,'department_name','province_name']],how='left',on=[edge_id])
+                    adapt_results['min_eael'] = dur*adapt_results['risk_wt']*adapt_results['min_econ_impact']
+                    adapt_results['max_eael'] = dur*adapt_results['risk_wt']*adapt_results['max_econ_impact']
+                    adapt_results = adapt_results.sort_values(by='max_bc_ratio',ascending=False)
+                    adapt_results.drop_duplicates(subset=[edge_id],keep='first',inplace=True)
+                    adapt_results.to_csv(os.path.join(output_path,'network_stats','{}_adaptation_summary_{}_days_disruption.csv'.format(modes[m],dur)),encoding='utf-8-sig')
+                    adapt_results = adapt_results.head(50)
+                    adapt_results.set_index(['road_name',
+                                            'province_name','department_name','climate_scenario','max_exposure_length',
+                                            'max_ini_adap_cost','max_tot_adap_cost',
+                                            'min_benefit','max_benefit','min_bc_ratio',
+                                            'max_bc_ratio']).to_excel(adapt_excel_writer,'{}_{}_days'.format(modes[m],dur),encoding='utf-8-sig')
+
+                    adapt_excel_writer.save()
+                    del adapt_results
+
             else:
                 edges = pd.read_csv(os.path.join(data_path,'network','rail_edges.csv'),encoding='utf-8-sig')
                 edges = edges[['edge_id','operador','linea']]
                 edge_id = 'edge_id'
 
+                print ('* Changes for {}'.format(modes[m]))
+                change_matrix(risk_results,1.0,100)
                 risk_results = risk_results[risk_results['future'] > 1.0]
                 risk_vals,risk_cols = risk_results_reorganise(risk_results,edge_id)
                 risk_vals = pd.merge(risk_vals,edges,how='left',on=[edge_id])

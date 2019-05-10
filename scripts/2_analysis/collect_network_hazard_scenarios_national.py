@@ -37,7 +37,7 @@ def main():
 
     # Supply input data and parameters
     modes = ['road', 'rail','bridge']
-    modes = ['bridge']
+    # modes = ['bridge']
     start_year = 2016
 
     # Give the paths to the input data files
@@ -74,7 +74,7 @@ def main():
                                           'road_edges.csv'), encoding='utf-8-sig')
             edge_id = 'edge_id'
         else:
-            length_thr = 50.0
+            length_thr = 5.0
             index_cols = ['bridge_id', 'hazard_type', 'model',
                           'climate_scenario', 'year', 
                           'structure_type','pavement_material_asc', 

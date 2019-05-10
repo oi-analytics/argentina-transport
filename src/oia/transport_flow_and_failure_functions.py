@@ -96,82 +96,71 @@ def combine_hazards_and_network_attributes_and_impacts(hazard_dataframe, network
     return all_edge_fail_scenarios
 
 
+def correct_exposures(x,length_thr):
+    if x.percent_exposure > 100:
+        return 100.0*x.exposure_length/x.percent_exposure, 100.0, 1.0
+    elif x.exposure_length < length_thr:
+        return x.exposure_length,x.percent_exposure, 1.0*x.exposure_length/length_thr
+    else:
+        return x.exposure_length,x.percent_exposure, 1.0
+
 def create_hazard_scenarios_for_adaptation(all_edge_fail_scenarios, index_cols, length_thr):
-    all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(index_cols)
-    scenarios = list(set(all_edge_fail_scenarios.index.values.tolist()))
-    print('Number of failure scenarios', len(scenarios))
+    tqdm.pandas()
+    min_max_height = all_edge_fail_scenarios.groupby(index_cols)['min_flood_depth','max_flood_depth'].max().reset_index()
+    prob_exposures = all_edge_fail_scenarios.groupby(index_cols + ['probability'])['percent_exposure','exposure_length'].sum().reset_index()
+    del all_edge_fail_scenarios
+
+    prob_exposures['exposures_risk'] = prob_exposures.progress_apply(lambda x: correct_exposures(x,length_thr),axis=1)
+    prob_exposures[['exposure_length','percent_exposure','risk_wt']] = prob_exposures['exposures_risk'].apply(pd.Series)
+
+    min_exposures = prob_exposures[index_cols + \
+                    ['exposure_length',
+                    'percent_exposure']].groupby(index_cols)['exposure_length',
+                    'percent_exposure'].min().reset_index()
+    min_exposures.rename(columns={'exposure_length':'min_exposure_length','percent_exposure':'min_exposure_percent'},inplace=True)
+    min_exposures['min_duration_wt'] = 0.01*min_exposures['min_exposure_percent']
+    max_exposures = prob_exposures[index_cols + \
+                    ['exposure_length',
+                    'percent_exposure']].groupby(index_cols)['exposure_length',
+                    'percent_exposure'].max().reset_index()
+    max_exposures.rename(columns={'exposure_length':'max_exposure_length','percent_exposure':'max_exposure_percent'},inplace=True)
+    max_exposures['max_duration_wt'] = 0.01*max_exposures['max_exposure_percent']
+
+    exposures = pd.merge(min_exposures,max_exposures,how='left',on=index_cols).fillna(0)
+    del min_exposures,max_exposures
+    height_exposures = pd.merge(min_max_height,exposures,how='left',on=index_cols).fillna(0)
+    del min_max_height, exposures
+
+    prob_exposures = prob_exposures.set_index(index_cols)
+    scenarios = list(set(prob_exposures.index.values.tolist()))
+    t = len(scenarios)
+    print('Number of failure scenarios',t)
     scenarios_list = []
+    l = 0
     for sc in scenarios:
-        min_height = max(all_edge_fail_scenarios.loc[[sc], 'min_flood_depth'].values.tolist())
-        max_height = max(all_edge_fail_scenarios.loc[[sc], 'max_flood_depth'].values.tolist())
-        prob = all_edge_fail_scenarios.loc[[sc], 'probability'].values
-        if len(list(set(prob))) > 1:
-            exposure_len = all_edge_fail_scenarios.loc[[sc], 'exposure_length'].values
-            per = all_edge_fail_scenarios.loc[[sc], 'percent_exposure'].values
-
-            prob_tup = list(zip(prob, exposure_len, per))
-            u_pr = sorted(list(set(prob.tolist())))
-            exposure_len = []
-            per = []
-            r_wt = []
-            for pr in u_pr:
-                per_exp = sum([z for (x, y, z) in prob_tup if x == pr])
-                exp_len = sum([y for (x, y, z) in prob_tup if x == pr])
-                if per_exp > 100.0:
-                    exposure_len.append(100.0*exp_len/per_exp)
-                    per.append(100.0)
-                    r_wt.append(1.0)
-                else:
-                    exposure_len.append(exp_len)
-                    per.append(per_exp)
-                    if exp_len < length_thr:
-                        r_wt.append(0.01*per_exp)
-                    else:
-                        r_wt.append(1.0)
-
-            max_exposure_len = max(exposure_len)
-            min_exposure_len = min(exposure_len)
-
-            min_per = min(per)
-            max_per = max(per)
-            min_dur = 0.01*min_per
-            max_dur = 0.01*max_per
+        l+= 1
+        prob_tup = [tuple(x) for x in prob_exposures.loc[[sc], ['probability','exposure_length','risk_wt']].values.tolist()]
+        if len(prob_tup) > 1:
+            prob_tup = [(w,x,y) for (w,x,y) in sorted(prob_tup, key=lambda pair: pair[0])]
             risk_wt = 0
             dam_wt = 0
-            for p in range(len(u_pr)-1):
-                risk_wt += 0.5*(u_pr[p+1]-u_pr[p])*(r_wt[p+1]+r_wt[p])
-                dam_wt += 0.5*(u_pr[p+1]-u_pr[p])*(exposure_len[p+1]+exposure_len[p])
+            for p in range(len(prob_tup)-1):
+                risk_wt += 0.5*(prob_tup[p+1][0]-prob_tup[p][0])*(prob_tup[p+1][-1]+prob_tup[p][-1])
+                dam_wt += 0.5*(prob_tup[p+1][0]-prob_tup[p][0])*(prob_tup[p+1][1]+prob_tup[p][1])
 
         else:
-            prob_wt = prob[0]
-            min_exposure_len = sum(
-                all_edge_fail_scenarios.loc[[sc], 'exposure_length'].values.tolist())
-            min_per = sum(all_edge_fail_scenarios.loc[[sc], 'percent_exposure'].values.tolist())
-            if min_per > 100.0:
-                min_exposure_len = 100.0*min_exposure_len/min_per
-                min_per = 100.0
+            risk_wt = prob_tup[0][0]*prob_tup[0][-1]
+            dam_wt = prob_tup[0][0]*prob_tup[0][1]
 
-            max_per = min_per
-            max_exposure_len = min_exposure_len
-            dam_wt = max_exposure_len
-            min_dur = 0.01*min_per
-            if max_exposure_len < length_thr:
-                max_dur = 0.01*max_per
-                risk_wt = 0.01*max_per*prob_wt
-            else:
-                max_dur = 1.0
-                risk_wt = prob_wt
+        scenarios_list.append(list(sc) + [risk_wt, dam_wt])
 
-        scenarios_list.append(list(sc) + [min_height, max_height,
-                                          min_per, max_per, min_dur, max_dur, min_exposure_len,
-                                          max_exposure_len, risk_wt, dam_wt])
-
-    new_cols = ['min_flood_depth', 'max_flood_depth', 'min_exposure_percent',
-                'max_exposure_percent', 'min_duration_wt', 'max_duration_wt',
-                'min_exposure_length', 'max_exposure_length', 'risk_wt', 'dam_wt']
+        print ('Done with scenario {} out of {}'.format(l,t))
+    
+    new_cols = ['risk_wt', 'dam_wt']
     scenarios_df = pd.DataFrame(scenarios_list, columns=index_cols + new_cols)
 
-    del all_edge_fail_scenarios, scenarios_list
+    scenarios_df = pd.merge(scenarios_df,height_exposures,how='left',on=index_cols).fillna(0)
+    del scenarios_list,height_exposures
     return scenarios_df
 
 def swap_min_max(x, min_col, max_col):
