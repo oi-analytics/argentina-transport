@@ -24,3 +24,13 @@ To point the scripts to the shared folder locations:
   - `incoming_data`: 302 Argentina/C Incoming data
   - `data`: 302 Argentina/D Work Processes/Argentina/data
   - `figures`: 302 Argentina/D Work Processes/Argentina/figures
+
+
+## Acknowledgements
+
+This project has been developed by Oxford Infrastructure Analytics as part of a project funded
+by the World Bank.
+
+All code is copyright Oxford Infrastructure Analytics, licensed MIT (see the `LICENSE` file for
+details) and is available on GitHub at
+[oi-analytics/argentina-transport](https://github.com/oi-analytics/argentina-transport).
