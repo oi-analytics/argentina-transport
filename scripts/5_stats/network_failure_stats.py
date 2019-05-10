@@ -17,7 +17,7 @@ Input data requirements
     - length - Float length of edge intersecting with hazards
     - geometry - Shapely geometry of edges as LineString or nodes as Points
 
-3. Shapefile of administrative boundaries of Vietnam with attributes:
+3. Shapefile of administrative boundaries of Argentina with attributes:
     - province_i - String/Integer ID of Province
     - pro_name_e - String name of Province in English
     - district_i - String/Integer ID of District
@@ -110,31 +110,31 @@ def main():
 
     od_output_excel = os.path.join(os.path.join(output_path,'network_stats','network_risks_ranked.xlsx'))
     risk_excel_writer = pd.ExcelWriter(od_output_excel)
-    
+
 
     for m in range(len(modes)):
         network_stats = pd.read_excel(os.path.join(output_path,
                                                         'network_stats',
                                                         'national_scale_boundary_stats.xlsx'),sheet_name=modes[m],encoding='utf-8-sig')
         if modes[m] in ['road','rail','bridge']:
-            failure_results = pd.read_csv(os.path.join(output_path, 
+            failure_results = pd.read_csv(os.path.join(output_path,
                                         'failure_results',
                                         'minmax_combined_scenarios',
                                         'single_edge_failures_minmax_{}_100_percent_disrupt.csv'.format(modes[m])),encoding='utf-8-sig')
 
-            risk_results = pd.read_csv(os.path.join(output_path, 
+            risk_results = pd.read_csv(os.path.join(output_path,
                                         'network_stats',
                                         'national_{}_eael_climate_change.csv'.format(modes[m])),encoding='utf-8-sig')
 
             risk_results = risk_results.sort_values(by=['future'],ascending=False)
             risk_results.drop('year',axis=1,inplace=True)
             risk_results[['current','future']] = 1.0*risk_results[['current','future']]/1000000
-            
+
             failure_results = failure_results.sort_values(by=['max_econ_impact'],ascending=False)
             failure_results.drop('no_access',axis=1,inplace=True)
             failure_results[['min_total_tons','max_total_tons']] = 1.0*failure_results[['min_total_tons','max_total_tons']]/1000.0
             failure_results[['min_tr_loss','max_tr_loss','min_econ_loss','max_econ_loss','min_econ_impact','max_econ_impact']] = 1.0*failure_results[['min_tr_loss','max_tr_loss','min_econ_loss','max_econ_loss','min_econ_impact','max_econ_impact']]/1000000
-            
+
             if modes[m] == 'bridge':
                 edges = pd.read_csv(os.path.join(data_path,'network','bridges.csv'),encoding='utf-8-sig')
                 edges = edges[['bridge_id','edge_id','structure_type']]

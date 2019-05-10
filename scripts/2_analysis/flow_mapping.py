@@ -223,9 +223,9 @@ def main():
                                 'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
                                 'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
                                 'min_total_tons'],
-                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
-                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
-                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES', 
+                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS',
+                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES',
                                 'max_total_tons']
                 },
                 {
@@ -237,9 +237,9 @@ def main():
                                 'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
                                 'min_INDUSTRIA MANUFACTURERA','min_PESCA','min_TRANSPORTE Y COMUNICACIONES',
                                 'min_total_tons'],
-                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
-                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
-                                'max_INDUSTRIA MANUFACTURERA','max_PESCA', 'max_TRANSPORTE Y COMUNICACIONES', 
+                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS',
+                                'max_INDUSTRIA MANUFACTURERA','max_PESCA', 'max_TRANSPORTE Y COMUNICACIONES',
                                 'max_total_tons']
                 }
     ]
@@ -295,7 +295,7 @@ def main():
             print ('* Loading {} OD nodes pairs and tonnages'.format(modes[m]['sector']))
             ods = pd.read_csv(os.path.join(data_path,'OD_data','{}_nodes_daily_ods.csv'.format(modes[m]['sector'])),encoding='utf-8-sig')
             print ('Number of unique OD pairs',len(ods.index))
-        
+
             all_ods = copy.deepcopy(ods)
             # all_ods_tons_cols = [col for col in all_ods.columns.values.tolist() if col not in ['origin','o_region','destination','d_region']]
             all_ods_tons_cols = [col for col in all_ods.columns.values.tolist() if col not in index_cols]

@@ -17,7 +17,7 @@ Input data requirements
     - length - Float length of edge intersecting with hazards
     - geometry - Shapely geometry of edges as LineString or nodes as Points
 
-3. Shapefile of administrative boundaries of Vietnam with attributes:
+3. Shapefile of administrative boundaries of Argentina with attributes:
     - province_i - String/Integer ID of Province
     - pro_name_e - String name of Province in English
     - district_i - String/Integer ID of District

@@ -17,7 +17,7 @@ Input data requirements
     - length - Float length of edge intersecting with hazards
     - geometry - Shapely geometry of edges as LineString or nodes as Points
 
-3. Shapefile of administrative boundaries of Vietnam with attributes:
+3. Shapefile of administrative boundaries of Argentina with attributes:
     - province_i - String/Integer ID of Province
     - pro_name_e - String name of Province in English
     - district_i - String/Integer ID of District
@@ -142,7 +142,7 @@ def create_hazard_attributes_for_network(intersection_dir,climate_scenario,year,
                 hazard_dict['probability'] = hazard_df.loc[hazard_df.file_name ==
                                                             hz_file].probability.values[0]
 
-                
+
                 hazard_thrs = [(thresholds[t], thresholds[t+1]) for t in range(len(thresholds)-1)
                                            if '{0}m-{1}m'.format(thresholds[t], thresholds[t+1]) in file][0]
                 hazard_dict['min_depth'] = hazard_thrs[0]
@@ -204,7 +204,7 @@ def main():
     provinces = gpd.read_file(province_path,encoding='utf-8')
     provinces = provinces.to_crs({'init': 'epsg:4326'})
     sindex_provinces = provinces.sindex
-    
+
     '''Assign provinces to zones
     '''
     print('* Reading department dataframe')
@@ -261,7 +261,7 @@ def main():
                 mode_data_df.append(data_df)
                 del data_df
 
-            mode_data_df = pd.concat(mode_data_df,axis=0,sort='False', ignore_index=True)    
+            mode_data_df = pd.concat(mode_data_df,axis=0,sort='False', ignore_index=True)
             mode_data_df.to_excel(nat_excel_writer, modes[m], index=False,encoding='utf-8-sig')
             nat_excel_writer.save()
             del mode_data_df
