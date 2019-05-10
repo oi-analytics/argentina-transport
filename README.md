@@ -1,5 +1,7 @@
 # Argentina Transport Risk World Bank project
 
+[![Documentation Status](https://readthedocs.org/projects/argentina-transport-risk-analyis/badge/?version=latest)](https://argentina-transport-risk-analyis.readthedocs.io/en/latest/?badge=latest)
+
 Data processing and model scripts for Argentina Transport Risk Analysis
 
 ## Code organisation
