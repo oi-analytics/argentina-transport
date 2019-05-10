@@ -11,7 +11,7 @@ import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
-from oia.utils import *
+from atra.utils import *
 
 def main():
     config = load_config()
@@ -36,7 +36,7 @@ def main():
     national_pth = os.path.join(config['paths']['output'],
             'network_stats',
             'national_scale_hazards_stats.xlsx')
-    
+
     # Give the paths to the input data files
     # load provinces and get geometry of the right province
     print('* Reading provinces dataframe')
@@ -44,7 +44,7 @@ def main():
     provinces = gpd.read_file(province_path,encoding='utf-8')
     provinces = provinces.to_crs({'init': 'epsg:4326'})
     sindex_provinces = provinces.sindex
-    
+
     '''Assign provinces to zones
     '''
     print('* Reading department dataframe')
@@ -67,7 +67,7 @@ def main():
     for mode in modes:
         edge_fail_scenarios = pd.read_excel(national_pth,sheet_name=mode)
         edge_fail_scenarios = edge_fail_scenarios[hazard_cols + ['department_id','probability','percentage']]
-        
+
         for rp in return_periods:
             print ('return period',rp)
             all_edge_fail_scenarios = edge_fail_scenarios[edge_fail_scenarios['probability'] == 1.0/rp]
@@ -204,7 +204,7 @@ def main():
                 legend_handles = []
                 for c in range(len(colors)):
                     legend_handles.append(mpatches.Patch(color=colors[c], label=labels[c]))
-                
+
                 ax.legend(
                     handles=legend_handles,
                     title='Percentage exposure',

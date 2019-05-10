@@ -22,7 +22,7 @@ from rasterio.mask import mask
 from shapely.geometry import mapping
 from rasterio.features import shapes
 
-from oia.utils import *
+from atra.utils import *
 
 def glofris_data_details(root_dir):
 	f_all = []
@@ -53,7 +53,7 @@ def raster_rewrite(in_raster,out_raster,nodata):
 	with rasterio.open(in_raster) as dataset:
 		data_array = dataset.read()
 		data_array[np.where(np.isnan(data_array))] = nodata
-	
+
 		with rasterio.open(out_raster, 'w', driver='GTIff',
 					height=data_array.shape[1],    # numpy of rows
 					width=data_array.shape[2],     # number of columns
@@ -112,7 +112,7 @@ def convert_geotiff_to_vector_with_threshold(from_threshold,to_threshold, infile
 	subprocess.run(["rm", tmpfile_2.replace('shp', 'dbf')])
 	subprocess.run(["rm", tmpfile_2.replace('shp', 'prj')])
 
-				
+
 def main(config):
 	data_path = config['paths']['data']
 	incoming_path = config['paths']['incoming_data']
@@ -126,7 +126,7 @@ def main(config):
 	get_boundary_to_json = get_boundary.to_json()
 	get_boundary_to_json_dict = json.loads(get_boundary_to_json)
 	clip_boundary = [feature["geometry"] for feature in get_boundary_to_json_dict["features"]]
-	
+
 	del get_boundary, get_boundary_to_json, get_boundary_to_json_dict
 
 	model_types = ['WATCH','RCP45','RCP85']
@@ -134,7 +134,7 @@ def main(config):
 		model = model_types[m]
 		root_dir = os.path.join(incoming_path,'Global_GLOFRIS_data',model)
 		arg_dir = os.path.join(data_path,'flood_data','GLOFRIS',model)
-	
+
 		for root, dirs, files in os.walk(root_dir):
 			for file in files:
 				if file.endswith(".nc"):
@@ -168,10 +168,10 @@ def main(config):
 
 					# print (out_image)
 					arg_raster = os.path.join(arg_dir, 'ARG_' + file[:-3]+'.tif')
-					with rasterio.open(arg_raster, 'w', driver='GTiff', 
+					with rasterio.open(arg_raster, 'w', driver='GTiff',
 								height=out_image.shape[1],
-								width=out_image.shape[2], 
-								count=1, 
+								width=out_image.shape[2],
+								count=1,
 								dtype=out_image.dtype,
 								crs=proj.EPSG_code,
 								compress='lzw',
@@ -201,4 +201,3 @@ def main(config):
 if __name__ == '__main__':
     CONFIG = load_config()
     main(CONFIG)
-

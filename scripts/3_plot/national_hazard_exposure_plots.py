@@ -11,7 +11,7 @@ import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
-from oia.utils import *
+from atra.utils import *
 from tqdm import tqdm
 
 def main():
@@ -46,7 +46,7 @@ def main():
     provinces = gpd.read_file(province_path,encoding='utf-8')
     provinces = provinces.to_crs({'init': 'epsg:4326'})
     sindex_provinces = provinces.sindex
-    
+
     '''Assign provinces to zones
     '''
     print('* Reading department dataframe')
@@ -92,7 +92,7 @@ def main():
                 change_df.to_csv(os.path.join(config['paths']['output'],
                     'network_stats',
                     '{}_exposure_climate_change.csv'.format(mode)
-                    ), 
+                    ),
                     index=False,
                     encoding='utf-8-sig'
                 )
@@ -143,7 +143,7 @@ def main():
                         fancybox=True,
                         framealpha=1.0
                     )
-                    
+
                     climate_scenario = climate_scenario.replace('_',' ')
                     plt.title('{} - Percentage change for {}-year {} {} {}'.format(mode.title(),rp,name,climate_scenario,year), fontsize=9)
                     output_file = os.path.join(config['paths']['figures'],
@@ -203,7 +203,7 @@ def main():
                 legend_handles = []
                 for c in range(len(colors)):
                     legend_handles.append(mpatches.Patch(color=colors[c], label=labels[c]))
-                
+
                 ax.legend(
                     handles=legend_handles,
                     title='Percentage exposure',

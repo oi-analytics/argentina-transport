@@ -27,11 +27,10 @@
 
 import inspect
 import os
+import subprocess
 import sys
 # mock modules which we can avoid installing for docs-building
 from unittest.mock import MagicMock
-
-from sphinx import apidoc
 
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -68,6 +67,9 @@ mock_modules = [
     'geopandas',
     'geopy.distance',
     'haversine',
+    'matplotlib',
+    'matplotlib.patches',
+    'matplotlib.pyplot',
     'networkx',
     'openpyxl',
     'osgeo',
@@ -81,9 +83,14 @@ mock_modules = [
     'SALib',
     'SALib.sample',
     'SALib.analyze.morris',
+    'scipy',
+    'scipy.spatial',
     'shapely',
+    'shapely.errors',
     'shapely.geometry',
     'shapely.ops',
+    'snkit',
+    'snkit.utils',
     'sqlalchemy',
     'tqdm',
 ]
@@ -94,7 +101,7 @@ output_dir = os.path.join(__location__, "api")
 module_dir = os.path.join(__location__, "../src/atra")
 cmd_line_template = "sphinx-apidoc -f -M -o {outputdir} {moduledir}"
 cmd_line = cmd_line_template.format(outputdir=output_dir, moduledir=module_dir)
-apidoc.main(cmd_line.split(" "))
+subprocess.call(cmd_line.split(" "))
 
 
 # -- General configuration -----------------------------------------------------

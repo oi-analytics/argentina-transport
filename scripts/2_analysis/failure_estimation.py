@@ -101,8 +101,8 @@ import igraph as ig
 import networkx as nx
 import numpy as np
 import pandas as pd
-from oia.utils import *
-from oia.transport_flow_and_failure_functions import *
+from atra.utils import *
+from atra.transport_flow_and_failure_functions import *
 
 
 def main():
@@ -170,9 +170,9 @@ def main():
                                 'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
                                 'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
                                 'min_total_tons'],
-                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
-                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
-                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES', 
+                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS',
+                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES',
                                 'max_total_tons']
                 }
     ]
@@ -187,9 +187,9 @@ def main():
     #                             'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
     #                             'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
     #                             'min_total_tons'],
-    #             'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
-    #                             'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
-    #                             'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES', 
+    #             'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+    #                             'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS',
+    #                             'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES',
     #                             'max_total_tons']
     #             }
     # ]
@@ -291,7 +291,7 @@ def main():
             #         #         G_df, fail_edge, flow_df, modes[m]['vehicle_wt'],path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
             #         ef_dict = igraph_scenario_edge_failures_new(
             #                 G_df, fail_edge, flow_df,edge_path_idx, modes[m]['vehicle_wt'],path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
-                    
+
             #         if ef_dict:
             #             ef_list += ef_dict
 

@@ -11,7 +11,7 @@ import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 import numpy as np
 from shapely.geometry import LineString
-from oia.utils import *
+from atra.utils import *
 
 
 def main():

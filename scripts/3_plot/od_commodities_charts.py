@@ -5,7 +5,7 @@ import os
 import cartopy.crs as ccrs
 import pandas
 
-from oia.utils import load_config
+from atra.utils import load_config
 
 
 def main(config):

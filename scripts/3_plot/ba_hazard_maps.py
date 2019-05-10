@@ -3,7 +3,7 @@
 import os
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
-from oia.utils import *
+from atra.utils import *
 import matplotlib as mpl
 import geopandas
 
@@ -24,7 +24,7 @@ def main(config):
 
 	extent_file = provinces_filename = os.path.join(config['paths']['data'],'boundaries','admin_1_boundaries.shp')
 	record_names = []
-	num = 0 
+	num = 0
 	for record in shpreader.Reader(extent_file).records():
 		record_names.append((num,record.attributes['name'].lower().strip()))
 		num += 1
@@ -58,13 +58,13 @@ def main(config):
 	legend_handles = []
 	for c in range(len(colors)):
 		legend_handles.append(mpatches.Patch(color=colors[c], label=str(depths[c])))
-				
+
 	ax.legend(
 		handles=legend_handles,
 		title = 'Flood depths (cm)',
 		loc='lower right'
 	)
-					
+
 	plt.title('1 in 100 year flood for 3 hour duration', fontsize = 14)
 	save_fig(output_file)
 	plt.close()

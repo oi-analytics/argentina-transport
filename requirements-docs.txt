@@ -3,5 +3,6 @@ m2r
 matplotlib
 numpy
 pandas
+recommonmark
 requests
 scipy

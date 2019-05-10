@@ -11,9 +11,9 @@ import unidecode
 from scipy.spatial import Voronoi
 from shapely.geometry import Point, LineString
 from shapely import wkt,ops
-from oia.utils import *
+from atra.utils import *
 import copy
-from oia.transport_flow_and_failure_functions import *
+from atra.transport_flow_and_failure_functions import *
 import datetime
 from tqdm import tqdm
 import pandas as pd
@@ -39,7 +39,7 @@ def find_closest_edges(x,road_dataframe,edge_id_column):
         id_dist.append((line[edge_id_column],x['geometry'].distance(line['geometry'])))
 
     id_dist = [(z,y) for (z,y) in sorted(id_dist, key=lambda pair: pair[-1])]
-    
+
     return id_dist[0][0]
 
 def find_point_edges(road_dataframe,marker_dataframe,marker_columns,edge_columns,geom_buffer):
@@ -87,12 +87,12 @@ def main(config):
     km_markers = km_markers.to_crs(epsg=epsg_utm_20s)
     km_markers['id_ruta'] = km_markers.progress_apply(lambda x:find_closest_edges(x,edges,'id_ruta'),axis=1)
     km_markers = pd.merge(km_markers,edges[['id_ruta','cod_ruta']],how='left',on=['id_ruta'])
-    
+
     '''Find the bridge locations
     '''
     marker_df = gpd.read_file(os.path.join(incoming_data_path,'pre_processed_network_data','roads','national_roads','puente_sel','puente_selPoint.shp'),encoding='utf-8').fillna(0)
     marker_df.drop_duplicates(subset='id_estruct', keep='first', inplace=True)
-    
+
     marker_df = marker_df.to_crs(epsg=epsg_utm_20s)
     bm = find_point_edges(edges[['id_ruta','cod_ruta','geometry']],marker_df,['id_estruct','color'],['id_ruta','cod_ruta'],1)
     bm = pd.merge(bm,marker_df[['id_estruct','geometry']],how='left',on=['id_estruct'])
@@ -101,7 +101,7 @@ def main(config):
 
     bridge_df = pd.read_excel(os.path.join(incoming_data_path,'pre_processed_network_data','roads',
                 'national_roads','puente_sel','Consulta Puentes - 2017.xlsx'),sheet_name='Consulta',encoding='utf-8-sig').fillna(0)
-    bridge_df.columns = map(str.lower, bridge_df.columns) 
+    bridge_df.columns = map(str.lower, bridge_df.columns)
 
     all_ids = list(set(bridge_markers['id_estruct'].values.tolist()))
     ids = copy.deepcopy(all_ids)
@@ -131,7 +131,7 @@ def main(config):
         bridge_ids.drop_duplicates(subset='id_estruct', keep='first', inplace=True)
         if len(bridge_info.index) == len(bridge_ids.index):
             bridge_matches.append(bridge_ids)
-            id_matches += bridge_ids['id_estruct'].values.tolist() 
+            id_matches += bridge_ids['id_estruct'].values.tolist()
         else:
             r_n.append(r)
 
@@ -195,18 +195,18 @@ def main(config):
             bridge_ids = bm[bm['id_estruct'] == i]
             bridge_matches.append(bridge_ids)
             id_matches += bridge_ids['id_estruct'].values.tolist()
-            
+
     bridge_markers = gpd.GeoDataFrame(pd.concat(bridge_matches,axis=0,sort='False', ignore_index=True).fillna(0),geometry='geometry',crs={'init' :'epsg:32720'})
 
     '''Match bridge locations to markers
-    ''' 
+    '''
     bridge_markers['distances'] = bridge_markers.progress_apply(lambda x:get_marker(x,km_markers,'id_ruta','progresiva'),axis=1)
     bridge_markers.to_csv(os.path.join(incoming_data_path,'pre_processed_network_data','roads','national_roads','puente_sel','bridge_markers.csv'),encoding='utf-8-sig',index=False)
 
     # bridge_markers = pd.read_csv('bridge_markers.csv',encoding='utf-8-sig').fillna(0)
     # bridge_markers['geometry'] = bridge_markers['geometry'].apply(wkt.loads)
     # bridge_markers = gpd.GeoDataFrame(bridge_markers,geometry='geometry',crs={'init' :'epsg:32720'})
-      
+
     routes = list(set(bridge_markers['cod_ruta'].values.tolist()))
     bridge_data = []
     for r in routes:
@@ -241,7 +241,7 @@ def main(config):
                 bridge_info['distances'] = prog_end['prog_end'].values.tolist()
                 bridge_info['color'] = prog_end['color'].values.tolist()
                 bridge_info['geometry'] = prog_end['geometry'].values.tolist()
-                bridge_data.append(bridge_info)    
+                bridge_data.append(bridge_info)
 
         elif (len(bridge_info.index) != len(bridge_ids.index)) and (list(set(bridge_ids['distances'].values.tolist())) != [0]):
             if len(bridge_info.index) > len(bridge_ids.index):
@@ -273,7 +273,7 @@ def main(config):
                 bridge_info['distances'] = bridge_ids['distances'].values.tolist()
                 bridge_info['color'] = bridge_ids['color'].values.tolist()
                 bridge_info['geometry'] = bridge_ids['geometry'].values.tolist()
-                bridge_data.append(bridge_info)                
+                bridge_data.append(bridge_info)
 
         else:
             print (r,len(bridge_info.index),len(bridge_ids.index))
@@ -314,7 +314,7 @@ def main(config):
         'tipo de estructura',
         'tipo de tablero',
         'ubicación']
-    
+
     columns_rename = ['railing_height',
         'free_height',
         'right_lane_width',
@@ -356,7 +356,7 @@ def main(config):
     columns_dict= {}
     for c in range(len(columns)):
         columns_dict[columns[c]] = columns_rename[c]
-    
+
     bridges = gpd.GeoDataFrame(pd.concat(bridge_data,axis=0,sort='False', ignore_index=True).fillna(0),geometry='geometry',crs={'init' :'epsg:32720'})
     bridges.rename(columns=columns_dict,inplace=True)
 

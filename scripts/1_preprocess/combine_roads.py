@@ -8,7 +8,7 @@ import sys
 import pandas as pd
 import geopandas as gpd
 
-from oia.utils import *
+from atra.utils import *
 import network_create as nc
 
 def main():

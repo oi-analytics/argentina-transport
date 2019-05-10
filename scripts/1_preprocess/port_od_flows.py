@@ -8,7 +8,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import unidecode
-from oia.utils import *
+from atra.utils import *
 
 def extract_subset_from_dataframe(input_dataframe,skiprows,start_row,end_row,new_columns):
     output_data = []
@@ -63,12 +63,12 @@ def port_name_to_node_matches(port_reference,named_port,commodity_group,country,
             ]
         if not p_rename:
             p_rename = [x.node for x in list(port_countries.itertuples(index=False)) \
-                if (unidecode.unidecode(str(named_port).lower().strip()) == unidecode.unidecode(x.port_name.lower().strip())) 
+                if (unidecode.unidecode(str(named_port).lower().strip()) == unidecode.unidecode(x.port_name.lower().strip()))
                 ]
             if not p_rename:
                 p_rename = [x.node for x in list(port_countries.itertuples(index=False)) \
                 if (unidecode.unidecode(str(country).lower().strip()) == unidecode.unidecode(str(x.country).lower().strip()))
-                and (unidecode.unidecode(x.port_name.lower().strip()) in ('all','other')) 
+                and (unidecode.unidecode(x.port_name.lower().strip()) in ('all','other'))
                 ]
                 if p_rename:
                     named_port = p_rename[0]
@@ -99,12 +99,12 @@ def port_name_to_node_matches(port_reference,named_port,commodity_group,country,
             st_match = port_match
 
     return st_match
-                
+
 
 def main(config):
     """
-    Flanders Marine Institute (2018). 
-    Maritime Boundaries Geodatabase: Maritime Boundaries and Exclusive Economic Zones (200NM), version 10. 
+    Flanders Marine Institute (2018).
+    Maritime Boundaries Geodatabase: Maritime Boundaries and Exclusive Economic Zones (200NM), version 10.
     Available online at http://www.marineregions.org/ https://doi.org/10.14284/312
     """
     incoming_data_path = config['paths']['incoming_data']
@@ -131,7 +131,7 @@ def main(config):
     ref_date = '2017-01-01 00:00:00'
     export_operations = ['Exportación','Vehículos Expo','Transbordo Expo','Cabotaje Salido']
     import_operations = ['Importación','Transbordo Impo','Vehículos Impo','Cabotaje Entrado']
-    transit_operattions = ['Tránsito','Otros'] 
+    transit_operattions = ['Tránsito','Otros']
     port_df = gpd.read_file(os.path.join(data_path,'network','water_nodes.shp'),encoding='utf-8').fillna('none')
     port_df.crs = {'init' :'epsg:4326'}
     # port_df.rename(columns={'id':'node_id'},inplace=True)
@@ -258,7 +258,7 @@ def main(config):
     # excel_writer.save()
 
     od_vals_group_industry = {}
-    
+
     gr_cols = ['origin_id','destination_id','origin_province','destination_province','commodity_group','commodity_subgroup','industry_name','o_date']
     od_com_day_totals = od_dfs[gr_cols+['tons']].groupby(gr_cols)['tons'].sum().reset_index()
     od_dfs[['o_date','tons']].groupby('o_date')['tons'].sum().reset_index().to_csv(os.path.join(incoming_data_path,'port_ods','od_daily_total.csv'),encoding='utf-8-sig',index=False)
@@ -267,12 +267,12 @@ def main(config):
     od_com_max = od_com_day_totals[gr_cols + ['tons']].groupby(gr_cols).max().rename(columns={'tons': 'max_daily_tons'}).reset_index()
     od_com_min = od_com_day_totals[gr_cols + ['tons']].groupby(gr_cols).min().rename(columns={'tons': 'min_daily_tons'}).reset_index()
     od_minmax = pd.merge(od_com_min,od_com_max,how='left',on=gr_cols).fillna(0)
-    
+
     # print (od_minmax)
     for iter_,row in od_minmax.iterrows():
         if '{}-{}'.format(row.origin_id,row.destination_id) not in od_vals_group_industry.keys():
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)] = {}
-            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['origin_province'] = row.origin_province 
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['origin_province'] = row.origin_province
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['destination_province'] = row.destination_province
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['min_total_tons'] = row.min_daily_tons
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['max_total_tons'] = row.max_daily_tons
@@ -295,20 +295,20 @@ def main(config):
         od_list.append({**{'origin_id':key.split('-')[0],'destination_id':key.split('-')[1]},**values})
     od_df = pd.DataFrame(od_list).fillna(0)
     od_df.to_csv(os.path.join(data_path,'OD_data','port_nodes_daily_ods.csv'),index=False,encoding='utf-8-sig')
-    
+
     del od_list
-    
+
     od_vals_group_industry = {}
     for iter_,row in od_dfs.iterrows():
         if '{}-{}'.format(row.origin_id,row.destination_id) not in od_vals_group_industry.keys():
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)] = {}
-            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['origin_province'] = row.origin_province 
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['origin_province'] = row.origin_province
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['destination_province'] = row.destination_province
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['total_tons'] = row.tons
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)][row.industry_name] = row.tons
         else:
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['total_tons'] += row.tons
-            
+
             if row.industry_name not in od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)].keys():
                 od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)][row.industry_name] = row.tons
             else:
@@ -322,7 +322,7 @@ def main(config):
 
     province_ods = od_df[['origin_province','destination_province']+industry_cols + ['total_tons']]
     province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index()
-    province_ods.to_csv(os.path.join(data_path,'OD_data','port_province_annual_ods.csv'),index=False,encoding='utf-8-sig')  
+    province_ods.to_csv(os.path.join(data_path,'OD_data','port_province_annual_ods.csv'),index=False,encoding='utf-8-sig')
     # province_ods.to_excel(province_excel_writer,'industries',index=False,encoding='utf-8-sig')
     # province_excel_writer.save()
 

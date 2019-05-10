@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import cm
-from oia.utils import *
+from atra.utils import *
 
 mpl.style.use('ggplot')
 mpl.rcParams['font.size'] = 10.
@@ -176,7 +176,7 @@ def plot_many_ranges_subplots(input_dfs, division_factor,x_label, y_label,plot_t
         # ax[i].tick_params(axis='x', rotation=45)
         ax[i].legend(loc='upper left')
         ax[i].set_xlabel(x_label, fontweight='bold')
-    
+
     # fig.text(0.5, 0.04, 'Hazard scenarios', ha="center", va="center", fontweight='bold')
     fig.text(0.015, 0.5, y_label, ha="center", va="center", rotation=90, fontweight='bold')
 
@@ -261,7 +261,7 @@ def main():
             # fail_dfs = [fail_flu[['min_eael_flu','max_eael_flu']],fail_plu[['min_eael_plu','max_eael_plu']]]
             # print (fail_scenarios)
 
-            for flooding in ['fluvial flooding','pluvial flooding']: 
+            for flooding in ['fluvial flooding','pluvial flooding']:
                 fail_rcp45 = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_Med')]
                 fail_rcp45.rename(columns={'min_eael':'min_eael_rcp45','max_eael':'max_eael_rcp45'},inplace=True)
                 fail_rcp45_min = fail_rcp45.groupby([modes_id[m]])['min_eael_rcp45'].min().reset_index()

@@ -3,7 +3,7 @@
 """
 import os
 import sys
-from oia.adaptation_options import *
+from atra.adaptation_options import *
 
 def main():
     read_from_file = False

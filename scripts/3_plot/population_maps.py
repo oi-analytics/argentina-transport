@@ -3,7 +3,7 @@
 import os
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
-from oia.utils import *
+from atra.utils import *
 import matplotlib as mpl
 
 mpl.style.use('ggplot')
@@ -20,9 +20,9 @@ def main(config):
 	"""
 	figure_names = ['2010-census','2015-census']
 	# for f_i in range(len(figure_names)):
-	for f_i in range(0,1):	
+	for f_i in range(0,1):
 		output_file = os.path.join(config['paths']['figures'], '{}.png'.format(figure_names[f_i]))
-		
+
 		ax = get_axes()
 		plot_basemap(ax, config['paths']['data'])
 		scale_bar(ax, location=(0.8, 0.05))
@@ -56,7 +56,7 @@ def main(config):
 					elif region_val > 5000 and region_val <= 6000:
 						color = '#253494' # TODO
 						ax.add_geometries([geom], crs=proj_lat_lon, edgecolor='#ffffff', facecolor=color,label = '5000 to 6000')
-					
+
 				else:
 					ax.add_geometries([geom], crs=proj_lat_lon, edgecolor='#ffffff', facecolor=color,label = 'No value')
 
@@ -66,7 +66,7 @@ def main(config):
 			legend_handles = []
 			for c in range(len(colors)):
 				legend_handles.append(mpatches.Patch(color=colors[c], label=labels[c]))
-				
+
 			ax.legend(
 				handles=legend_handles,
 				title = 'Population numbers',
@@ -82,7 +82,7 @@ def main(config):
 			data[(data <= 0) | (data > 5)] = np.nan
 			max_val = np.nanmax(data)
 			norm=mpl.colors.Normalize(vmin=0, vmax=max_val)
-						
+
 			# Plot population data
 			im = ax.imshow(data, extent=lat_lon_extent,transform=proj_lat_lon, cmap=colors,norm =norm, zorder=2)
 
@@ -94,7 +94,7 @@ def main(config):
 			cbar.outline.set_color("none")
 			cbar.ax.yaxis.set_tick_params(color='black')
 			cbar.ax.set_xlabel('Population estimates',fontsize=12,color='black')
-					
+
 		plt.title(figure_names[f_i], fontsize = 14)
 		save_fig(output_file)
 		plt.close()

@@ -5,7 +5,7 @@ import os
 import geopandas as gpd
 import pandas as pd
 
-from oia.utils import load_config
+from atra.utils import load_config
 from shapely.geometry import Point
 from snkit import Network
 from snkit.network import (link_nodes_to_nearest_edge, add_ids, add_topology, add_endpoints,

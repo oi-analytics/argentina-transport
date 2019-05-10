@@ -11,7 +11,7 @@ import igraph as ig
 import copy
 import unidecode
 from scipy.spatial import Voronoi
-from oia.utils import *
+from atra.utils import *
 import datetime
 from tqdm import tqdm
 
@@ -188,7 +188,7 @@ def main(config):
             'destination_id','net_destination_name','net_destination_line','net_destination_province','net_destination_operator',
             'net_speed','chosen_speed','net_path','net_distance']
 
-    
+
     population_threshold = 1000
     '''Get industries
     '''
@@ -203,7 +203,7 @@ def main(config):
     provinces = gpd.read_file(province_path,encoding='utf-8')
     provinces = provinces.to_crs({'init': 'epsg:4326'})
     sindex_provinces = provinces.sindex
-    
+
     '''Assign provinces to zones
     '''
     print('* Reading zones dataframe')
@@ -271,7 +271,7 @@ def main(config):
     # road_edges = road_edges.reindex(list(road_edges.columns)[2:]+list(road_edges.columns)[:2], axis=1)
     # road_net = ig.Graph.TupleList(road_edges.itertuples(index=False), edge_attrs=list(road_edges.columns)[2:])
 
-    
+
     od_output_excel = os.path.join(incoming_data_path,'road_ods','road_ods.xlsx')
     excel_writer = pd.ExcelWriter(od_output_excel)
 
@@ -301,17 +301,17 @@ def main(config):
                                 if unidecode.unidecode(x.commodity_group.lower().strip()) == unidecode.unidecode(fd['commodity_group'].lower().strip()) \
                                 and unidecode.unidecode(x.commodity_subgroup.lower().strip()) == unidecode.unidecode(commodity.lower().strip())][0]
                 for o_index in range(1,124):
-                    for d_index in range(1,124): 
+                    for d_index in range(1,124):
                         fval = sheet.loc[o_index,d_index]
                         if fval > 0:
-                            o_matches = [(item.node_id, item.provincia,item.weight) 
+                            o_matches = [(item.node_id, item.provincia,item.weight)
                                         for item in road_nodes if item.od_id == o_index and item.weight > 0]
                             if len(o_matches) > 0:
                                 for o_vals in o_matches:
                                     o_val = 1.0*fval*(1.0*o_vals[2])
                                     o_node = o_vals[0]
                                     o_region = o_vals[1]
-                                    d_matches = [(item.node_id, item.provincia,item.weight) 
+                                    d_matches = [(item.node_id, item.provincia,item.weight)
                                                 for item in road_nodes if item.od_id == d_index and item.weight > 0]
                                     if len(d_matches) > 0:
                                         for d_vals in d_matches:
@@ -323,15 +323,15 @@ def main(config):
                                                     od_vals.append((o_node,d_node,o_index,d_index,o_region,d_region,commodity,fd['commodity_group'],industry_name,od_val))
                                                     if '{}-{}'.format(o_node,d_node) not in od_vals_group_industry.keys():
                                                         od_vals_group_industry['{}-{}'.format(o_node,d_node)] = {}
-                                                        od_vals_group_industry['{}-{}'.format(o_node,d_node)]['origin_zone_id'] = o_index 
-                                                        od_vals_group_industry['{}-{}'.format(o_node,d_node)]['destination_zone_id'] = d_index 
-                                                        od_vals_group_industry['{}-{}'.format(o_node,d_node)]['origin_province'] = o_region 
+                                                        od_vals_group_industry['{}-{}'.format(o_node,d_node)]['origin_zone_id'] = o_index
+                                                        od_vals_group_industry['{}-{}'.format(o_node,d_node)]['destination_zone_id'] = d_index
+                                                        od_vals_group_industry['{}-{}'.format(o_node,d_node)]['origin_province'] = o_region
                                                         od_vals_group_industry['{}-{}'.format(o_node,d_node)]['destination_province'] = d_region
                                                         od_vals_group_industry['{}-{}'.format(o_node,d_node)][fd['commodity_group']] = od_val
                                                         od_vals_group_industry['{}-{}'.format(o_node,d_node)]['total_tons'] = od_val
                                                         od_vals_group_industry['{}-{}'.format(o_node,d_node)][industry_name] = od_val
                                                     else:
-                                                        od_vals_group_industry['{}-{}'.format(o_node,d_node)]['total_tons'] += od_val 
+                                                        od_vals_group_industry['{}-{}'.format(o_node,d_node)]['total_tons'] += od_val
                                                         if fd['commodity_group'] not in od_vals_group_industry['{}-{}'.format(o_node,d_node)].keys():
                                                             od_vals_group_industry['{}-{}'.format(o_node,d_node)][fd['commodity_group'] ] = od_val
                                                         else:
@@ -346,19 +346,19 @@ def main(config):
 
                             print ('* Done with OD assignmenet between zones {} and {}'.format(o_index,d_index))
 
-    
+
     print ('Number of unique OD pairs by commodity',len(od_vals))
     print ('Number of unique OD pairs',len(od_vals_group_industry.keys()))
     od_list = []
     for key,values in od_vals_group_industry.items():
         od_list.append({**{'origin_id':key.split('-')[0],'destination_id':key.split('-')[1]},**values})
     od_df = pd.DataFrame(od_list).fillna(0)
-    
+
     del od_list, od_vals_group_industry
 
     province_ods = od_df[['origin_province','destination_province']+industry_cols + ['total_tons']]
-    province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index() 
-    province_ods.to_csv(os.path.join(data_path,'OD_data','road_province_annual_ods.csv'),index=False,encoding='utf-8-sig') 
+    province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index()
+    province_ods.to_csv(os.path.join(data_path,'OD_data','road_province_annual_ods.csv'),index=False,encoding='utf-8-sig')
     province_ods.to_excel(province_excel_writer,'industries',index=False,encoding='utf-8-sig')
     province_excel_writer.save()
 

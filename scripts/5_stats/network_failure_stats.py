@@ -46,8 +46,8 @@ import sys
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon
-from oia.utils import *
-from oia.transport_flow_and_failure_functions import *
+from atra.utils import *
+from atra.transport_flow_and_failure_functions import *
 from tqdm import tqdm
 
 

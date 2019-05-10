@@ -14,7 +14,7 @@ from sklearn import datasets, linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from oia.utils import *
+from atra.utils import *
 
 def main():
     config = load_config()
@@ -28,12 +28,12 @@ def main():
     mode_file = gpd.read_file(mode_file_path,encoding='utf-8')
     flow_file = pd.read_csv(flow_file_path)
     mode_file = pd.merge(mode_file,flow_file,how='left', on=['edge_id']).fillna(0)
-    
+
     data_df = mode_file[mode_file['road_type'] == 'national']
     print ('Before filtering',len(data_df.index))
     data_df = data_df[(data_df['tmda_count'] > 0) & (data_df['max_total_tons'] > 0)]
     print ('After filtering',len(data_df.index))
-    
+
     # X = 1.0/365*data_df['tmda_count'].values.reshape(-1, 1) # Transforrm single column data to matrix
     # y = data_df['max_total_tons'].values
 

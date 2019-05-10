@@ -10,7 +10,7 @@ import numpy as np
 import igraph as ig
 import copy
 import unidecode
-from oia.utils import *
+from atra.utils import *
 import datetime
 
 def extract_subset_from_dataframe(input_dataframe,skiprows,start_row,end_row,new_columns):
@@ -79,7 +79,7 @@ def station_name_to_node_matches(st,rename_stations,replace_strings,fd,rail_node
         st_prov = rename_stations.loc[rename_stations['od_station']==st[0],'provincia'].values[0]
         if st_prov == 0:
             st_prov = st[1]
-    else: 
+    else:
         st_change = st[0]
         st_prov = st[1]
 
@@ -92,7 +92,7 @@ def station_name_to_node_matches(st,rename_stations,replace_strings,fd,rail_node
         st_change = st_change.replace(rp[0],rp[1])
 
     if fd['line_name'].lower().strip() in (unidecode.unidecode(str(x.linea).replace('FFCC','').lower().strip()) for x in rail_nodes):
-        
+
         st_match = [x for x in rail_nodes \
             if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip()) \
             and fd['line_name'].lower().strip() in unidecode.unidecode(str(x.linea).replace('FFCC','').lower().strip()) \
@@ -101,7 +101,7 @@ def station_name_to_node_matches(st,rename_stations,replace_strings,fd,rail_node
         if not st_match:
             st_match = [x for x in rail_nodes if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip()) \
                     and st_prov == unidecode.unidecode(str(x.provincia).lower().strip())]
-        
+
             if not st_match:
                 st_match = [x for x in rail_nodes \
                     if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip()) \
@@ -115,7 +115,7 @@ def station_name_to_node_matches(st,rename_stations,replace_strings,fd,rail_node
 
                     if not st_match:
                         st_match = [x for x in rail_nodes if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip())]
-                        
+
                         if not st_match:
                             st_match = [x for x in rail_nodes if unidecode.unidecode(x.nombre.lower().strip()) in unidecode.unidecode(st_change.lower().strip()) \
                                         or unidecode.unidecode(st_change.lower().strip()) in unidecode.unidecode(x.nombre.lower().strip())]
@@ -125,7 +125,7 @@ def station_name_to_node_matches(st,rename_stations,replace_strings,fd,rail_node
             if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip()) \
             and fd['line_name'].lower().strip() in unidecode.unidecode(str(x.operador).lower().strip()) \
             and st_prov == unidecode.unidecode(str(x.provincia).lower().strip())]
-        
+
         if not st_match:
             st_match = [x for x in rail_nodes if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip()) \
                     and st_prov == unidecode.unidecode(str(x.provincia).lower().strip())]
@@ -263,7 +263,7 @@ def main(config):
     ref_date = '2015-01-01 00:00:00'
     replace_strings = [('est.',''),('gral.','general'),('pto.',''),('p.s.m.','san martin'),('p.s.l.','san lorenzo'),('p.',''),('cnel.','coronel'),('ing.','ingeniero')]
     provinces_df = []
-    for pdes in province_desc: 
+    for pdes in province_desc:
         p_df = pd.read_excel(os.path.join(rail_od_folder,'{}.xlsx'.format(pdes['file_name'])),sheet_name=pdes['sheet_name'],encoding='utf-8-sig')
         p_df.rename(columns={pdes['station_column']:'station',pdes['province_column']:'province'},inplace=True)
         provinces_df.append(p_df)
@@ -341,7 +341,7 @@ def main(config):
     rail_nodes['nombre'] = rail_nodes['nombre'].apply(lambda x:replace_string_characters(x,replace_strings))
     rail_nodes = list(rail_nodes.itertuples(index=False))
 
-    
+
     cost_df = pd.read_excel(os.path.join(incoming_data_path,'5','rail_od_matrices_06082018','rail_costs.xlsx'),sheet_name='baseline_values')
 
     od_output_excel = os.path.join(incoming_data_path,'rail_ods','rail_ods_paths.xlsx')
@@ -372,7 +372,7 @@ def main(config):
                 df['line_name'] = fd['line_name']
                 df_list.append(df)
                 del df
-            
+
             df = pd.concat(df_list,axis=0,sort='False', ignore_index=True).fillna(0)
 
         else:
@@ -448,7 +448,7 @@ def main(config):
 
                 if len(od_outputs) > 1:
                     od_outputs = [[od for od in sorted(od_outputs, key=lambda pair: pair[-1])][0]]
-                  
+
 
                 od_vals += od_outputs
 
@@ -473,7 +473,7 @@ def main(config):
             'origin_id','net_origin_name','net_origin_line','net_origin_province','net_origin_operator',
             'destination_id','net_destination_name','net_destination_line','net_destination_province','net_destination_operator'])['kms','net_distance'].min().reset_index()
         od_mismatch_df.to_excel(mismatch_excel_writer, fd['file_name'] + ' ' + fd['line_name'] + ' pairs', index=False,encoding='utf-8-sig')
-        mismatch_excel_writer.save()        
+        mismatch_excel_writer.save()
 
         od_com_day_totals = od_df[['origin_id','destination_id','commodity_group','commodity_subgroup','o_date','tons']].groupby(['origin_id','destination_id','commodity_group','commodity_subgroup','o_date'])['tons'].sum()
         od_com_day_totals.to_excel(day_total_excel_writer,fd['file_name'] + ' ' + fd['line_name'],encoding='utf-8-sig')
@@ -508,12 +508,12 @@ def main(config):
     od_com_max = od_com_day_totals[gr_cols + ['tons']].groupby(gr_cols).max().rename(columns={'tons': 'max_daily_tons'}).reset_index()
     od_com_min = od_com_day_totals[gr_cols + ['tons']].groupby(gr_cols).min().rename(columns={'tons': 'min_daily_tons'}).reset_index()
     od_minmax = pd.merge(od_com_min,od_com_max,how='left',on=gr_cols).fillna(0)
-    
+
     # print (od_minmax)
     for iter_,row in od_minmax.iterrows():
         if '{}-{}'.format(row.origin_id,row.destination_id) not in od_vals_group_industry.keys():
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)] = {}
-            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['origin_province'] = row.net_origin_province 
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['origin_province'] = row.net_origin_province
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['destination_province'] = row.net_destination_province
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['min_total_tons'] = row.min_daily_tons
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['max_total_tons'] = row.max_daily_tons
@@ -536,20 +536,20 @@ def main(config):
         od_list.append({**{'origin_id':key.split('-')[0],'destination_id':key.split('-')[1]},**values})
     od_df = pd.DataFrame(od_list).fillna(0)
     od_df.to_csv(os.path.join(data_path,'OD_data','rail_nodes_daily_ods.csv'),index=False,encoding='utf-8-sig')
-    
+
     del od_list
-    
+
     od_vals_group_industry = {}
     for iter_,row in od_dfs.iterrows():
         if '{}-{}'.format(row.origin_id,row.destination_id) not in od_vals_group_industry.keys():
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)] = {}
-            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['origin_province'] = row.net_origin_province 
+            od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['origin_province'] = row.net_origin_province
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['destination_province'] = row.net_destination_province
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['total_tons'] = row.tons
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)][row.industry_name] = row.tons
         else:
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)]['total_tons'] += row.tons
-            
+
             if row.industry_name not in od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)].keys():
                 od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)][row.industry_name] = row.tons
             else:
@@ -563,14 +563,14 @@ def main(config):
 
     province_ods = od_df[['origin_province','destination_province']+industry_cols + ['total_tons']]
     province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index()
-    province_ods.to_csv(os.path.join(data_path,'OD_data','rail_province_annual_ods.csv'),index=False,encoding='utf-8-sig')  
+    province_ods.to_csv(os.path.join(data_path,'OD_data','rail_province_annual_ods.csv'),index=False,encoding='utf-8-sig')
     province_ods.to_excel(province_excel_writer,'industries',index=False,encoding='utf-8-sig')
     province_excel_writer.save()
 
-    
+
     esp = []
     for key,values in edge_speeds.items():
-        # speed_vals, cost_vals = list(zip(*values)) 
+        # speed_vals, cost_vals = list(zip(*values))
         # esp.append((key,min(speed_vals),max(speed_vals),min(cost_vals),max(cost_vals)))
         esp.append((key,min(values),max(values)))
 

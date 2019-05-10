@@ -8,7 +8,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
 
-from oia.utils import load_config, get_axes, plot_basemap, scale_bar, plot_basemap_labels, save_fig
+from atra.utils import load_config, get_axes, plot_basemap, scale_bar, plot_basemap_labels, save_fig
 
 
 def main(config):

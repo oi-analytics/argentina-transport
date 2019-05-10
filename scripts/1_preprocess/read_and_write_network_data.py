@@ -6,7 +6,7 @@ Date: June 25, 2018
 import os
 import sys
 
-from oia.utils import *
+from atra.utils import *
 import network_create as nc
 
 def check_single_linegeom_creation(line_table,line_id,line_geom_type,line_attr,line_attr_typ):

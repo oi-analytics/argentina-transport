@@ -10,7 +10,7 @@ import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
-from oia.utils import *
+from atra.utils import *
 
 
 def main():
@@ -33,9 +33,9 @@ def main():
             'file_tag': 'commodities',
             'legend_label': "AADF ('000 tons/day)",
             'divisor': 1000,
-            'columns': ['max_total_tons','max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA', 
-                        'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS', 
-                        'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES' 
+            'columns': ['max_total_tons','max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
+                        'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS',
+                        'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES'
                         ],
             'title_cols': ['Total tonnage','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
                     'COMERCIO','EXPLOTACIÓN DE MINAS Y CANTERAS',

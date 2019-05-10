@@ -11,7 +11,7 @@ import geopandas
 import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
-from oia.utils import *
+from atra.utils import *
 
 def main(config):
     """Read shapes, plot map
@@ -60,7 +60,7 @@ def main(config):
     for iter_, val in bridges.iterrows():
         cat = val['structur_1'].strip()
         geoms_by_category[cat].append(val.geometry)
-    
+
 
     for cat, geoms in geoms_by_category.items():
         cat_style = styles[cat]

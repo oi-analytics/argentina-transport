@@ -40,7 +40,7 @@ import sys
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon
-from oia.utils import *
+from atra.utils import *
 
 
 def networkedge_hazard_intersection(edge_shapefile, hazard_shapefile, output_shapefile,edge_id_column):

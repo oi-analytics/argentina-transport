@@ -80,8 +80,8 @@ import igraph as ig
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from oia.transport_flow_and_failure_functions import *
-from oia.utils import *
+from atra.transport_flow_and_failure_functions import *
+from atra.utils import *
 
 def network_od_paths_assembly(points_dataframe, graph, vehicle_wt, transport_mode,
                                 min_tons_column,max_tons_column,csv_output_path=''):

@@ -12,7 +12,7 @@ import copy
 import unidecode
 from scipy.spatial import Voronoi
 from shapely.geometry import Point, LineString
-from oia.utils import *
+from atra.utils import *
 import datetime
 from tqdm import tqdm
 

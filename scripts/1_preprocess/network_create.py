@@ -27,8 +27,8 @@ import networkx as nx
 import osgeo.ogr as ogr
 import psycopg2
 
-from oia.utils import load_config
-import oia.dbutils as db
+from atra.utils import load_config
+import atra.dbutils as db
 
 def open_connection_psycopg2():
 	# ========================================
@@ -237,7 +237,7 @@ def create_points_from_line_intersections(edge_table,point_table,point_id,sector
 		cur.execute(sql_query)
 		for row in cur.fetchall():
 			start_id = row[0]
-		
+
 
 		sql_query = '''SELECT ST_AsText(ST_Intersection(A.geom,B.geom))
 						FROM {0} as A, {1} as B

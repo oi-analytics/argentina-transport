@@ -8,7 +8,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import unidecode
-from oia.utils import load_config,  transform_geo_file
+from atra.utils import load_config,  transform_geo_file
 
 def extract_subset_from_dataframe(input_dataframe,skiprows,start_row,end_row,new_columns):
     output_data = []
@@ -54,12 +54,12 @@ def port_name_to_node_matches(port_reference,named_port,commodity_group,country,
             ]
         if not p_rename:
             p_rename = [x.node for x in list(port_countries.itertuples(index=False)) \
-                if (unidecode.unidecode(str(named_port).lower().strip()) == unidecode.unidecode(x.port_name.lower().strip())) 
+                if (unidecode.unidecode(str(named_port).lower().strip()) == unidecode.unidecode(x.port_name.lower().strip()))
                 ]
             if not p_rename:
                 p_rename = [x.node for x in list(port_countries.itertuples(index=False)) \
                 if (unidecode.unidecode(str(country).lower().strip()) == unidecode.unidecode(str(x.country).lower().strip()))
-                and (unidecode.unidecode(x.port_name.lower().strip()) in ('all','other')) 
+                and (unidecode.unidecode(x.port_name.lower().strip()) in ('all','other'))
                 ]
                 if p_rename:
                     named_port = p_rename[0]
@@ -90,12 +90,12 @@ def port_name_to_node_matches(port_reference,named_port,commodity_group,country,
             st_match = port_match
 
     return st_match
-                
+
 
 def main(config):
     """
-    Flanders Marine Institute (2018). 
-    Maritime Boundaries Geodatabase: Maritime Boundaries and Exclusive Economic Zones (200NM), version 10. 
+    Flanders Marine Institute (2018).
+    Maritime Boundaries Geodatabase: Maritime Boundaries and Exclusive Economic Zones (200NM), version 10.
     Available online at http://www.marineregions.org/ https://doi.org/10.14284/312
     """
     incoming_data_path = config['paths']['incoming_data']
@@ -119,7 +119,7 @@ def main(config):
         'TEUS Totales':'total_teus'
     }
 
-    
+
     port_df = gpd.read_file(os.path.join(data_path,'network','water_nodes.shp'),encoding='utf-8').fillna('none')
     # port_names = []
     # for p in list(port_df.itertuples(index=False)):
@@ -153,7 +153,7 @@ def main(config):
             for m in match:
                 match_ports.append((p.port,p.destination_port,p.destination_country,p.origin_port,p.destination_port,p.commodity_group,m.name,m.id))
         else:
-            no_ports.append((p.port,p.destination_port,p.destination_country,p.commodity_group)) 
+            no_ports.append((p.port,p.destination_port,p.destination_country,p.commodity_group))
 
 
     excel_writer = pd.ExcelWriter(os.path.join(incoming_data_path,'port_ods','matches_and_nomatches_v2.xlsx'))
@@ -169,9 +169,9 @@ def main(config):
     commodity_list = port_df[['commodity_group','commodity_subgroup','tons']].groupby(['commodity_group','commodity_subgroup'])['tons'].sum()
     commodity_list.to_excel(excel_writer,'port',encoding='utf-8-sig')
     excel_writer.save()
-    
 
-    
+
+
     # port_df = pd.read_excel(os.path.join(incoming_data_path,'5','Puertos','Contenedores - SSPVNYMM.xlsx'),sheet_name='2017',encoding='utf-8-sig').fillna(0)
     # # print (port_df)
     # port_df.rename(columns=translate_columns,inplace=True)

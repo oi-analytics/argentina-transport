@@ -5,7 +5,7 @@ import os
 
 import fiona
 
-from oia.utils import load_config, within_extent
+from atra.utils import load_config, within_extent
 from shapely.geometry import shape
 
 def main(config):

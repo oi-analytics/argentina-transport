@@ -4,8 +4,8 @@ import os
 import sys
 
 import pandas as pd
-from oia.utils import *
-from oia.transport_flow_and_failure_functions import *
+from atra.utils import *
+from atra.transport_flow_and_failure_functions import *
 
 
 def main():
@@ -58,16 +58,16 @@ def main():
                                           'rail_edges.csv'), encoding='utf-8-sig')
             edge_id = 'edge_id'
         elif modes[m] == 'road':
-            index_cols = ['edge_id', 'hazard_type', 'model', 
-                            'climate_scenario', 'year', 
+            index_cols = ['edge_id', 'hazard_type', 'model',
+                            'climate_scenario', 'year',
                             'road_type','road_name','surface',
                             'road_cond', 'width', 'edge_length']
             sel_cols = ['edge_id','road_type',
                         'road_name','surface',
                         'road_cond','width', 'length']
-            cols = ['climate_scenario', 'edge_id', 
-                    'hazard_type', 'max_depth', 
-                    'min_depth','model', 'probability', 
+            cols = ['climate_scenario', 'edge_id',
+                    'hazard_type', 'max_depth',
+                    'min_depth','model', 'probability',
                     'year', 'length']
             length_thr = 500.0
             G_df = pd.read_csv(os.path.join(network_data_excel,
@@ -76,12 +76,12 @@ def main():
         else:
             length_thr = 50.0
             index_cols = ['bridge_id', 'hazard_type', 'model',
-                          'climate_scenario', 'year', 
-                          'structure_type','pavement_material_asc', 
+                          'climate_scenario', 'year',
+                          'structure_type','pavement_material_asc',
                           'pavement_material_desc','substructure_material',
                           'superstructure_material','road_name',
                           'width', 'edge_length']
-            sel_cols = ['bridge_id','structure_type','pavement_material_asc', 
+            sel_cols = ['bridge_id','structure_type','pavement_material_asc',
                         'pavement_material_desc','substructure_material',
                         'superstructure_material','road_name','width', 'length']
             cols = ['climate_scenario', 'bridge_id', 'hazard_type', 'max_depth', 'min_depth','model', 'probability', 'year', 'length']

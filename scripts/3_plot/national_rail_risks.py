@@ -12,7 +12,7 @@ import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
-from oia.utils import *
+from atra.utils import *
 
 
 def main():
@@ -104,7 +104,7 @@ def main():
         cl = all_edge_fail_scenarios.loc[[sc], 'climate_scenario'].values.tolist()
         if 2016 not in yrs:
             for e in range(len(eael)):
-                if eael[e] > 0: 
+                if eael[e] > 0:
                     # change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),cl,yrs,[0]*len(cl),eael,[1e9]*len(cl)))
                     change_tup += [(sc[0],sc[1],cl[e],yrs[e],0,eael[e],1e9)]
         elif len(yrs) > 1:
@@ -243,7 +243,7 @@ def main():
     #             ('2', Style(color='#969696', zindex=7, label='No hazard exposure/effect'))
     #         ])
 
-            
+
     #         for cat, geoms in rail_geoms_by_category.items():
     #             cat_style = styles[cat]
     #             ax.add_geometries(
@@ -315,7 +315,7 @@ def main():
 
     #         if climate_scenario == 'none':
     #             climate_scenario = 'Current'
-            
+
     #         title = 'Railways ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario,year)
     #         print ('* Plotting ',title)
 

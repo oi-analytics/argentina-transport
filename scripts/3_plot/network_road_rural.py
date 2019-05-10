@@ -8,7 +8,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
 
-from oia.utils import load_config, get_axes, plot_basemap, scale_bar, plot_basemap_labels, save_fig
+from atra.utils import load_config, get_axes, plot_basemap, scale_bar, plot_basemap_labels, save_fig
 
 
 def main(config):
@@ -19,7 +19,7 @@ def main(config):
     # data
     output_file = os.path.join(config['paths']['figures'], 'network-rural-road-map.png')
     road_edge_file_rural = os.path.join(data_path, 'network', 'road_edges_rural.shp')
-    
+
 
     # basemap
     proj_lat_lon = ccrs.PlateCarree()

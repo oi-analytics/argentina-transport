@@ -10,7 +10,7 @@ import numpy as np
 import igraph as ig
 import copy
 import unidecode
-from oia.utils import *
+from atra.utils import *
 import datetime
 
 def main(config):
@@ -21,12 +21,12 @@ def main(config):
     file_desc = [{'file_name':'Cargas No Containerizadas - SSPVNYMM',
         'sheet_name':'2017',
         'skiprows':0,
-        'excel_columns':['Puerto', 'Año', 'Mes', 'Nombre Del Buque', 'Tipo de Buque', 
-                        'OMI', 'Bandera', 'TRN', 'Eslora', 'Manga', 'Sitio de Atraque', 
-                        'Fecha Entrada', 'Hora Entrada', 'Fecha Salida', ' Hora Salida', 
-                        'País de Procedencia', 'Puerto de Procedencia', 'País de Destino', 
-                        'Puerto de Destino', 'Tipo de Operación', 'Producto Corregido', 
-                        'Rubro', 'Trimestre', 'Total Tn', 'Medida', 'Observaciones', 
+        'excel_columns':['Puerto', 'Año', 'Mes', 'Nombre Del Buque', 'Tipo de Buque',
+                        'OMI', 'Bandera', 'TRN', 'Eslora', 'Manga', 'Sitio de Atraque',
+                        'Fecha Entrada', 'Hora Entrada', 'Fecha Salida', ' Hora Salida',
+                        'País de Procedencia', 'Puerto de Procedencia', 'País de Destino',
+                        'Puerto de Destino', 'Tipo de Operación', 'Producto Corregido',
+                        'Rubro', 'Trimestre', 'Total Tn', 'Medida', 'Observaciones',
                         'Provincia', 'Región'],
         'columns':['commodity_group','commodity_subgroup','tons',
                 'origin_date','origin_port',
@@ -46,11 +46,11 @@ def main(config):
     file_desc = [{'file_name':'Cargas No Containerizadas - SSPVNYMM',
         'sheet_name':'2017',
         'skiprows':0,
-        'excel_columns':['Puerto', 'Mes',  
-                        'Fecha Entrada', 'Hora Entrada', 'Fecha Salida', ' Hora Salida', 
-                        'País de Procedencia', 'Puerto de Procedencia', 'País de Destino', 
-                        'Puerto de Destino', 'Tipo de Operación', 'Producto Corregido', 
-                        'Rubro', 'Total Tn', 'Medida', 
+        'excel_columns':['Puerto', 'Mes',
+                        'Fecha Entrada', 'Hora Entrada', 'Fecha Salida', ' Hora Salida',
+                        'País de Procedencia', 'Puerto de Procedencia', 'País de Destino',
+                        'Puerto de Destino', 'Tipo de Operación', 'Producto Corregido',
+                        'Rubro', 'Total Tn', 'Medida',
                         'Provincia', 'Región'],
         'columns':['port_name','month','entry_date','entry_time','exit_date','exit_time',
                 'origin_country','origin_port',
@@ -59,8 +59,8 @@ def main(config):
                 'commodity_group','tons',
                 'tons_unit','province','port_region'
                 ],
-        'excel_operations':['Cabotaje Entrado', 'No Operó', 'Cabotaje Salido', 
-                    'Vehículos Expo', 'Tránsito', 'Otros', 'Vehículos Impo', 
+        'excel_operations':['Cabotaje Entrado', 'No Operó', 'Cabotaje Salido',
+                    'Vehículos Expo', 'Tránsito', 'Otros', 'Vehículos Impo',
                     'Transbordo Impo', 'Exportación', 'Transbordo Expo', 'Importación'],
 
         'operations':['']
@@ -84,7 +84,7 @@ def main(config):
 
 
 
-    
+
 
 if __name__ == '__main__':
     CONFIG = load_config()
