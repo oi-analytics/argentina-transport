@@ -12,7 +12,7 @@ import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
-from oia.utils import *
+from atra.utils import *
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
     change_labels = ['< -100','-100 to -50','-50 to -10','-10 to 0','0 to 10','10 to 50','50 to 100',' > 100','No change/value/BCR<1']
     change_ranges = [(-1e10,-100),(-100,-50),(-50,-10),(-10,0),(0.001,10),(10,50),(50,100),(100,1e10)]
 
-    
+
     adapt_set = [
         {
             'column': 'min_ini_adap_cost',
@@ -346,7 +346,7 @@ def main():
                 ('none', Style(color='#969696', zindex=6, label=cat_label))
             ])
 
-            
+
             for cat, geoms in road_geoms_by_category.items():
                 cat_style = styles[cat]
                 ax.add_geometries(
@@ -416,13 +416,12 @@ def main():
                     transform=proj_lat_lon,
                     size=10)
 
-            # if climate_scenario.lower().strip() == 'baseline':
-            #     year = 2016
-            # else:
-            #     year = 2050
-            
-            # title = 'Roads ({}) {} {}'.format(adapt_set[c]['title'],climate_scenario.replace('_',' ').title(),year)
-            title = 'Roads ({})'.format(adapt_set[c]['title'])
+            if climate_scenario.lower().strip() == 'baseline':
+                year = 2016
+            else:
+                year = 2050
+
+            title = 'Roads ({}) {} {}'.format(adapt_set[c]['title'],climate_scenario.replace('_',' ').title(),year)
             print ('* Plotting ',title)
 
             plt.title(title, fontsize=14)
@@ -437,7 +436,7 @@ def main():
             save_fig(output_file)
             plt.close()
 
-    
+
 
 
 if __name__ == '__main__':

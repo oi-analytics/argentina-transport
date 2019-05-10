@@ -13,7 +13,7 @@ from tqdm import tqdm
 from dask import dataframe as dd
 from dask.multiprocessing import get
 from multiprocessing import cpu_count
-from oia.utils import *
+from atra.utils import *
 
 nCores = cpu_count()
 
@@ -139,7 +139,7 @@ def calc_costs(x, cst_2L_asphalt, cst_2L_concrete, cst_4L_concrete,
     bc_ratio : list
         benefit cost ratios for this road segment
 
-    """    
+    """
     if x.width == 0:
         x.width = 7.3
 
@@ -164,7 +164,7 @@ def calc_costs(x, cst_2L_asphalt, cst_2L_concrete, cst_4L_concrete,
             duration = duration_max*x.max_duration_wt
 
 
-    
+
     cst_rehab = 1.0e3*(cst_rehab*x.width)/7.3
 
     # Estimate benefit
@@ -244,7 +244,7 @@ def calc_costs(x, cst_2L_asphalt, cst_2L_concrete, cst_4L_concrete,
 
 def run_adaptation_calculation(file_id, data_path, output_path, duration_max=10,
                                discount_rate=10, growth_rate=2.9,  read_from_file=False):
-    
+
     tqdm.pandas()
     print('* {} started!'.format(file_id))
 
@@ -261,7 +261,7 @@ def run_adaptation_calculation(file_id, data_path, output_path, duration_max=10,
     adapt = adapt[~adapt.option.isin(['Subtotal','No value'])]
 
     cost_2L_asphalt = adapt.loc[adapt['option']=='Upgrading to Bituminous 2L','cost_perkm'].values[0] + \
-                     adapt.loc[adapt['option']=='Upgrading to Bituminous 2L','climate_uplift_perkm'].values[0] 
+                     adapt.loc[adapt['option']=='Upgrading to Bituminous 2L','climate_uplift_perkm'].values[0]
     cost_2L_concrete = adapt.loc[adapt['option']=='Upgrading to Concrete 2L','cost_perkm'].values[0] + \
                         adapt.loc[adapt['option']=='Upgrading to Concrete 2L','climate_uplift_perkm'].values[0]
     cost_4L_concrete = adapt.loc[adapt['option']=='Upgrading to Concrete 4L','cost_perkm'].values[0] + \

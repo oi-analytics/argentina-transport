@@ -13,7 +13,7 @@ import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from shapely.geometry import LineString
-from oia.utils import *
+from atra.utils import *
 
 mpl.style.use('ggplot')
 mpl.rcParams['font.size'] = 10.

@@ -11,7 +11,7 @@ import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
 import matplotlib as mpl
-from oia.utils import *
+from atra.utils import *
 
 
 def main():
@@ -102,7 +102,7 @@ def main():
             # generate weight bins
             if plot_set['columns'][c] == 'tmda':
                 column = plot_set['columns'][c]
-                weights = [int(str(record[column])) 
+                weights = [int(str(record[column]))
                         for iter_, record in mode_file.iterrows() if str(record[column]).isdigit() is True and int(str(record[column])) > 0]
                 max_weight = max(weights)
                 width_by_range = generate_weight_bins(weights, n_steps=7, width_step=0.02)

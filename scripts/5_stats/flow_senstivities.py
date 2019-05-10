@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import Voronoi
 from shapely.geometry import Point, Polygon
-from oia.utils import *
+from atra.utils import *
 
 
 def nodes_flows_from_edges(edge_flow_file,nodes_name_file,nodes_name_column,flow_columns):
@@ -97,7 +97,7 @@ def main():
 
 
 
-        
+
 
 
 if __name__ == '__main__':

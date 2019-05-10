@@ -15,8 +15,8 @@ import igraph as ig
 import networkx as nx
 import numpy as np
 import pandas as pd
-from oia.utils import *
-from oia.transport_flow_and_failure_functions import *
+from atra.utils import *
+from atra.transport_flow_and_failure_functions import *
 
 
 def main():

@@ -10,7 +10,7 @@ import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
-from oia.utils import *
+from atra.utils import *
 from tqdm import tqdm
 
 def assign_veh_to_roads(x,veh_list):
@@ -50,7 +50,7 @@ def main():
 
     road_file = gpd.read_file(road_file_path,encoding='utf-8')
     road_file = road_file[road_file['road_type'] == 'national']
-    
+
     road_veh = pd.read_excel(os.path.join(incoming_data_path,'5','DNV_data_recieved_06082018','TMDA y Clasificación 2016.xlsx'),sheet_name='Clasificación 2016',skiprows=14,encoding='utf-8-sig').fillna(0)
     road_veh.columns = map(str.lower, road_veh.columns)
     road_veh = list(road_veh.itertuples(index=False))

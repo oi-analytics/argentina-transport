@@ -17,7 +17,7 @@ Input data requirements
     - length - Float length of edge intersecting with hazards
     - geometry - Shapely geometry of edges as LineString or nodes as Points
 
-3. Shapefile of administrative boundaries of Vietnam with attributes:
+3. Shapefile of administrative boundaries of Argentina with attributes:
     - province_i - String/Integer ID of Province
     - pro_name_e - String name of Province in English
     - district_i - String/Integer ID of District
@@ -66,8 +66,8 @@ import sys
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon
-from oia.utils import *
-from oia.transport_flow_and_failure_functions import *
+from atra.utils import *
+from atra.transport_flow_and_failure_functions import *
 from tqdm import tqdm
 
 
@@ -143,7 +143,7 @@ def create_hazard_event_attributes_for_network(intersection_dir,climate_scenario
                 hazard_dict['probability'] = hazard_df.loc[hazard_df.file_name ==
                                                             hz_file].probability.values[0]
 
-                
+
                 hazard_thrs = [(thresholds[t], thresholds[t+1]) for t in range(len(thresholds)-1)
                                            if '{0}m-{1}m'.format(thresholds[t], thresholds[t+1]) in file][0]
                 hazard_dict['min_depth'] = hazard_thrs[0]
@@ -197,7 +197,7 @@ def main():
     national_results = 'Yes'
     climate_scenarios = ['Baseline','Future_Med','Future_High']
     years = [2016,2050,2050]
-    
+
     '''Assign provinces to zones
     '''
     print('* Reading department dataframe')
@@ -232,7 +232,7 @@ def main():
                 intersected_zones['event_id'] = [event_val['id']]*len(intersected_zones.index)
                 intersected_zones = pd.merge(intersected_zones,mode_df,how='left',on=['department_id']).fillna(0)
                 intersected_zones = intersected_zones[intersected_zones[modes_id_cols[m]] != 0]
-                
+
                 event_df = intersected_zones[[modes_id_cols[m],'event_id','climate_scenario','probability']].set_index(['event_id','climate_scenario','probability'])
                 events_select = list(set(event_df.index.values.tolist()))
                 for e in events_select:
@@ -240,7 +240,7 @@ def main():
                     event_mode_ids = list(set(event_df.loc[[e],modes_id_cols[m]].values.tolist()))
                     # print (event_mode_ids)
                     event_set += list(zip([event_desc]*len(event_mode_ids),event_mode_ids))
-                    # print (event_set) 
+                    # print (event_set)
 
                 mode_data_df.append(intersected_zones)
                 print ('* Done with event {} for {}'.format(event_val['id'],modes[m]))
@@ -254,7 +254,7 @@ def main():
             # event_set = []
             # for e in events:
             #     event_desc = '{}_1in{}_{}'.format(e[0],int(1.0/e[2]),e[1])
-            #     event_set.append((event_desc,list(set(event_df.loc[[e],modes_id_cols[m]].values.tolist())))) 
+            #     event_set.append((event_desc,list(set(event_df.loc[[e],modes_id_cols[m]].values.tolist()))))
 
             event_set = pd.DataFrame(event_set,columns=['event_id',modes_id_cols[m]])
             event_set.to_csv(os.path.join(output_dir,'{}_event_set.csv'.format(modes[m])),index=False,encoding='utf-8-sig')

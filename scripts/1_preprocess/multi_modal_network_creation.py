@@ -12,7 +12,7 @@ import copy
 import unidecode
 from scipy.spatial import Voronoi
 from shapely.geometry import Point, LineString
-from oia.utils import *
+from atra.utils import *
 import datetime
 from tqdm import tqdm
 
@@ -39,7 +39,7 @@ def network_shapefile_to_network(edges_in, mode_properties_file, mode_name, spee
 
 
 def assign_minmax_tariff_costs_multi_modal_apply(x, cost_dataframe):
-    """Assign tariff costs on multi-modal network links in Vietnam
+    """Assign tariff costs on multi-modal network links in Argentina
 
     Parameters
         - x - Pandas dataframe with values
@@ -194,9 +194,9 @@ def main(config):
     port_nodes = port_nodes[port_nodes['name'] != 'none']
     port_nodes = port_nodes[['node_id','geometry']]
 
-    
+
     '''
-    Find closest rail, port and road points 
+    Find closest rail, port and road points
     '''
     multi_edge_df = []
 
@@ -209,7 +209,7 @@ def main(config):
     multi_edge_df['length'] = multi_edge_df.geometry.progress_apply(line_length)
     multi_edge_df.drop(['from_geometry','to_geometry'],axis=1,inplace=True)
     multi_edge_df = multi_edge_df[multi_edge_df['length'] < 2]
-    
+
     '''Add costs to multi-modal edges
     '''
     multi_edge_df['min_time'] = 0
@@ -224,7 +224,7 @@ def main(config):
     G_df = pd.merge(G_df,e_flow[['edge_id','max_total_tons']],how='left',on=['edge_id'])
     G_nodes = list(set(G_df[G_df['max_total_tons'] > 0]['from_node'].values.tolist() + G_df[G_df['max_total_tons'] > 0]['to_node'].values.tolist()))
     multi_edge_df['operation_state'] = multi_edge_df.progress_apply(lambda x: get_operational_state(x,G_nodes),axis = 1)
-    
+
     '''Create edges and arrange columns
     '''
     multi_edge_df['edge_id'] = ['{}_{}'.format('multie', i) for i in range(len(multi_edge_df.index))]

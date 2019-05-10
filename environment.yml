@@ -1,0 +1,41 @@
+# Conda environment specification
+# To import/create a copy of the environment:
+#    conda env create -f .environment.yml
+name: argentina-transport
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - boltons
+  - cartopy
+  - colour
+  - dask
+  - fiona
+  - GDAL
+  - geoalchemy2
+  - geopandas==0.4.0
+  - geopy
+  - haversine
+  - ipopt
+  - jupyter
+  - matplotlib
+  - nbstripout
+  - networkx
+  - numpy
+  - openpyxl
+  - pandas
+  - pathos
+  - pylint  # dev
+  - pyomo
+  - pytest  # test
+  - pytest-cov  # test
+  - rasterio
+  - rasterstats
+  - requests
+  - rtree
+  - SALib
+  - scipy
+  - shapely
+  - sphinx  # docs
+  - sqlalchemy
+  - tqdm

@@ -10,7 +10,7 @@ import copy
 import unidecode
 from scipy.spatial import Voronoi
 from shapely.geometry import Point, LineString
-from oia.utils import *
+from atra.utils import *
 import datetime
 from tqdm import tqdm
 import pandas as pd
@@ -73,7 +73,7 @@ def main(config):
 
     edges = pd.read_csv(os.path.join(data_path,'network','road_edges.csv'),encoding='utf-8-sig')
     edges = pd.merge(edges,edges_geom,how='left',on=['edge_id'])
-    
+
     del edges_geom
     '''Add the tmda data
     '''
@@ -83,7 +83,7 @@ def main(config):
                         a['folder_name'],a['file_name']),encoding='utf-8').fillna(0)
         road_attr = road_attr[(road_attr['sentido'] == 'A') & (road_attr[a['attribute']] != -1)]
         edge_attr = get_numeric_attributes(edges[edges['road_type']=='national'][['edge_id','length','geometry']],road_attr,a['id_column'],a['attribute'],a['attribute_rename'])
-        
+
         edges = pd.merge(edges,edge_attr,how='left',on=['edge_id']).fillna(0)
 
     edges.to_file(os.path.join(data_path,'network','road_edges.shp'),encoding = 'utf-8')

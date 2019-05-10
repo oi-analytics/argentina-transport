@@ -17,7 +17,7 @@ Input data requirements
     - length - Float length of edge intersecting with hazards
     - geometry - Shapely geometry of edges as LineString or nodes as Points
 
-3. Shapefile of administrative boundaries of Vietnam with attributes:
+3. Shapefile of administrative boundaries of Argentina with attributes:
     - province_i - String/Integer ID of Province
     - pro_name_e - String name of Province in English
     - district_i - String/Integer ID of District
@@ -46,8 +46,8 @@ import sys
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon
-from oia.utils import *
-from oia.transport_flow_and_failure_functions import *
+from atra.utils import *
+from atra.transport_flow_and_failure_functions import *
 from tqdm import tqdm
 
 def main():
@@ -78,7 +78,7 @@ def main():
 
     # Supply input data and parameters
     modes = ['road','rail']
-    
+
     '''Road stats
     '''
     road_edges = pd.read_csv(os.path.join(data_path,'network','road_edges.csv'),encoding='utf-8-sig')
@@ -122,7 +122,7 @@ def main():
                                 'surface','length']].groupby(['road_type',
                                     'surface'])['length'].sum().reset_index().to_csv(os.path.join(output_path,'network_stats','road_surface.csv'))
 
-    
+
     '''National bridge stats
     '''
     road_bridges = pd.read_csv(os.path.join(data_path,'network','bridges.csv'),encoding='utf-8-sig')
@@ -137,7 +137,7 @@ def main():
     rail_nodes = pd.read_csv(os.path.join(data_path,'network','rail_nodes.csv'),encoding='utf-8-sig')
     print ('* Number of rail edges:',len(rail_edges.index))
     print ('* Number of rail nodes:',len(rail_nodes.index))
-    print ('* Number of rail stations:',len(rail_nodes[rail_nodes['nombre']!='0'].index))     
+    print ('* Number of rail stations:',len(rail_nodes[rail_nodes['nombre']!='0'].index))
 
     '''Port stats
     '''

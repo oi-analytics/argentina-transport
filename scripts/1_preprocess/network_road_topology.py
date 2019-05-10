@@ -6,7 +6,7 @@ import geopandas
 import pandas
 
 from fiona.crs import from_epsg
-from oia.utils import load_config
+from atra.utils import load_config
 from shapely.geometry import Point
 from snkit import Network
 from snkit.network import (add_endpoints, link_nodes_to_edges_within, nearest_edge,

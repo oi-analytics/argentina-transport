@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import cm
-from oia.utils import *
+from atra.utils import *
 
 mpl.style.use('ggplot')
 mpl.rcParams['font.size'] = 10.
@@ -188,7 +188,7 @@ def plot_many_ranges_subplots(input_dfs, division_factor,x_label, y_label,plot_t
         # ax[i].tick_params(axis='x', rotation=45)
         ax[i].legend(loc='upper left')
         ax[i].set_xlabel(x_label, fontweight='bold')
-    
+
     # fig.text(0.5, 0.04, 'Hazard scenarios', ha="center", va="center", fontweight='bold')
     fig.text(0.015, 0.5, y_label, ha="center", va="center", rotation=90, fontweight='bold')
 
@@ -256,20 +256,21 @@ def main():
             fail_scenarios['min_eael'] = duration*fail_scenarios['risk_wt']*fail_scenarios['min_econ_impact']
             fail_scenarios['max_eael'] = duration*fail_scenarios['risk_wt']*fail_scenarios['max_econ_impact']
 
-            for flooding in ['fluvial flooding','pluvial flooding']: 
-                fail_futmed = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_Med')]
-                fail_futmed.rename(columns={'min_eael':'min_eael_futmed','max_eael':'max_eael_futmed'},inplace=True)
-                fail_futmed_min = fail_futmed.groupby([modes_id[m]])['min_eael_futmed'].min().reset_index()
-                fail_futmed_max = fail_futmed.groupby([modes_id[m]])['max_eael_futmed'].max().reset_index()
-                fail_futmed = pd.merge(fail_futmed_min,fail_futmed_max,how='left',on=[modes_id[m]]).fillna(0)
-                fail_futmed = fail_futmed.sort_values(['max_eael_futmed'], ascending=True)
 
-                fail_futhigh = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_High')]
-                fail_futhigh.rename(columns={'min_eael':'min_eael_futhigh','max_eael':'max_eael_futhigh'},inplace=True)
-                fail_futhigh_min = fail_futhigh.groupby([modes_id[m]])['min_eael_futhigh'].min().reset_index()
-                fail_futhigh_max = fail_futhigh.groupby([modes_id[m]])['max_eael_futhigh'].max().reset_index()
-                fail_futhigh = pd.merge(fail_futhigh_min,fail_futhigh_max,how='left',on=[modes_id[m]]).fillna(0)
-                fail_futhigh = fail_futhigh.sort_values(['max_eael_futhigh'], ascending=True)
+            for flooding in ['fluvial flooding','pluvial flooding']:
+                fail_rcp45 = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_Med')]
+                fail_rcp45.rename(columns={'min_eael':'min_eael_rcp45','max_eael':'max_eael_rcp45'},inplace=True)
+                fail_rcp45_min = fail_rcp45.groupby([modes_id[m]])['min_eael_rcp45'].min().reset_index()
+                fail_rcp45_max = fail_rcp45.groupby([modes_id[m]])['max_eael_rcp45'].max().reset_index()
+                fail_rcp45 = pd.merge(fail_rcp45_min,fail_rcp45_max,how='left',on=[modes_id[m]]).fillna(0)
+                fail_rcp45 = fail_rcp45.sort_values(['max_eael_rcp45'], ascending=True)
+
+                fail_rcp85 = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] > 2016) & (fail_scenarios['climate_scenario'] == 'Future_High')]
+                fail_rcp85.rename(columns={'min_eael':'min_eael_rcp85','max_eael':'max_eael_rcp85'},inplace=True)
+                fail_rcp85_min = fail_rcp85.groupby([modes_id[m]])['min_eael_rcp85'].min().reset_index()
+                fail_rcp85_max = fail_rcp85.groupby([modes_id[m]])['max_eael_rcp85'].max().reset_index()
+                fail_rcp85 = pd.merge(fail_rcp85_min,fail_rcp85_max,how='left',on=[modes_id[m]]).fillna(0)
+                fail_rcp85 = fail_rcp85.sort_values(['max_eael_rcp85'], ascending=True)
 
                 fail_cur = fail_scenarios[(fail_scenarios['hazard_type'] == flooding) & (fail_scenarios['year'] == 2016)]
                 fail_min = fail_cur.groupby([modes_id[m]])['min_eael'].min().reset_index()

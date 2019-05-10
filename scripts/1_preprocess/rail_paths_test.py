@@ -10,7 +10,7 @@ import numpy as np
 import igraph as ig
 import copy
 import unidecode
-from oia.utils import *
+from atra.utils import *
 import datetime
 
 def extract_subset_from_dataframe(input_dataframe,skiprows,start_row,end_row,new_columns):
@@ -52,7 +52,7 @@ def station_name_to_node_matches(st,rename_stations,replace_strings,fd,rail_node
         st_prov = rename_stations.loc[rename_stations['od_station']==st[0],'provincia'].values[0]
         if st_prov == 0:
             st_prov = st[1]
-    else: 
+    else:
         st_change = st[0]
         st_prov = st[1]
 
@@ -62,12 +62,12 @@ def station_name_to_node_matches(st,rename_stations,replace_strings,fd,rail_node
         st_change = st_change.replace(rp[0],rp[1])
 
     if fd['line_name'].lower().strip() in (unidecode.unidecode(str(x.linea).replace('FFCC','').lower().strip()) for x in rail_nodes):
-        
+
         st_match = [x for x in rail_nodes \
             if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip()) \
             and fd['line_name'].lower().strip() in unidecode.unidecode(str(x.linea).replace('FFCC','').lower().strip()) \
             and st_prov == unidecode.unidecode(str(x.provincia).lower().strip())]
-        
+
         if not st_match:
             st_match = [x for x in rail_nodes \
                 if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip()) \
@@ -93,7 +93,7 @@ def station_name_to_node_matches(st,rename_stations,replace_strings,fd,rail_node
             if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip()) \
             and fd['line_name'].lower().strip() in unidecode.unidecode(str(x.operador).lower().strip()) \
             and st_prov == unidecode.unidecode(str(x.provincia).lower().strip())]
-        
+
         if not st_match:
             st_match = [x for x in rail_nodes \
                 if unidecode.unidecode(x.nombre.lower().strip()) == unidecode.unidecode(st_change.lower().strip()) \
@@ -230,7 +230,7 @@ def main(config):
     ref_date = '2015-01-01 00:00:00'
     replace_strings = [('est.',''),('gral.','general'),('pto.',''),('p.s.m.','san martin'),('p.s.l.','san lorenzo'),('p.',''),('cnel.','coronel'),('ing.','ingeniero')]
     provinces_df = []
-    for pdes in province_desc: 
+    for pdes in province_desc:
         p_df = pd.read_excel(os.path.join(rail_od_folder,'{}.xlsx'.format(pdes['file_name'])),sheet_name=pdes['sheet_name'],encoding='utf-8-sig')
         p_df.rename(columns={pdes['station_column']:'station',pdes['province_column']:'province'},inplace=True)
         provinces_df.append(p_df)
@@ -289,7 +289,7 @@ def main(config):
         names = ('/').join([x.od_station for x in new_stations if x.od_station_correct == u])
         rail_nodes.at[rail_nodes['node_id'] == u,'nombre'] = names
 
-    
+
     rail_nodes.to_csv(os.path.join(data_path,'rail_ods','rail_nodes.csv'),encoding='utf-8-sig')
     rail_nodes = rail_nodes[rail_nodes['nombre'] != 0]
     rail_nodes = rail_nodes[['node_id','nombre','linea','provincia','operador']]
@@ -306,7 +306,7 @@ def main(config):
                 df['line_name'] = fd['line_name']
                 df_list.append(df)
                 del df
-            
+
             df = pd.concat(df_list,axis=0,sort='False', ignore_index=True).fillna(0)
 
         else:
@@ -379,7 +379,7 @@ def main(config):
 
                 if len(od_outputs) > 1:
                     od_outputs = [[od for od in sorted(od_outputs, key=lambda pair: pair[-3])][0]]
-                  
+
 
                 od_vals += od_outputs
 

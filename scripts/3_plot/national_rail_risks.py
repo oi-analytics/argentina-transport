@@ -12,7 +12,7 @@ import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
-from oia.utils import *
+from atra.utils import *
 
 
 def main():
@@ -90,7 +90,7 @@ def main():
         cl = all_edge_fail_scenarios.loc[[sc], 'climate_scenario'].values.tolist()
         if 2016 not in yrs:
             for e in range(len(eael)):
-                if eael[e] > 0: 
+                if eael[e] > 0:
                     # change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),cl,yrs,[0]*len(cl),eael,[1e9]*len(cl)))
                     change_tup += [(sc[0],sc[1],cl[e],yrs[e],0,eael[e],1e9)]
         elif len(yrs) > 1:
@@ -304,6 +304,81 @@ def main():
             
             title = 'Railways ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario,year)
             print ('* Plotting ',title)
+
+    #         for cat, geoms in rail_geoms_by_category.items():
+    #             cat_style = styles[cat]
+    #             ax.add_geometries(
+    #                 geoms,
+    #                 crs=proj_lat_lon,
+    #                 linewidth=0,
+    #                 facecolor=cat_style.color,
+    #                 edgecolor='none',
+    #                 zorder=cat_style.zindex
+    #             )
+    #         name = [h['name'] for h in hazard_set if h['hazard'] == hazard_type][0]
+
+    #         x_l = -62.4
+    #         x_r = x_l + 0.4
+    #         base_y = -42.1
+    #         y_step = 0.8
+    #         y_text_nudge = 0.2
+    #         x_text_nudge = 0.2
+
+    #         ax.text(
+    #             x_l,
+    #             base_y + y_step - y_text_nudge,
+    #             eael_set[c]['legend_label'],
+    #             horizontalalignment='left',
+    #             transform=proj_lat_lon,
+    #             size=10)
+
+    #         divisor = eael_set[c]['divisor']
+    #         significance_ndigits = eael_set[c]['significance']
+    #         max_sig = []
+    #         for (i, ((nmin, nmax), line_style)) in enumerate(width_by_range.items()):
+    #             if round(nmin/divisor, significance_ndigits) < round(nmax/divisor, significance_ndigits):
+    #                 max_sig.append(significance_ndigits)
+    #             elif round(nmin/divisor, significance_ndigits+1) < round(nmax/divisor, significance_ndigits+1):
+    #                 max_sig.append(significance_ndigits+1)
+    #             elif round(nmin/divisor, significance_ndigits+2) < round(nmax/divisor, significance_ndigits+2):
+    #                 max_sig.append(significance_ndigits+2)
+    #             else:
+    #                 max_sig.append(significance_ndigits+3)
+
+    #         significance_ndigits = max(max_sig)
+    #         for (i, ((nmin, nmax), width)) in enumerate(width_by_range.items()):
+    #             y = base_y - (i*y_step)
+    #             line = LineString([(x_l, y), (x_r, y)]).buffer(width)
+    #             ax.add_geometries(
+    #                 [line],
+    #                 crs=proj_lat_lon,
+    #                 linewidth=0,
+    #                 edgecolor='#000000',
+    #                 facecolor='#000000',
+    #                 zorder=2)
+    #             if nmin == max_weight:
+    #                 value_template = '>{:.' + str(significance_ndigits) + 'f}'
+    #                 label = value_template.format(
+    #                     round(max_weight/divisor, significance_ndigits))
+    #             else:
+    #                 value_template = '{:.' + str(significance_ndigits) + \
+    #                     'f}-{:.' + str(significance_ndigits) + 'f}'
+    #                 label = value_template.format(
+    #                     round(nmin/divisor, significance_ndigits), round(nmax/divisor, significance_ndigits))
+
+    #             ax.text(
+    #                 x_r + x_text_nudge,
+    #                 y - y_text_nudge,
+    #                 label,
+    #                 horizontalalignment='left',
+    #                 transform=proj_lat_lon,
+    #                 size=10)
+
+    #         if climate_scenario == 'none':
+    #             climate_scenario = 'Current'
+
+    #         title = 'Railways ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario,year)
+    #         print ('* Plotting ',title)
 
             plt.title(title, fontsize=14)
             legend_from_style_spec(ax, styles,loc='lower left')

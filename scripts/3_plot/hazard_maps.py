@@ -3,7 +3,7 @@
 import os
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
-from oia.utils import *
+from atra.utils import *
 import matplotlib as mpl
 
 mpl.style.use('ggplot')
@@ -45,7 +45,7 @@ def main(config):
 	    data[(data <= 0) | (data > 5)] = np.nan
 	    max_val = np.nanmax(data)
 	    norm=mpl.colors.Normalize(vmin=0, vmax=max_val)
-	                
+
 	    # Plot population data
 	    im = ax.imshow(data, extent=lat_lon_extent,transform=proj_lat_lon, cmap=colors,norm =norm, zorder=2)
 
@@ -58,7 +58,7 @@ def main(config):
 	    cbar.outline.set_color("none")
 	    cbar.ax.yaxis.set_tick_params(color='black')
 	    cbar.ax.set_xlabel('Flood depths (m)',fontsize=12,color='black')
-	                
+
 	    plt.title('1 in 1000 year {}'.format(figure_titles[f_i]), fontsize = 14)
 	    save_fig(output_file)
 	    plt.close()

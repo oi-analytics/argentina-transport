@@ -2,7 +2,7 @@
 """
 import os
 
-from oia.utils import load_config, transform_geo_file
+from atra.utils import load_config, transform_geo_file
 
 def main(config):
     incoming_data_path = config['paths']['incoming_data']

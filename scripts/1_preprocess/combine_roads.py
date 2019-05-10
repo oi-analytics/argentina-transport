@@ -1,5 +1,5 @@
 """
-Get vietnam shapefiles and convert them into networks
+Get Argentina shapefiles and convert them into networks
 @author: Raghav Pant
 Date: June 25, 2018
 """
@@ -8,7 +8,7 @@ import sys
 import pandas as pd
 import geopandas as gpd
 
-from oia.utils import *
+from atra.utils import *
 import network_create as nc
 
 def main():
@@ -28,7 +28,7 @@ def main():
 			input_data = os.path.join(config['paths']['incoming_data'],'pre_processed_network_data',sectors,subsects[sb],subfolders[sb],input_files[sb])
 		else:
 			input_data = os.path.join(config['paths']['incoming_data'],'pre_processed_network_data',sectors,subsects[sb],input_files[sb])
-		
+
 		input_df = gpd.read_file(input_data,encoding='utf-8')
 		input_df = input_df[attributes[sb] + ['geometry']]
 		input_df.rename(columns={'id_ruta':'road_no','cod_ruta':'road_name','tipo':'purpose',
@@ -37,7 +37,7 @@ def main():
 		input_df['road_type'] = road_types[sb]
 		if road_types[sb] == 'national':
 			input_df = input_df[input_df['sentido'] == 'A']
-		
+
 		networks.append(input_df)
 
 	networks_file = gpd.GeoDataFrame(pd.concat(networks,ignore_index=True,sort=False),geometry='geometry',crs={'init': 'epsg:4326'})

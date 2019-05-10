@@ -8,21 +8,21 @@ Created on Fri Nov 30 13:16:48 2018
 import os
 import pandas as pd
 import numpy as np
-import oia.utils
+import atra.utils
 from ras_method import ras_method
 import subprocess
 
 import warnings
 warnings.filterwarnings('ignore')
 
-data_path= oia.utils.load_config()['paths']['data']
+data_path= atra.utils.load_config()['paths']['data']
 
 def est_trade_value(x,output_new,sector):
     if sector is not 'other':
         sec_output = output_new.sum(axis=1).loc[output_new.sum(axis=1).index.get_level_values(1) == sector].reset_index()
     else:
         sec_output = output_new.sum(axis=1).loc[output_new.sum(axis=1).index.get_level_values(1) == 'VA'].reset_index()
-        
+
     x['gdp'] = x.gdp*min(sec_output.loc[sec_output.region==x.reg1].values[0][2],sec_output.loc[sec_output.region==x.reg2].values[0][2])
 #    x['gdp'] = x.gdp*(sec_output.loc[sec_output.region==x.reg1].values[0][2])
     return x
@@ -32,34 +32,34 @@ def indind_iotable(sup_table,use_table,sectors):
     x = np.array(sup_table.sum(axis=0)) # total production on industry level
     g = np.array(sup_table.sum(axis=1)) # total production on product level
     F = use_table.iloc[:16,16:].sum(axis=1)
-    
+
     #Numpify
     Sup_array = np.asarray(sup_table.iloc[:len(sectors),:len(sectors)]) # numpy array if supply matrix
     Use_array = np.asarray(use_table.iloc[:len(sectors),:len(sectors)]) # numpy array of use matrix
-    
+
     g_diag_inv = np.linalg.inv(np.diag(g)) # inverse of g (and diagolinized)
     x_diag_inv = np.linalg.inv(np.diag(x)) # inverse of x (and diagolinized)
-    
+
     # Calculate the matrices
     B = np.dot(Use_array,x_diag_inv) # B matrix (U*x^-1)
     D = np.dot(Sup_array.T,g_diag_inv) # D matrix (V*g^-1)
     I_i = np.identity((len(x))) # Identity matrix for industry-to-industry
-    
+
     # Inverse for industry-to-industry
     A_ii = np.dot(D,B)
     F_ii = np.dot(D,F)/1e6
-    IDB_inv = np.linalg.inv((I_i-np.dot(D,B))) # (I-DB)^-1 
-    
+    IDB_inv = np.linalg.inv((I_i-np.dot(D,B))) # (I-DB)^-1
+
     # And canclulate sum of industries
     ind = np.dot(IDB_inv,np.dot(D,F)/1e6) # (I-DB)^-1 * DF
-    
+
     IO = pd.concat([pd.DataFrame(np.dot(A_ii,np.diag(ind))),pd.DataFrame(F_ii)],axis=1)
     IO.columns = list(use_table.columns[:17])
     IO.index = list(use_table.columns[:16])
     VA = np.array(list(ind)+[0])-np.array(IO.sum(axis=0))
     VA[-1] = 0
     IO.loc['ValueA'] = VA
-    
+
     return IO,VA
 
 # =============================================================================
@@ -80,7 +80,7 @@ reg_mapper = dict(zip(reg_mapper[0], reg_mapper[1]))
 sectors = [chr(i) for i in range(ord('A'),ord('P')+1)]
 
 # =============================================================================
-# Load supply table and aggregate 
+# Load supply table and aggregate
 # =============================================================================
 sup_table_in = pd.read_excel(os.path.join(data_path,'economic_IO_tables','input','sh_cou_06_16.xls'),
                           sheet_name='Mat Oferta pb',skiprows=2,header=[0,1],index_col=[0,1],nrows=271)
@@ -95,7 +95,7 @@ sup_table.columns = sup_table.columns.map(com_mapper)
 sup_table = sup_table.T.groupby(level=0,axis=0).sum()
 
 # =============================================================================
-# Load use table and aggregate 
+# Load use table and aggregate
 # =============================================================================
 use_table = pd.read_excel(os.path.join(data_path,'economic_IO_tables','input','sh_cou_06_16.xls'),
                           sheet_name='Mat Utilizacion pc',skiprows=2,header=[0,1],index_col=[0,1],nrows=271)
@@ -198,7 +198,7 @@ for iter_,sector in enumerate(sectors+['other']):
         proxy_sector = proxy_sector[['year','sector','index','TOTAL']]
         proxy_sector.columns = ['year','sector','region','gdp']
         proxy_sector.to_csv(os.path.join(data_path,'mrio_analysis','proxy_{}.csv'.format(sector)),index=False)
-        
+
 # proxy level 18
 mi_index = pd.MultiIndex.from_product([sectors+['other'], region_names, sectors+['other'], region_names],
                                      names=['sec1', 'reg1','sec2','reg2'])
@@ -213,20 +213,20 @@ for iter_,sector in enumerate(sectors+['other']):
         proxy_trade['sec2'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec2 ]
         proxy_trade = proxy_trade[['year','sec1','reg1','sec2','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','sector','region','gdp']
-        proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade_sec{}.csv'.format(sector)),index=False)    
+        proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade_sec{}.csv'.format(sector)),index=False)
     else:
         proxy_trade = pd.DataFrame(columns=['year','gdp'],index= mi_index).reset_index()
         proxy_trade['year'] = 2016
         proxy_trade['gdp'] = 0
-        proxy_trade = proxy_trade.query("reg1 != reg2")    
+        proxy_trade = proxy_trade.query("reg1 != reg2")
         proxy_trade = proxy_trade.loc[proxy_trade.sec1 == sector]
         proxy_trade['sec1'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec1 ]
         proxy_trade['sec2'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec2 ]
         proxy_trade = proxy_trade[['year','sec1','reg1','sec2','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','sector','region','gdp']
         proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade_{}.csv'.format(sector)),index=False)
-        
-        
+
+
 # =============================================================================
 # Create first version of MRIO for Argentina
 # =============================================================================
@@ -282,7 +282,7 @@ od_matrix_total = od_matrix_total.swaplevel(i=-2, j=-1, axis=0)
 # =============================================================================
 # Create proxy data for second iteration
 # =============================================================================
-# proxy level 14 
+# proxy level 14
 mi_index = pd.MultiIndex.from_product([sectors+['other'], region_names, region_names],
                                      names=['sec1', 'reg1','reg2'])
 
@@ -314,8 +314,8 @@ for iter_,sector in enumerate(sectors+['other']):
         proxy_trade['sec1'] = sector+'1'
         proxy_trade = proxy_trade[['year','sec1','reg1','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','region','gdp']
-        proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade14_{}.csv'.format(sector)),index=False)       
-        
+        proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade14_{}.csv'.format(sector)),index=False)
+
 # proxy level 18
 mi_index = pd.MultiIndex.from_product([sectors+['other'], region_names, sectors+['other'], region_names],
                                      names=['sec1', 'reg1','sec2','reg2'])
@@ -329,35 +329,35 @@ for iter_,sector in enumerate(sectors+['other']):
         proxy_trade = proxy_trade.loc[proxy_trade.sec2.isin(['L','M','N','O','P'])]
         proxy_trade['sec1'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec1 ]
         proxy_trade['sec2'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec2 ]
-        
-        proxy_trade = proxy_trade.query("reg1 == reg2")    
 
-        
+        proxy_trade = proxy_trade.query("reg1 == reg2")
+
+
         proxy_trade = proxy_trade[['year','sec1','reg1','sec2','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','sector','region','gdp']
         proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade_sec{}.csv'.format(sector)),index=False)
-    
+
     else:
         proxy_trade = pd.DataFrame(columns=['year','gdp'],index= mi_index).reset_index()
         proxy_trade['year'] = 2016
         proxy_trade['gdp'] = 0
-        proxy_trade = proxy_trade.query("reg1 != reg2")    
+        proxy_trade = proxy_trade.query("reg1 != reg2")
         proxy_trade = proxy_trade.loc[proxy_trade.sec1 == sector]
         proxy_trade = proxy_trade.loc[proxy_trade.sec2.isin(['L','M','N','O','P'])]
         proxy_trade['sec1'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec1 ]
         proxy_trade['sec2'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec2 ]
-        
-        proxy_trade = proxy_trade.query("reg1 == reg2")    
+
+        proxy_trade = proxy_trade.query("reg1 == reg2")
 
         proxy_trade = proxy_trade[['year','sec1','reg1','sec2','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','sector','region','gdp']
 
         proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade_{}.csv'.format(sector)),index=False)
-        
+
 # =============================================================================
 # Create second version of MRIO for Argentina
 # =============================================================================
-        
+
 p = subprocess.Popen(['mrio_disaggregate', 'settings_trade.yml'],
                      cwd=os.path.join(data_path, 'mrio_analysis'))
 p.wait()
@@ -397,7 +397,7 @@ output = output.reindex(column_mi_reorder, axis='columns')
 
 ''' Rebalance table'''
 prov_ratios = pd.DataFrame((prov_data.iloc[:16,:24].stack().swaplevel(i=-2,
-             j=-1)/sum(prov_data.iloc[:16,:24].stack().swaplevel(i=-2, 
+             j=-1)/sum(prov_data.iloc[:16,:24].stack().swaplevel(i=-2,
              j=-1))),columns=['ratio']).reset_index().groupby(['level_0','level_1']).sum().reindex(output.index)[:384]
 
 output_ratio = pd.DataFrame((output.sum(level=0,axis=1).sum(axis=1)[:-1]/sum(output.sum(level=0,axis=1).sum(axis=1)[:-1])),columns=['ratio'])

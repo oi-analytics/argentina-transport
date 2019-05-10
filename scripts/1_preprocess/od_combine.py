@@ -1,4 +1,4 @@
-"""Combine the OD matrices of different modes to create a total OD matrix 
+"""Combine the OD matrices of different modes to create a total OD matrix
 """
 import csv
 import os
@@ -10,7 +10,7 @@ import numpy as np
 import igraph as ig
 import copy
 import unidecode
-from oia.utils import *
+from atra.utils import *
 import datetime
 
 
@@ -19,7 +19,7 @@ def main(config):
     data_path = config['paths']['data']
 
     modes = ['road','rail','port']
-    
+
     province_excel_writer = pd.ExcelWriter(os.path.join(data_path,'OD_data','province_ods.xlsx'))
 
     all_ods = []
@@ -35,7 +35,7 @@ def main(config):
     all_ods = pd.concat(all_ods,axis=0,sort='False', ignore_index=True).fillna(0)
     industry_cols = [cols for cols in all_ods.columns.values.tolist() if cols not in ['origin_province','destination_province']]
 
-    province_ods = all_ods.groupby(['origin_province','destination_province'])[industry_cols].sum().reset_index() 
+    province_ods = all_ods.groupby(['origin_province','destination_province'])[industry_cols].sum().reset_index()
     province_ods.to_excel(province_excel_writer,'total',index=False,encoding='utf-8-sig')
     province_excel_writer.save()
 

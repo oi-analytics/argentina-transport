@@ -30,7 +30,7 @@ import json
 import sys
 
 
-from oia.utils import load_config
+from atra.utils import load_config
 
 import fiona
 import fiona.crs

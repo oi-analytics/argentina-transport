@@ -17,7 +17,7 @@ Input data requirements
     - length - Float length of edge intersecting with hazards
     - geometry - Shapely geometry of edges as LineString or nodes as Points
 
-3. Shapefile of administrative boundaries of Vietnam with attributes:
+3. Shapefile of administrative boundaries of Argentina with attributes:
     - province_i - String/Integer ID of Province
     - pro_name_e - String name of Province in English
     - district_i - String/Integer ID of District
@@ -46,8 +46,8 @@ import sys
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon
-from oia.utils import *
-from oia.transport_flow_and_failure_functions import *
+from atra.utils import *
+from atra.transport_flow_and_failure_functions import *
 
 def hazard_data_summary(hazard_network_dataframe,network_dataframe):
     df = pd.merge(network_dataframe,hazard_network_dataframe,how='left',on=['edge_id']).fillna(0)
@@ -141,7 +141,7 @@ def main():
 
             flood_df = flood_df[flood_df['edge_id'].isin(edges['edge_id'].values.tolist())]
             network_stats = network_stats[network_stats['edge_id'].isin(edges['edge_id'].values.tolist())]
-            
+
             network_stats = network_stats.groupby(boundary_cols)['length'].sum().reset_index()
             network_stats.rename(columns={'length':'total_length_m'},inplace=True)
             hazard_stats = flood_df.groupby(boundary_cols+hazard_cols)['length'].sum().reset_index()

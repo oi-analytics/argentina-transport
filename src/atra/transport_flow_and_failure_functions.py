@@ -16,7 +16,7 @@ from collections import defaultdict
 from itertools import chain
 import numpy as np
 import pandas as pd
-from oia.utils import *
+from atra.utils import *
 from tqdm import tqdm
 
 def spatial_scenario_selection(network_shapefile, polygon_dataframe, hazard_dictionary, data_dictionary,network_id_column,network_type ='nodes'):
@@ -61,7 +61,7 @@ def spatial_scenario_selection(network_shapefile, polygon_dataframe, hazard_dict
             for p_index, poly in intersected_polys.iterrows():
                 if (lines['geometry'].intersects(poly['geometry']) is True) and (poly.geometry.is_valid is True) and (lines.geometry.is_valid is True):
                     if network_type == 'edges':
-                        value_dictionary = {network_id_column: lines[network_id_column], 
+                        value_dictionary = {network_id_column: lines[network_id_column],
                                             'length': 1000.0*line_length(lines['geometry'].intersection(poly['geometry'])),
                                             'province_id': poly['province_id'], 'province_name': poly['province_name'],
                                             'department_id': poly['department_id'], 'department_name': poly['department_name']}
@@ -345,7 +345,7 @@ def write_flow_paths_to_network_files(save_paths_df,
     if min_industry_columns == max_industry_columns:
         for ind in min_industry_columns:
             edge_flows_min.rename(columns={ind:'min_'+ind},inplace=True)
-            edge_flows_max.rename(columns={ind:'max_'+ind},inplace=True) 
+            edge_flows_max.rename(columns={ind:'max_'+ind},inplace=True)
 
     edge_flows = pd.merge(edge_flows_min,edge_flows_max,how='left',on=['edge_id']).fillna(0)
     tqdm.pandas()
@@ -525,7 +525,7 @@ def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
     # network_df,edge_path_index = identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria)
 
     edge_path_index = list(set(list(chain.from_iterable([path_idx for path_key,path_idx in edge_flow_path_indexes.items() if path_key in edge_failure_set]))))
-    
+
     if edge_path_index:
         select_flows = flow_dataframe[flow_dataframe.index.isin(edge_path_index)]
         del edge_path_index
@@ -578,7 +578,7 @@ def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
                             edge_fail_dictionary.append({'edge_id': first_edge_id, 'origin_id': origin, 'destination_id': destinations[p],
                                                          'new_path':[],'new_distance': new_dist, 'new_time': new_time,
                                                          'new_cost': tons[p]*new_gcost, 'no_access': 0})
-                    del destinations, tons, paths        
+                    del destinations, tons, paths
                 del origins
                 po_access = po_access.reset_index()
                 po_access['access'] = 1
@@ -586,7 +586,7 @@ def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
             del po_access
 
         del A
-        
+
         if len(access_flows):
             access_flows = pd.concat(access_flows,axis=0,sort='False', ignore_index=True)
             select_flows = pd.merge(select_flows,access_flows,how='left',on=['origin_id','destination_id']).fillna(0)
@@ -596,7 +596,7 @@ def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
         no_access = select_flows[select_flows['access'] == 0]
         if len(no_access.index) > 0:
             for value in no_access.itertuples():
-                edge_fail_dictionary.append({'edge_id': first_edge_id, 'origin_id': getattr(value,'origin_id'), 
+                edge_fail_dictionary.append({'edge_id': first_edge_id, 'origin_id': getattr(value,'origin_id'),
                                             'destination_id': getattr(value,'destination_id'),
                                             'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
 
@@ -645,7 +645,7 @@ def igraph_scenario_edge_failures(network_df_in, edge_failure_set,
 
         network_graph = ig.Graph.TupleList(network_df.itertuples(
             index=False), edge_attrs=list(network_df.columns)[2:])
-        
+
         nodes_name = np.asarray([x['name'] for x in network_graph.vs])
         select_flows = flow_dataframe[flow_dataframe.index.isin(edge_path_index)]
 
@@ -806,5 +806,5 @@ def merge_failure_results(flow_df_select,failure_df,id_col,tons_col,dist_col,tim
     flow_df_select['dist_diff'] = (1 - flow_df_select['no_access'])*(flow_df_select['new_distance'] - flow_df_select[dist_col])
     flow_df_select['time_diff'] = (1 - flow_df_select['no_access'])*(flow_df_select['new_time'] - flow_df_select[time_col])
     flow_df_select['tr_loss'] = (1 - flow_df_select['no_access']) * (flow_df_select['new_cost'] - flow_df_select[cost_col])
-    
+
     return flow_df_select

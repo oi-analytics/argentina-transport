@@ -11,7 +11,7 @@ import igraph as ig
 import copy
 import unidecode
 from scipy.spatial import Voronoi
-from oia.utils import *
+from atra.utils import *
 import datetime
 from tqdm import tqdm
 
@@ -37,7 +37,7 @@ def main(config):
     intersected_events = events_df.iloc[list(sindex_events_df.intersection(boundary_df['geometry'].values[0].bounds))]
     for idx,val in intersected_events.iterrows():
         country_match = [c for c in countries
-                        if (unidecode.unidecode(str(val.country)).lower().strip() in unidecode.unidecode(c).lower().strip()) 
+                        if (unidecode.unidecode(str(val.country)).lower().strip() in unidecode.unidecode(c).lower().strip())
                         or (unidecode.unidecode(c).lower().strip() in unidecode.unidecode(str(val.country)).lower().strip())]
 
         if not country_match:
@@ -49,7 +49,7 @@ def main(config):
     intersected_events = gpd.GeoDataFrame(intersected_events,geometry='geometry',crs={'init' :'epsg:4326'}).reset_index()
     intersected_events.drop('time_diff',axis=1,inplace=True)
     print (intersected_events.dtypes)
-    
+
     intersected_events.to_file(os.path.join(data_path,'flood_data','Darthmouth_events','darthmouth_event_set.shp'),encoding='utf-8')
     intersected_events.drop(['geometry'],axis=1,inplace=True)
     intersected_events.to_csv(os.path.join(data_path,'flood_data','Darthmouth_events','darthmouth_event_set.csv'),index=False,encoding='utf-8-sig')

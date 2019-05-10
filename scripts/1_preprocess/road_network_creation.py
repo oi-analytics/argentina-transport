@@ -10,7 +10,7 @@ import copy
 import unidecode
 from scipy.spatial import Voronoi
 from shapely.geometry import Point, LineString
-from oia.utils import *
+from atra.utils import *
 import datetime
 from tqdm import tqdm
 import pandas as pd
@@ -28,7 +28,7 @@ def assign_road_name(x):
         String value as paved or unpaved
     """
     asset_type = str(x.road_type).lower().strip()
-    
+
 
     # This is an national and provincial roads with paved surfaces
     if asset_type == 'national':
@@ -54,7 +54,7 @@ def assign_road_surface(x):
         String value as paved or unpaved
     """
     asset_type = str(x.road_type).lower().strip()
-    
+
 
     # This is an national and provincial roads with paved surfaces
     '''A - Asphalt, H - Hormigon, R - Ripio, T - Tierra, B - Tratamiento
@@ -89,7 +89,7 @@ def assign_road_conditions(x):
         String value as paved or unpaved
     """
     asset_type = str(x.road_type).lower().strip()
-    
+
 
     # This is an national and provincial roads with paved surfaces
     '''A - Asphalt, H - Hormigon, R - Ripio, T - Tierra, B - Tratamiento
@@ -210,7 +210,7 @@ def assign_minmax_time_costs_roads(x, road_costs,exchange_rate):
     else:
         min_speed = [design_speeds[d] for d in range(len(design_speeds)-1) if design_speeds[d] <= x.min_speed < design_speeds[d+1]][0]
         max_speed = [design_speeds[d] for d in range(len(design_speeds)-1) if design_speeds[d] <= x.max_speed < design_speeds[d+1]][0]
-   
+
     if x.surface.lower().strip() in ('tierra','de tierra'):
         min_cost = road_costs.loc[road_costs['speed'] == min_speed,'tierra_cost_total'].values[0]
         max_cost = road_costs.loc[road_costs['speed'] == max_speed,'tierra_cost_total'].values[0]
@@ -221,7 +221,7 @@ def assign_minmax_time_costs_roads(x, road_costs,exchange_rate):
         min_cost = road_costs.loc[road_costs['speed'] == min_speed,'paved_cost_total'].values[0]
         max_cost = road_costs.loc[road_costs['speed'] == max_speed,'paved_cost_total'].values[0]
 
-    
+
     return exchange_rate*min_cost*x.length, exchange_rate*max_cost*x.length
 
 def assign_minmax_tariff_costs_roads_apply(x,tariff_costs_dataframe,exchange_rate):
@@ -517,7 +517,7 @@ def main(config):
         else:
             road_attr = road_attr[(road_attr['sentido'] == 'A') & (road_attr[a['attribute']] != -1)]
             edge_attr = get_numeric_attributes(edges[edges['road_type']=='national'][['edge_id','length','geometry']],road_attr,a['id_column'],a['attribute'],a['attribute_rename'])
-        
+
         edges = pd.merge(edges,edge_attr,how='left',on=['edge_id']).fillna(0)
 
     edges = road_shapefile_to_dataframe(edges,road_properties_df,road_speeds_df,time_costs_df,tariff_costs_df,exchange_rate)

@@ -101,8 +101,8 @@ import igraph as ig
 import networkx as nx
 import numpy as np
 import pandas as pd
-from oia.utils import *
-from oia.transport_flow_and_failure_functions import *
+from atra.utils import *
+from atra.transport_flow_and_failure_functions import *
 
 
 def main():
@@ -180,7 +180,7 @@ def main():
     #     flow_file = pd.read_csv(flow_file_path,encoding='utf-8-sig').fillna(0)
     #     df = pd.merge(G_df,flow_file,how='left',on=['edge_id']).fillna(0)
     #     df.drop('edge_id',axis=1,inplace=True)
-    #     df.to_csv(os.path.join(output_path, 
+    #     df.to_csv(os.path.join(output_path,
     #             'flow_mapping_combined',
     #             'weighted_flows_bridge_{}_percent.csv'.format(int(perct))),
     #             encoding='utf-8-sig')

@@ -12,7 +12,7 @@ import copy
 import unidecode
 from scipy.spatial import Voronoi
 from shapely.geometry import Point, LineString
-from oia.utils import *
+from atra.utils import *
 import datetime
 from tqdm import tqdm
 
@@ -126,7 +126,7 @@ def assign_minmax_time_costs_roads(x, road_costs,exchange_rate):
     else:
         min_speed = [design_speeds[d] for d in range(len(design_speeds)-1) if design_speeds[d] <= x.min_speed < design_speeds[d+1]][0]
         max_speed = [design_speeds[d] for d in range(len(design_speeds)-1) if design_speeds[d] <= x.max_speed < design_speeds[d+1]][0]
-    
+
     if x.road_cond == 'paved':
         min_cost = road_costs.loc[road_costs['speed'] == min_speed,'paved_cost_total'].values[0]
         max_cost = road_costs.loc[road_costs['speed'] == max_speed,'paved_cost_total'].values[0]
@@ -137,7 +137,7 @@ def assign_minmax_time_costs_roads(x, road_costs,exchange_rate):
         min_cost = road_costs.loc[road_costs['speed'] == min_speed,'ripio_cost_total'].values[0]
         max_cost = road_costs.loc[road_costs['speed'] == max_speed,'ripio_cost_total'].values[0]
 
-    
+
     return exchange_rate*min_cost*x.length, exchange_rate*max_cost*x.length
 
 def assign_minmax_tariff_costs_roads_apply(x,tariff_costs_dataframe,exchange_rate):
@@ -216,7 +216,7 @@ def road_shapefile_to_dataframe(edges_in,road_properties_dataframe,
 
 def get_attributes(road_gpd,attribute_gpd,road_id_column,attribute_column,road_column_name):
     road_matches = gpd.sjoin(road_gpd,attribute_gpd, how="inner", op='intersects').reset_index()
-    
+
 
     road_mean = road_matches[[road_id_column,attribute_column]].groupby([road_id_column])[attribute_column].mean().reset_index()
     road_mean.rename(columns={attribute_column:'{}_mean'.format(road_column_name)},inplace=True)
@@ -224,7 +224,7 @@ def get_attributes(road_gpd,attribute_gpd,road_id_column,attribute_column,road_c
     road_min.rename(columns={attribute_column:'{}_min'.format(road_column_name)},inplace=True)
     road_max = road_matches[[road_id_column,attribute_column]].groupby([road_id_column])[attribute_column].max().reset_index()
     road_max.rename(columns={attribute_column:'{}_max'.format(road_column_name)},inplace=True)
-    
+
 
     road_vals = pd.merge(road_mean,road_min,how='left',on=[road_id_column]).fillna(0)
     road_vals = pd.merge(road_vals,road_max,how='left',on=[road_id_column]).fillna(0)
@@ -236,7 +236,7 @@ def main(config):
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
     attributes_desc = [
-        {   
+        {
             'folder_name':'tmda',
             'file_name':'vistagis_selLine.shp',
             'attribute':'valor',
@@ -255,7 +255,7 @@ def main(config):
             'attribute_rename':'road_service'
         }
 
-    ] 
+    ]
 
     '''Get road edge network
     '''
