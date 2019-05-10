@@ -23,11 +23,9 @@ mpl.rcParams['xtick.labelsize'] = 9.
 mpl.rcParams['ytick.labelsize'] = 9.
 
 
-def plot_ranges(input_data, division_factor,x_label, y_label,plot_title,plot_color,plot_file_path,ylimit,yticks_loc,y_ticks_labels):
+def plot_ranges(input_data, division_factor,x_label, y_label,plot_title,plot_color,plot_file_path,ylimit=None,yticks_loc=None,y_ticks_labels=None):
     fig, ax = plt.subplots(figsize=(8, 4))
     # vals_min_max = list(zip(*list(h for h in input_data.itertuples(index=False))))
-    max_val = input_data.max().max()
-    y_ticks_labels += [str(int(max_val/division_factor))]
     vals_min_max = []
     for a, b in input_data.itertuples(index=False):
         if a < b:
@@ -68,8 +66,11 @@ def plot_ranges(input_data, division_factor,x_label, y_label,plot_title,plot_col
         )
         # ax.set_xscale('log')
         ax.legend(loc='upper left')
-    ax.set_ylim(bottom=-0.5,top=ylimit/division_factor)
-    plt.yticks(yticks_loc,y_ticks_labels)
+    if ylimit:
+        max_val = input_data.max().max()
+        y_ticks_labels += [str(int(max_val/division_factor))]
+        ax.set_ylim(bottom=-0.5,top=ylimit/division_factor)
+        plt.yticks(yticks_loc,y_ticks_labels)
     # ax.set_yscale('log')
     # ax.tick_params(axis='x', rotation=45)
     plt.xlabel(x_label, fontweight='bold')
@@ -80,34 +81,65 @@ def plot_ranges(input_data, division_factor,x_label, y_label,plot_title,plot_col
     plt.savefig(plot_file_path, dpi=500)
     plt.close()
 
+def change_to_infinity(x,dividend_column,divisor_column):
+    if x[divisor_column] == 0 and x[dividend_column] == 0:
+        return 0
+    elif x[divisor_column] == 0 and x[dividend_column] > 0:
+        return 1e9
+    elif x[divisor_column] == 0 and x[dividend_column] < 0:
+        return -1e9
+    else:
+        return 100.0*(x[dividend_column] - x[divisor_column])/x[divisor_column]
 
-def main(mode):
+def main():
     config = load_config()
     data_path = config['paths']['data']
-    if mode == 'road':
-        region_file_path = os.path.join(config['paths']['data'], 'post_processed_networks',
-                                   'road_edges.shp')
-        flow_file_path = os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
-                                   'single_edge_failures_minmax_road_10_percent_modal_shift.csv')
-    elif mode == 'rail':
-        region_file_path = os.path.join(config['paths']['data'], 'network',
-                                   'rail_edges.shp')
-        flow_file_path = os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
-                                   'single_edge_failures_minmax_rail_100_percent_disrupt_multi_modal.csv')
-    else:
-        raise ValueError("Mode must be road or rail")
 
+    duration = 10
+    change_colors = ['#1a9850','#66bd63','#a6d96a','#d9ef8b','#fee08b','#fdae61','#f46d43','#d73027','#969696']
+    change_labels = ['< -100','-100 to -50','-50 to -10','-10 to 0','0 to 10','10 to 50','50 to 100',' > 100','No change/value']
+    change_ranges = [(-1e10,-100),(-100,-50),(-50,-10),(-10,0),(0.001,10),(10,50),(50,100),(100,1e10)]
+
+    
+    fail_file = pd.read_csv(os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
+                               'single_edge_failures_minmax_rail_100_percent_disrupt_multi_modal.csv'))
+    
+
+    flow_file = pd.read_csv(os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
+                               'single_edge_failures_minmax_rail_100_percent_disrupt.csv'))
+    fail_file = pd.merge(fail_file,flow_file[['edge_id','min_econ_impact','max_econ_impact']],how='outer', on=['edge_id']).fillna(0)
+    del flow_file
+
+    flow_file = pd.read_csv(os.path.join(config['paths']['output'], 'network_stats',
+                               'national_rail_hazard_intersections_risks.csv'))
+    fail_file = pd.merge(fail_file,flow_file,how='left', on=['edge_id']).fillna(0)
+    del flow_file
+
+    fail_file['min_eael'] = duration*fail_file['risk_wt']*fail_file['min_econ_impact']
+    fail_file['max_eael'] = duration*fail_file['risk_wt']*fail_file['max_econ_impact']
+
+    fail_file['min_eael_multimodal'] = duration*fail_file['risk_wt']*fail_file['min_tr_loss']
+    fail_file['max_eael_multimodal'] = duration*fail_file['risk_wt']*fail_file['max_tr_loss']
+
+    fail_file.to_csv('test.csv')
+    fail_file_min = fail_file.groupby(['edge_id'])['min_tr_loss','min_econ_impact','min_eael_multimodal','min_eael'].min().reset_index()
+    fail_file_max = fail_file.groupby(['edge_id'])['max_tr_loss','max_econ_impact','max_eael_multimodal','max_eael'].max().reset_index()
+    del fail_file
+
+    region_file_path = os.path.join(config['paths']['data'], 'network',
+                               'rail_edges.shp')
     region_file = gpd.read_file(region_file_path,encoding='utf-8')
+    region_file = pd.merge(region_file[['edge_id','geometry']],fail_file_min,how='left',on=['edge_id']).fillna(0)
+    region_file = pd.merge(region_file,fail_file_max,how='left',on=['edge_id']).fillna(0)
+    del fail_file_min,fail_file_max
+
     flow_file = pd.read_csv(os.path.join(config['paths']['output'], 'flow_mapping_combined',
                                    'weighted_flows_rail_100_percent.csv'))
     region_file = pd.merge(region_file,flow_file,how='left', on=['edge_id']).fillna(0)
 
     region_file = region_file[region_file['max_total_tons'] > 0]
     del flow_file
-    
-    flow_file = pd.read_csv(flow_file_path)
-    region_file = pd.merge(region_file,flow_file,how='left', on=['edge_id']).fillna(0)
-    del flow_file
+
 
     rail_color = '#006d2c'
     very_high_value = 4000000
@@ -120,15 +152,93 @@ def main(mode):
             'legend_label': "Economic loss (million USD/day)",
             'divisor': 1000000,
             'columns': ['min_tr_loss', 'max_tr_loss'],
-            'title_cols': ['Economic impact (min)', 'Economic impact (max)']
+            'title_cols': ['Rail - Multi-modal Economic impact (min)', 'Rail - Multi-modal Economic impact (max)']
+        },
+
+        {
+            'file_tag': 'risk',
+            'no_access': [0, 1],
+            'legend_label': "EAEL million USD",
+            'divisor': 1000000,
+            'columns': ['min_eael_multimodal', 'max_eael_multimodal'],
+            'title_cols': ['Rail - Multi-modal EAEL (min)', 'Rail - Multi-modal EAEL (max)']
+        },
+    ]
+
+    change_sets = [
+        {
+            'columns': ['tr_loss', 'econ_impact'],
+            'legend': 'daily losses',
+            'title_col': 'Percentage change in Economic losses for rail multi-modal switches'
+        },
+
+        {
+            'columns': ['eael_multimodal', 'eael'],
+            'legend': 'EAEL',
+            'title_col': 'Percentage change in EAEL for rail multi-modal switches'
         },
     ]
 
     plt_file_path = os.path.join(config['paths']['figures'],'rail-economic-loss-ranges-100-percent-multi-modal.png')
-    plot_ranges(region_file[['min_tr_loss','max_tr_loss']],1000000, "Percentile rank (%)",
-                "Economic impacts (million USD/day)","Rail - Range of total economic impacts due to single link failures",
+    plot_ranges(region_file[['min_tr_loss','max_tr_loss']],
+                1000000,
+                "Percentile rank (%)",
+                "Economic impacts (million USD/day)",
+                "Rail - Range of total economic impacts due to single link failures",
                 rail_color,plt_file_path,very_high_value,yticks_loc,y_ticks_labels)
 
+    plt_file_path = os.path.join(config['paths']['figures'],'rail-eael-ranges-100-percent-multi-modal.png')
+    plot_ranges(region_file[['min_eael_multimodal','max_eael_multimodal']],
+                1000000, 
+                "Percentile rank (%)",
+                "EAEL (million USD)",
+                "Rail - Range of EAEL due to single link failures",
+                rail_color,plt_file_path)
+
+    
+    for t in ['min','max']:
+        for ch in change_sets: 
+            edges_vals = region_file[['edge_id','geometry','{}_{}'.format(t,ch['columns'][0]),'{}_{}'.format(t,ch['columns'][1])]]
+            # edges_vals.to_csv('test.csv')
+            edges_vals['change'] = edges_vals.apply(lambda x:change_to_infinity(x,'{}_{}'.format(t,ch['columns'][0]),'{}_{}'.format(t,ch['columns'][1])),axis=1)
+            proj_lat_lon = ccrs.PlateCarree()
+            ax = get_axes()
+            plot_basemap(ax, data_path)
+            scale_bar(ax, location=(0.8, 0.05))
+            plot_basemap_labels(ax, data_path, include_regions=True)
+
+            for record in edges_vals.itertuples():
+                geom = record.geometry
+                region_val = record.change
+                if region_val:
+                    cl = [c for c in range(len((change_ranges))) if region_val >= change_ranges[c][0] and region_val < change_ranges[c][1]]
+                    if cl:
+                        c = cl[0]
+                        ax.add_geometries([geom],crs=proj_lat_lon,linewidth=2.0,edgecolor=change_colors[c],facecolor='none',zorder=8)
+                        # ax.add_geometries([geom.buffer(0.1)],crs=proj_lat_lon,linewidth=0,facecolor=change_colors[c],edgecolor='none',zorder=8)
+                else:
+                    ax.add_geometries([geom], crs=proj_lat_lon, linewidth=1.5,edgecolor=change_colors[-1],facecolor='none',zorder=7)
+                    # ax.add_geometries([geom.buffer(0.1)], crs=proj_lat_lon, linewidth=0,facecolor=change_colors[-1],edgecolor='none',zorder=7)
+            # Legend
+            legend_handles = []
+            for c in range(len(change_colors)):
+                legend_handles.append(mpatches.Patch(color=change_colors[c], label=change_labels[c]))
+
+            ax.legend(
+                handles=legend_handles,
+                title='Percentage change in {}'.format(ch['legend']),
+                loc=(0.5,0.2),
+                fancybox=True,
+                framealpha=1.0
+            )
+
+            print(" * Plotting {}".format(ch['title_col']))
+
+            plt.title(ch['title_col'], fontsize=10)
+            output_file = os.path.join(config['paths']['figures'],
+                                       'national-rail-multi-modal-{}-{}-change-percentage.png'.format(t,ch['legend'].replace(' ','-')))
+            save_fig(output_file)
+            plt.close()
 
     for plot_set in plot_sets:
         for c in range(len(plot_set['columns'])):
@@ -275,21 +385,13 @@ def main(mode):
             plt.title(plot_set['title_cols'][c], fontsize=14)
             legend_from_style_spec(ax, styles,loc='lower left')
 
-            print ('* Plotting {} {}'.format(mode,plot_set['title_cols'][c]))
-            if mode == 'road':
-                output_file = os.path.join(
-                    config['paths']['figures'], 'road_failure-map-{}-{}-multi-modal-options-10-shift.png'.format(plot_set['file_tag'], column))
-            elif mode == 'rail':
-                output_file = os.path.join(
-                    config['paths']['figures'], 'rail_failure-map-{}-{}-multi-modal-options.png'.format(plot_set['file_tag'], column))
-            else:
-                raise ValueError("Mode must be road or rail")
+            print ('* Plotting Rail {}'.format(plot_set['title_cols'][c]))
+            output_file = os.path.join(
+                      config['paths']['figures'], 'rail_failure-map-{}-{}-multi-modal-options.png'.format(plot_set['file_tag'], column))
             save_fig(output_file)
             plt.close()
             print(" >", output_file)
 
 
 if __name__ == '__main__':
-    ok_values = ['rail']
-    for ok in ok_values:
-        main(ok)
+    main()
