@@ -140,6 +140,10 @@ def main():
     region_file = region_file[region_file['max_total_tons'] > 0]
     del flow_file
 
+    region_file[['edge_id','min_tr_loss','min_econ_impact','min_eael_multimodal','min_eael',
+                'max_tr_loss','max_econ_impact','max_eael_multimodal','max_eael']].to_csv(os.path.join(config['paths']['output'], 
+                                'network_stats',
+                                'national_rail_multi_modal_risks.csv'),index=False)
 
     rail_color = '#006d2c'
     very_high_value = 4000000

@@ -276,8 +276,9 @@ def run_adaptation_calculation(file_id, data_path, output_path, duration_max=10,
     print ('* Get discount ratios')
     dr_norm, dr_growth, min_main_dr, max_main_dr = calculate_discounting_arrays(
         discount_rate, growth_rate)
-    print(sum(dr_norm), sum(dr_growth), sum(min_main_dr), sum(max_main_dr))
+    # print(sum(dr_norm), sum(dr_growth), sum(min_main_dr), sum(max_main_dr))
 
+    print ('* Analysis for {} {} days disruption and {} growth'.format(file_id,duration_max,round(growth_rate,1)))
 
     # load provinces
     if file_id == 'road':
@@ -310,17 +311,11 @@ def run_adaptation_calculation(file_id, data_path, output_path, duration_max=10,
                dr_growth, min_main_dr, max_main_dr, duration_max=duration_max,
                min_exp=False, min_loss=False,mode=file_id,length_duration_weights=1), axis=1))
 
-    # if not read_from_file:
-    #     roads['max_tot_adap_cost'] = roads.max_tot_adap_cost.apply(lambda item: max(item))
-    #     roads['min_tot_adap_cost'] = roads.min_tot_adap_cost.apply(lambda item: max(item))
-    #     roads['min_bc_ratio'] = roads['min_benefit']/roads['max_tot_adap_cost']
-    #     roads['max_bc_ratio'] = roads['max_benefit']/roads['min_tot_adap_cost']
-
     if read_from_file:
-        filename = 'output_adaptation_{}_{}_days_max_disruption.csv'.format(
-            file_id, duration_max)
+        filename = 'output_adaptation_{}_{}_days_max_{}_growth_disruption.csv'.format(
+            file_id, duration_max,str(round(growth_rate,1)).replace('.','p').replace('-','minus'))
         roads.to_csv(os.path.join(output_path, 'adaptation_results', filename),index=False,encoding='utf-8-sig')
     else:
-        filename = 'output_adaptation_{}_{}_days_max_disruption_fixed_parameters.csv'.format(
-            file_id, duration_max)
+        filename = 'output_adaptation_{}_{}_days_max_{}_growth_disruption_fixed_parameters.csv'.format(
+            file_id, duration_max,str(round(growth_rate,1)).replace('.','p').replace('-','minus'))
         roads.to_csv(os.path.join(output_path, 'adaptation_results', filename),index=False,encoding='utf-8-sig')

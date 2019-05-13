@@ -3,6 +3,7 @@
 """
 import os
 import sys
+import numpy as np
 from atra.adaptation_options import *
 
 def main():
@@ -25,16 +26,17 @@ def main():
     if os.path.exists(adapt_results) == False:
         os.mkdir(adapt_results)
 
-    duration_list = [10,20,30]
+    duration_list = np.arange(10,110,10)
     discount_rate = 10
-    growth_rate = 2.9
+    growth_rates = np.arange(-2,4,0.2)
     modes = ['road','bridge']
-    # modes = ['bridge']
 
+    # print (growth_rates)
     for dur in duration_list:
-        for file_id in modes:
-            run_adaptation_calculation(
-                file_id, data_path, output_path, duration_max=dur, discount_rate=discount_rate, growth_rate=growth_rate, read_from_file=read_from_file)
+        for growth_rate in growth_rates:
+            for file_id in modes:
+                run_adaptation_calculation(
+                    file_id, data_path, output_path, duration_max=dur, discount_rate=discount_rate, growth_rate=round(growth_rate,1), read_from_file=read_from_file)
 
 
 
