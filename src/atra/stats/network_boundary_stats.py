@@ -86,6 +86,7 @@ def main():
     province_path = os.path.join(incoming_data_path,'2','provincia','Provincias.shp')
     provinces = gpd.read_file(province_path,encoding='utf-8')
     provinces = provinces.to_crs({'init': 'epsg:4326'})
+    provinces.rename(columns={'OBJECTID':'province_id','nombre':'province_name','Geometry':'geom_type'},inplace=True)
     sindex_provinces = provinces.sindex
 
     '''Assign provinces to zones
@@ -97,10 +98,23 @@ def main():
     zones = zones.to_crs({'init': 'epsg:4326'})
     zones.rename(columns={'OBJECTID':'department_id','Name':'department_name','Geometry':'geom_type'},inplace=True)
 
-    zones['province_name'] = zones.progress_apply(lambda x: extract_value_from_gdf(
-        x, sindex_provinces, provinces,'nombre'), axis=1)
-    zones['province_id'] = zones.progress_apply(lambda x: extract_value_from_gdf(
-        x, sindex_provinces, provinces,'OBJECTID'), axis=1)
+    zones['geometry_centroid'] = zones.geometry.centroid
+    zones_centriods = zones[['department_id','department_name','geometry_centroid']]
+    zones_centriods.rename(columns={'geometry_centroid':'geometry'},inplace=True)
+    zone_matches = gpd.sjoin(zones_centriods,provinces[['province_id','province_name','geometry']], how="inner", op='within').reset_index()
+    no_zones = [x for x in zones['department_id'].tolist() if x not in zone_matches['department_id'].tolist()]
+
+    zones.drop('geometry_centroid',axis=1,inplace=True)
+    if no_zones:
+        remain_zones = zones[zones['department_id'].isin(no_zones)]
+        remain_zones['province_name'] = remain_zones.progress_apply(lambda x: extract_value_from_gdf(
+            x, sindex_provinces, provinces,'province_name'), axis=1)
+        remain_zones['province_id'] = remain_zones.progress_apply(lambda x: extract_value_from_gdf(
+            x, sindex_provinces, provinces,'province_id'), axis=1)
+
+        zone_matches = pd.concat([zone_matches,remain_zones],axis=0,sort='False', ignore_index=True)
+
+    zones = pd.merge(zones,zone_matches[['department_id','province_id','province_name']],how='left',on=['department_id'])
 
 
     # Specify the output files and paths to be created
