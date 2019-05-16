@@ -12,7 +12,6 @@ Networks
 	- In sub-folders in the file path - ``/data/pre_processed_networks_data/``
 	- As Shapefiles with of network nodes and edges
 	- The names of files and folders are self-explanatory
-	- See ``/data/pre_processed_networks_data/networks_description.xlsx`` for details of all shapefiles
 
 2. All nodes should have the following attributes:
 	- ``node_id`` - String Node ID

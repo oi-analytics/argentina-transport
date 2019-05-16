@@ -132,7 +132,7 @@ def main(config):
     export_operations = ['Exportación','Vehículos Expo','Transbordo Expo','Cabotaje Salido']
     import_operations = ['Importación','Transbordo Impo','Vehículos Impo','Cabotaje Entrado']
     transit_operattions = ['Tránsito','Otros']
-    port_df = gpd.read_file(os.path.join(data_path,'network','water_nodes.shp'),encoding='utf-8').fillna('none')
+    port_df = gpd.read_file(os.path.join(incoming_data_path,'pre_processed_network_data','ports','water_nodes.shp'),encoding='utf-8').fillna('none')
     port_df.crs = {'init' :'epsg:4326'}
     # port_df.rename(columns={'id':'node_id'},inplace=True)
     port_df.to_file(os.path.join(data_path,'network','port_nodes.shp'),encoding = 'utf-8')
@@ -328,7 +328,7 @@ def main(config):
 
     '''Add operators
     '''
-    port_edges_path = os.path.join(data_path,'network','water_edges.shp')
+    port_edges_path = os.path.join(incoming_data_path,'pre_processed_network_data','ports','water_edges.shp')
     port_edges = gpd.read_file(port_edges_path,encoding='utf-8').fillna(0)
     port_edges.columns = map(str.lower, port_edges.columns)
     port_edges.rename(columns={'id':'edge_id','from_id':'from_node','to_id':'to_node'},inplace=True)

@@ -120,7 +120,7 @@ def main(config):
     }
 
 
-    port_df = gpd.read_file(os.path.join(data_path,'network','water_nodes.shp'),encoding='utf-8').fillna('none')
+    port_df = gpd.read_file(os.path.join(incoming_data_path,'pre_processed_network_data','ports','water_nodes.shp'),encoding='utf-8').fillna('none')
     # port_names = []
     # for p in list(port_df.itertuples(index=False)):
     #     port_names += list(zip(p.name.split('/'),[p.id]*len(p.name.split('/'))))
