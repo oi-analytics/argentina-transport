@@ -17,12 +17,19 @@ warnings.filterwarnings('ignore')
 
 data_path= atra.utils.load_config()['paths']['data']
 
+def change_name(x):
+    if x in sectors:
+        return 'sec'+x
+    elif x == 'other1':
+        return 'other11'
+    else:
+        return 'other21'
+    
 def est_trade_value(x,output_new,sector):
-    if sector is not 'other':
+    if (sector is not 'other1') & (sector is not 'other2'):
         sec_output = output_new.sum(axis=1).loc[output_new.sum(axis=1).index.get_level_values(1) == sector].reset_index()
     else:
         sec_output = output_new.sum(axis=1).loc[output_new.sum(axis=1).index.get_level_values(1) == 'VA'].reset_index()
-
     x['gdp'] = x.gdp*min(sec_output.loc[sec_output.region==x.reg1].values[0][2],sec_output.loc[sec_output.region==x.reg2].values[0][2])
 #    x['gdp'] = x.gdp*(sec_output.loc[sec_output.region==x.reg1].values[0][2])
     return x
@@ -183,8 +190,8 @@ proxy_reg_arg.to_csv(os.path.join(data_path,'mrio_analysis','proxy_reg_arg.csv')
 
 
 # proxy level 4
-for iter_,sector in enumerate(sectors+['other']):
-    if sector is not 'other':
+for iter_,sector in enumerate(sectors+['other1','other2']):
+    if (sector is not 'other1') & (sector is not 'other2'):
         proxy_sector = pd.DataFrame(prov_data.iloc[iter_,:24]/prov_data.iloc[iter_,:24].sum()).reset_index()
         proxy_sector['year'] = 2016
         proxy_sector['sector'] = 'sec{}'.format(sector)
@@ -200,28 +207,28 @@ for iter_,sector in enumerate(sectors+['other']):
         proxy_sector.to_csv(os.path.join(data_path,'mrio_analysis','proxy_{}.csv'.format(sector)),index=False)
 
 # proxy level 18
-mi_index = pd.MultiIndex.from_product([sectors+['other'], region_names, sectors+['other'], region_names],
+mi_index = pd.MultiIndex.from_product([sectors+['other1','other2'], region_names, sectors+['other1','other2'], region_names],
                                      names=['sec1', 'reg1','sec2','reg2'])
-for iter_,sector in enumerate(sectors+['other']):
-    if sector is not 'other':
+for iter_,sector in enumerate(sectors+['other1','other2']):
+    if (sector is not 'other1') & (sector is not 'other2'):
         proxy_trade = pd.DataFrame(columns=['year','gdp'],index= mi_index).reset_index()
         proxy_trade['year'] = 2016
         proxy_trade['gdp'] = 0
         proxy_trade = proxy_trade.query("reg1 != reg2")
         proxy_trade = proxy_trade.loc[proxy_trade.sec1 == sector]
-        proxy_trade['sec1'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec1 ]
-        proxy_trade['sec2'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec2 ]
+        proxy_trade['sec1'] = proxy_trade.sec1.apply(change_name)
+        proxy_trade['sec2'] = proxy_trade.sec2.apply(change_name)
         proxy_trade = proxy_trade[['year','sec1','reg1','sec2','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','sector','region','gdp']
-        proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade_sec{}.csv'.format(sector)),index=False)
+        proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade_sec{}.csv'.format(sector)),index=False)    
     else:
         proxy_trade = pd.DataFrame(columns=['year','gdp'],index= mi_index).reset_index()
         proxy_trade['year'] = 2016
         proxy_trade['gdp'] = 0
-        proxy_trade = proxy_trade.query("reg1 != reg2")
+        proxy_trade = proxy_trade.query("reg1 != reg2")    
         proxy_trade = proxy_trade.loc[proxy_trade.sec1 == sector]
-        proxy_trade['sec1'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec1 ]
-        proxy_trade['sec2'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec2 ]
+        proxy_trade['sec1'] = proxy_trade.sec1.apply(change_name)
+        proxy_trade['sec2'] = proxy_trade.sec2.apply(change_name)       
         proxy_trade = proxy_trade[['year','sec1','reg1','sec2','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','sector','region','gdp']
         proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade_{}.csv'.format(sector)),index=False)
@@ -259,10 +266,21 @@ column_mi_reorder = pd.MultiIndex.from_arrays(
     [region_col, sector_only+col_only], names=('region', 'col'))
 
 # sum va and imports
-valueA = MRIO.loc[MRIO.index.get_level_values(1) == 'VA'].sum(axis='index')
+valueA = MRIO.xs('VA', level=1, axis=0).sum(axis=0)
+valueA.drop('FD', level=1,axis=0,inplace=True)
+valueA.drop('EXP', level=1,axis=0,inplace=True)
+imports = MRIO.xs('IMP', level=1, axis=0).sum(axis=0)
+imports.drop('FD', level=1,axis=0,inplace=True)
+imports.drop('EXP', level=1,axis=0,inplace=True)
+FinalD = MRIO.xs('FD', level=1, axis=1).sum(axis=1)
+FinalD.drop('VA', level=1,axis=0,inplace=True)
+FinalD.drop('IMP', level=1,axis=0,inplace=True)
+Export = MRIO.xs('EXP', level=1, axis=1).sum(axis=1)
+Export.drop('VA', level=1,axis=0,inplace=True)
+Export.drop('IMP', level=1,axis=0,inplace=True)
 
-output_new = pd.concat([MRIO.loc[~MRIO.index.get_level_values(1).isin(['FD'])]])
-output_new = output_new.reindex(column_mi_reorder, axis='columns')
+output_new = MRIO.copy()
+
 
 ''' Second iteration, including trade'''
 
@@ -271,22 +289,23 @@ output_new = output_new.reindex(column_mi_reorder, axis='columns')
 # =============================================================================
 
 od_matrix_total = pd.DataFrame(pd.read_excel(os.path.join(data_path,'OD_data','province_ods.xlsx'),
-                          sheet_name='total',index_col=[0,1])).unstack(1).fillna(0)
+                          sheet_name='total',index_col=[0,1],usecols =[0,1,2,3,4,5,6,7])).unstack(1).fillna(0)
 od_matrix_total.columns.set_levels(['A','G','C','D','B','I'],level=0,inplace=True)
 od_matrix_total.index = od_matrix_total.index.map(reg_mapper)
 od_matrix_total = od_matrix_total.stack(0)
 od_matrix_total.columns = od_matrix_total.columns.map(reg_mapper)
 od_matrix_total = od_matrix_total.swaplevel(i=-2, j=-1, axis=0)
+od_matrix_total = od_matrix_total.loc[:, od_matrix_total.columns.notnull()]
 
 
 # =============================================================================
 # Create proxy data for second iteration
 # =============================================================================
-# proxy level 14
-mi_index = pd.MultiIndex.from_product([sectors+['other'], region_names, region_names],
+# proxy level 14 
+mi_index = pd.MultiIndex.from_product([sectors+['other1','other2'], region_names, region_names],
                                      names=['sec1', 'reg1','reg2'])
 
-for iter_,sector in enumerate(sectors+['other']):
+for iter_,sector in enumerate(sectors+['other1','other2']):
     if sector in ['A','G','C','D','B','I']:
         proxy_trade = (od_matrix_total.loc[sector]/od_matrix_total.loc[sector].sum(axis=0)).stack(0).reset_index()
         proxy_trade.columns = ['reg1','reg2','gdp']
@@ -296,8 +315,9 @@ for iter_,sector in enumerate(sectors+['other']):
         proxy_trade = proxy_trade[['year','sec1','reg1','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','region','gdp']
         proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade14_sec{}.csv'.format(sector)),index=False)
-    elif (sector is not 'other') & (sector not in ['A','G','C','D','B','I']): # &  (sector not in ['L','M','N','O','P']):
+    elif (sector is not 'other1') &  (sector is not 'other2') & (sector not in ['A','G','C','D','B','I']): # &  (sector not in ['L','M','N','O','P']):
         proxy_trade = (od_matrix_total.sum(level=1)/od_matrix_total.sum(level=1).sum(axis=0)).stack(0).reset_index()
+
         proxy_trade.columns = ['reg1','reg2','gdp']
         proxy_trade['year'] = 2016
         proxy_trade = proxy_trade.apply(lambda x: est_trade_value(x,output_new,sector),axis=1)
@@ -314,40 +334,39 @@ for iter_,sector in enumerate(sectors+['other']):
         proxy_trade['sec1'] = sector+'1'
         proxy_trade = proxy_trade[['year','sec1','reg1','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','region','gdp']
-        proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade14_{}.csv'.format(sector)),index=False)
+        proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade14_{}.csv'.format(sector)),index=False)       
 
 # proxy level 18
-mi_index = pd.MultiIndex.from_product([sectors+['other'], region_names, sectors+['other'], region_names],
+mi_index = pd.MultiIndex.from_product([sectors+['other1','other2'], region_names, sectors+['other1','other2'], region_names],
                                      names=['sec1', 'reg1','sec2','reg2'])
-for iter_,sector in enumerate(sectors+['other']):
-    if sector is not 'other':
+for iter_,sector in enumerate(sectors+['other1','other2']):
+    if (sector is not 'other1') & (sector is not 'other2'):
         proxy_trade = pd.DataFrame(columns=['year','gdp'],index= mi_index).reset_index()
         proxy_trade['year'] = 2016
         proxy_trade['gdp'] = 0
         proxy_trade = proxy_trade.query("reg1 != reg2")
         proxy_trade = proxy_trade.loc[proxy_trade.sec1 == sector]
         proxy_trade = proxy_trade.loc[proxy_trade.sec2.isin(['L','M','N','O','P'])]
-        proxy_trade['sec1'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec1 ]
-        proxy_trade['sec2'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec2 ]
-
-        proxy_trade = proxy_trade.query("reg1 == reg2")
-
+        proxy_trade['sec1'] = proxy_trade.sec1.apply(change_name)
+        proxy_trade['sec2'] = proxy_trade.sec2.apply(change_name) 
+        
+        proxy_trade = proxy_trade.query("reg1 == reg2")    
 
         proxy_trade = proxy_trade[['year','sec1','reg1','sec2','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','sector','region','gdp']
         proxy_trade.to_csv(os.path.join(data_path,'mrio_analysis','proxy_trade_sec{}.csv'.format(sector)),index=False)
-
+    
     else:
         proxy_trade = pd.DataFrame(columns=['year','gdp'],index= mi_index).reset_index()
         proxy_trade['year'] = 2016
         proxy_trade['gdp'] = 0
-        proxy_trade = proxy_trade.query("reg1 != reg2")
+        proxy_trade = proxy_trade.query("reg1 != reg2")    
         proxy_trade = proxy_trade.loc[proxy_trade.sec1 == sector]
         proxy_trade = proxy_trade.loc[proxy_trade.sec2.isin(['L','M','N','O','P'])]
-        proxy_trade['sec1'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec1 ]
-        proxy_trade['sec2'] = ['sec'+x if x is not 'other' else 'other' for x in proxy_trade.sec2 ]
-
-        proxy_trade = proxy_trade.query("reg1 == reg2")
+        proxy_trade['sec1'] = proxy_trade.sec1.apply(change_name)
+        proxy_trade['sec2'] = proxy_trade.sec2.apply(change_name) 
+        
+        proxy_trade = proxy_trade.query("reg1 == reg2")    
 
         proxy_trade = proxy_trade[['year','sec1','reg1','sec2','reg2','gdp']]
         proxy_trade.columns = ['year','sector','region','sector','region','gdp']
@@ -395,19 +414,84 @@ output = pd.concat([output,valueA.T])
 
 output = output.reindex(column_mi_reorder, axis='columns')
 
-''' Rebalance table'''
-prov_ratios = pd.DataFrame((prov_data.iloc[:16,:24].stack().swaplevel(i=-2,
-             j=-1)/sum(prov_data.iloc[:16,:24].stack().swaplevel(i=-2,
-             j=-1))),columns=['ratio']).reset_index().groupby(['level_0','level_1']).sum().reindex(output.index)[:384]
+# convert to numpy matrix
+X0 = MRIO.as_matrix()
 
-output_ratio = pd.DataFrame((output.sum(level=0,axis=1).sum(axis=1)[:-1]/sum(output.sum(level=0,axis=1).sum(axis=1)[:-1])),columns=['ratio'])
+# get sum of rows and columns
+u = X0.sum(axis=1)
+v = X0.sum(axis=0)
 
-new_values = pd.DataFrame(output.sum(level=0,axis=1).sum(axis=1)[:-1],columns=['ratio']).multiply(prov_ratios).divide(output_ratio).fillna(0)
+# and only keep T
+v[:(len(u)-2)] = u[:-2]
 
-mrio_arg = ras_method(np.array(output).T,np.array(list(new_values.ratio)+list(output.sum(axis=0)[-24:])),
-                      np.array(list(new_values.ratio)+[output.sum(axis=0)[384:].sum()]), eps=1e-5,print_out=False)
+# apply RAS method to rebalance the table
+X1 = ras_method(X0, u, v, eps=1e-6,print_out=False)
 
-MRIO = pd.DataFrame(mrio_arg.T,columns=output.columns,index=output.index)
-
-''' And save table '''
+# and save output
+MRIO = pd.DataFrame(X1.T,columns=MRIO.columns,index=MRIO.index)
+MRIO = MRIO+1e-6
 MRIO.to_csv(os.path.join(data_path,'economic_IO_tables','output','mrio_argentina.csv'))
+
+''' Create Table ready to use for the MRIA table '''
+
+Xnew = MRIO.copy()*0.027*1000
+
+# prepare export and finalD data
+Exports = pd.DataFrame(Xnew.iloc[:, Xnew.columns.get_level_values(
+    1) == 'EXP'].sum(axis=1), columns=['Exports'])
+Exports.columns = pd.MultiIndex.from_tuples(list(zip(['Total'], ['Export'])))
+FinalD_ToT = Xnew.iloc[:, ((Xnew.columns.get_level_values(1) == 'FD'))]
+FinalD_ToT = FinalD_ToT.groupby(level=0, axis=1).sum()
+FinalD_ToT.columns = pd.MultiIndex.from_tuples(
+    list(zip(FinalD_ToT.columns, len(FinalD_ToT.columns)*['FinDem'])))
+
+Xnew.drop(['FD', 'EXP'], axis=1, level=1, inplace=True)
+
+Xnew = pd.concat([Xnew, FinalD_ToT, Exports], axis=1)
+
+valueA = Xnew.xs('VA', level=1, axis=0).sum(axis=0)
+imports = Xnew.xs('IMP', level=1, axis=0).sum(axis=0)
+
+Xnew.drop(['VA', 'IMP'], axis=0, level=1, inplace=True)
+
+Xnew = pd.concat([Xnew,  pd.concat([pd.DataFrame(valueA,columns=[('total', 'valueA')]), pd.DataFrame(imports,columns=[('total', 'import_')])], axis=1).T], axis=0)
+
+
+writer = pd.ExcelWriter(os.path.join(data_path, 'economic_IO_tables','output', 'IO_ARGENTINA.xlsx'))
+
+# write T
+df_T = Xnew.iloc[:384, :384]
+df_T.columns = df_T.columns.droplevel()
+df_labels_T = pd.DataFrame(df_T.reset_index()[['region', 'row']])
+df_T.reset_index(inplace=True, drop=True)
+df_T.to_excel(writer, 'T', index=False, header=False)
+df_labels_T.to_excel(writer, 'labels_T', index=False, header=False)
+
+# write FD
+df_FD = Xnew.iloc[:384, 384:408]
+df_labels_FD = pd.DataFrame(list(df_FD.columns))
+df_FD.columns = df_FD.columns.droplevel()
+df_FD.reset_index(inplace=True, drop=True)
+df_FD.to_excel(writer, 'FD', index=False, header=False)
+df_labels_FD.to_excel(writer, 'labels_FD', index=False, header=False)
+
+# write ExpROW
+df_ExpROW = pd.DataFrame(Xnew.iloc[:384,408])
+df_labels_ExpROW = pd.DataFrame(list(df_ExpROW.columns.get_level_values(1)))
+df_ExpROW.reset_index(inplace=True, drop=True)
+df_ExpROW.columns = df_ExpROW.columns.droplevel()
+df_ExpROW.to_excel(writer, 'ExpROW', index=False, header=False)
+df_labels_ExpROW.reset_index(inplace=True, drop=True)
+df_labels_ExpROW.columns = ['Export']
+df_labels_ExpROW.to_excel(writer, 'labels_ExpROW', index=False, header=False)
+
+# write VA
+df_VA = pd.DataFrame(Xnew.iloc[384:,:]).T
+df_VA.columns = ['Import', 'VA']
+df_VA.reset_index(inplace=True, drop=True)
+df_VA.to_excel(writer, 'VA', index=False, header=False)
+df_labels_VA = pd.DataFrame(['Import', 'VA']).T
+df_labels_VA.to_excel(writer, 'labels_VA', index=False, header=False)
+
+# save excel
+writer.save()
