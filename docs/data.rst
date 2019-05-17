@@ -98,28 +98,38 @@ Administrative Areas with Statistics
 
 2. Global boundary dataset for map plotting are stored:
 	- In the path - ``/data/boundaries/``
+	- As Shapefiles
+
+3. Census boundary data are stored:
+	- In the path - ``/incoming_data/2/radios censales/``
+	- As Shapefiles
 
 The essential attributes in the Argentina boundary datasets are listed below. See the data for all attributes
 
-3. All Argentina Department boundary datasets should have the attributes:
+4. All Argentina Department boundary datasets should have the attributes:
 	- ``name`` - String names Spanish - attribute name changed to ``department_name``
 	- ``OBJECTID`` - Integer IDs - attribute name changed to ``department_id``
 	- ``geometry`` - Polygon geometries of boundary with projection ESPG:4326
 
-4. All Argentina Province boundary datasets should have attributes:
+5. All Argentina Province boundary datasets should have attributes:
 	- ``nombre`` - String names Spanish - attribute name changed to ``province_name``
 	- ``OBJECTID`` - Integer IDs - attribute name changed to ``province_id``
 	- ``geometry`` - Polygon geometries of boundary with projection ESPG:4326
 
-5. All global boundary datasets should have attributes:
+6. All global boundary datasets should have attributes:
 	- ``name`` - String names of boundaries in English
+	- ``geometry`` - Polygon geometry of boundary with projection ESPG:4326
+
+6. The census datasets should have attributes:
+	- ``poblacion`` - Float value of population
 	- ``geometry`` - Polygon geometry of boundary with projection ESPG:4326
 
 
 Macroeconomic Data
 ------------------
 1. For the macroeconomic analysis we use the national IO table for Argentina:
-	- In the file in path - ``data/economic_IO_tables/PIB_provincial_06_17.xls``
+	- In the file in path - ``data/economic_IO_tables/input/IO_ARGENTINA.xlsx``
+	- In the file in path - ``data/economic_IO_tables/input/MRIO_ARGENTINA_FULL.xlsx``
 
 
 Adaptation Options

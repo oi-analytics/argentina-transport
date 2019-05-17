@@ -438,6 +438,13 @@ def main(config):
             'attribute':'grupo',
             'attribute_rename':'material_code'
         },
+        {
+            'folder_name':'tmda',
+            'file_name':'vistagis_selLine.shp',
+            'id_column':'nro_regist',
+            'attribute':'valor',
+            'attribute_rename':'tmda_count'
+        },
     ]
 
 

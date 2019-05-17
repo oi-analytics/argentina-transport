@@ -1,18 +1,22 @@
-==============
-Collected Data
-==============
+=======================
+Network Collected Data
+=======================
 .. Important::
 	- This section describes collected datasets that are used to create data for the Argentina Transport Risk Analysis (ATRA)
 	- The datasets listed here are specfic to Argentina and are used as inputs to data in the Processed Data Assembly steps
 	- To implement the ATRA pre-processing without any changes in existing codes, all data described here should be created and stored exactly as indicated below
 
-Networks
---------
+Network GIS
+-----------
 1. All pre-processed networks data are stored:
 	- In sub-folders in the file path - ``/data/pre_processed_networks_data/``
-	- As Shapefiles with of network nodes and edges
-	- The names of files and folders are self-explanatory
-
+	- Roads are extracted from the sub-folder - ``/roads/combined_roads``
+	- Railways are extracted from the sub-folder - ``/railways/national_rail/``
+	- Ports are extracted from the sub-folder - ``/ports/``
+	- Airlines are extracted from the sub-folder - ``/air/``
+	- As Shapefiles with topology of network nodes and edges
+	- The names of files are self-explanatory
+	
 2. All nodes should have the following attributes:
 	- ``node_id`` - String Node ID
 	- ``geometry`` - Point geometry of node with projection ESPG:4326
@@ -26,6 +30,20 @@ Networks
 	- ``geometry`` - LineString geometry of edge with projection ESPG:4326
 	- variable list of attributes depending upon sector
 
+4. National Roads specifc GIS data are stored: 
+	- In sub-folders in the path - ``/incoming_data/pre_processed_network_data/roads/national_roads/``
+	- As Shapefiles with attributes
+	- File in sub-folder ``/indice_de_estado/`` contains road surface quality as numeric values
+	- File in sub-folder ``/indice_de_serviciabilidad/`` contains road service quality as numeric values
+	- File in sub-folder ``/materialcarril_sel/`` contains road surface meterial as string values
+	- File in sub-folder ``/tmda/`` contains TMDA counts as numeric values
+	- File in sub-folder ``/v_mojon/`` contains locations of kilometer markers
+	
+5. National-roads bridges GIS data are stored:
+	- In the path - ``/incoming_data/pre_processed_network_data/roads/national_roads//puente_sel/``
+	- As Shapefiles with Point geometry of nodes with projection ESPG:4326
+	- As Excel file with bridges attributes
+
 .. Note::
 	We assume that networks are provided as topologically correct connected graphs: each edge
 	is a single LineString (may be straight line or more complex line), but must have exactly
@@ -35,81 +53,24 @@ Networks
 	Wherever two edges meet, we assume that there is a shared node, matching each of the intersecting edge endpoints. For example, at a t-junction there will be three edges meeting
 	at one node.
 
-
-Cost attributes
+Network OD data
 ---------------
-1. Data to assign transport costs to network edges are stored:
-	- In the file in path - ``/data/pre_processed_networks_data/mode_costs.xlsx``
+1. Road commodity OD matrices data are stored:
+	- In the path - ``/incoming_data/5/Matrices OD 2014- tablas/``
 	- As Excel sheets
+	- Each Excel Sheet is a 123-by-123 matrix of OD tons with first row and first column showing Zone IDs
+	- We use the sheets ``Total Toneladas 2014`` if given otherwise add tons across sheets
+	- Each Excel Sheet is a 123-by-123 matrix with first row and first column showing Zone IDs
 
-2. All cost estimtates should have the following attributes:
-	- ``time_cost_usd`` - Float values of rate of time
-	- ``tariff_min_vnd`` - Float values minimum tariff rate in VND/ton-km (VND/ton for multi)
-	- ``tariff_max_vnd`` - Float values maximum tariff rate in VND/ton-km (VND/ton for multi)
-	- ``tariff_min_usd`` - Float values minimum tariff rate in USD/ton-km (USD/ton for multi)
-	- ``tariff_max_usd`` - Float values maximum tariff rate in USD/ton-km (USD/ton for multi)
-	- attributes to decide how the costs are allocated to network edges (if none then all edges have same criteria)
+2. Road commodity OD Zone data is stored:
+	- In the path - ``/incoming_data/5/Lineas de deseo OD- 2014/3.6.1.10.zonas/``
+	- As Shapefile
+	- ``data`` - The ``od_id`` that matches the OD matrices Excel data
+	- ``geometry`` - Polygon geometry of zone with projection ESPG:4326 
 
-Road design attributes
-----------------------
-1. Data to assign characteristics to roads are stored:
-	- In the file in path - ``/data/pre_processed_networks_data/road_properties.xlsx``
-	- As Excel sheets
-	- See ``/data/pre_processed_networks_data/road_properties.xlsx`` for data description
+3. Rail OD OD matrices data are stored:
+	- 
 
 
-VITRANNS2 OD data
------------------
-1. VITRANSS2 province-level OD matrices are stored:
-	- In the path - ``data/OD_data/``
-	- As Excel sheets
-	- ``goods`` sheet gives OD values by commodity
-	- ``modes`` sheet gives OD values by mode
 
-2. Aggregated goods-wise province-level national OD matrices have attributes:
-	- ``o`` - Integer IDs of origin Provinces
-	- ``d`` - Integer IDs of of destination Provinces
-	- ``name o`` - String names of origin Provinces
-	- ``name d`` - String names of destination Provinces
-	- ``commodity_names`` - Float values of daily tonnages of commodities/industries between OD Provinces
 
-3. Aggregated mode-wise province-level national OD matrices have attributes:
-	- ``o`` - Integer IDs of origin Provinces
-	- ``d`` - Integer IDs of of destination Provinces
-	- ``name o`` - String names of origin Provinces
-	- ``name d`` - String names of destination Provinces
-	- ``mode_names`` - Float values of daily tonnages along modes between OD Provinces
-
-IFPRI crop data
----------------
-1. IFPRI crop datasets are stored:
-	- In the path - ``data/Agriculture_crops/``
-	- As GeoTiff files
-	- Only files with names ``SPAM_P_crop name_ver3.tif`` are used
-	- See Excel sheet in path ``data/Agriculture_crops//crop_data/crop_unit_costs.xlsx`` for costs of crops
-
-2. All crop GeoTiff datasets should have attributes:
-	- values greater than 0
-	- raster grid geometry
-	- projection systems: Default assumed = EPSG:4326
-
-RiceAtlas data
---------------
-1. RiceAtlas datasets are stored:
-	- In the path - ``data/rice_atlas_argentina/``
-	- As Shapefiles
-	- Only the file ``rice_production.shp`` is used
-
-2. The essential attributes in the dataset are listed below. See the data for all attributes:
-	- ``sub_region`` - String names of Provinces in English
-	- ``P_Jan``, ..., ``P_Dec`` - Column names with float tonnage produced in each month from January to December
-	- ``geometry`` - Polygon geometries of Provinces
-
-Points of interest data
------------------------
-1. Locations of populations, commune, district, province center committee points datasets are stored:
-	- In the path - ``data/Points_of_interest/``
-	- As Shapefiles
-
-2. The essential attributes in all the dataset are listed below. See the data for all attributes:
-	- ``geometry`` - Point geometry with projection ESPG:4326

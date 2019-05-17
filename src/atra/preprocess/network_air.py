@@ -33,7 +33,7 @@ def main(config):
     }
 
     transform_geo_file(
-        source_file=os.path.join(incoming_data_path, 'argentina-geoserver-gml', 'observ-_3.4.4.1.5_aerodromos_anac_2018.view.gml'),
+        source_file=os.path.join(incoming_data_path,'pre_processed_network_data','air', 'observ-_3.4.4.1.5_aerodromos_anac_2018.view.gml'),
         sink_file=os.path.join(data_path, 'network', 'air_nodes.shp'),
         sink_schema=node_schema,
         transform_record=transform_node
@@ -82,7 +82,7 @@ def main(config):
         ]
     }
     edge_input_file = os.path.join(
-        incoming_data_path, '5', 'PasajerosLargaDistanciaAvionyBus', 'SIAC2016pax.shp')
+        incoming_data_path, 'pre_processed_network_data','air', 'SIAC2016pax.shp')
     transform_geo_file(
         source_file=edge_input_file,
         sink_file=os.path.join(data_path, 'network', 'air_edges.shp'),
