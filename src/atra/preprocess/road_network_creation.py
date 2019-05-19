@@ -455,24 +455,24 @@ def main(config):
     '''Get the road properties, which are mainly the widths of national roads
     '''
     skiprows = 4
-    road_properties_df = pd.read_excel(os.path.join(incoming_data_path,'5','DNV_data_recieved_06082018','Tramos por Rutas.xls'),sheet_name='Hoja1',skiprows=skiprows,encoding='utf-8-sig').fillna(0)
+    road_properties_df = pd.read_excel(os.path.join(incoming_data_path,'5','DNV_data','Tramos por Rutas.xls'),sheet_name='Hoja1',skiprows=skiprows,encoding='utf-8-sig').fillna(0)
     # road_properties_df = road_properties_df.iloc[skiprows:]
     road_properties_df.columns = ['road_no','location','inital_km','final_km',
                                 'purpose','description','length_km','left_surface',
                                 'left_width','right_surface','right_width','lanes','terrain']
 
 
-    road_speeds_df = pd.read_excel(os.path.join(incoming_data_path,'5','DNV_data_recieved_06082018','TMDA y Clasificación 2016.xlsx'),sheet_name='Clasificación 2016',skiprows=14,encoding='utf-8-sig').fillna(0)
+    road_speeds_df = pd.read_excel(os.path.join(incoming_data_path,'5','DNV_data','TMDA y Clasificación 2016.xlsx'),sheet_name='Clasificación 2016',skiprows=14,encoding='utf-8-sig').fillna(0)
     road_speeds_df.columns = map(str.lower, road_speeds_df.columns)
 
-    time_costs_df = pd.read_excel(os.path.join(incoming_data_path,'5','Costs','Costos de Operación de Vehículos.xlsx'),sheet_name='Camión Pesado',skiprows=15,encoding='utf-8-sig').fillna(0)
+    time_costs_df = pd.read_excel(os.path.join(incoming_data_path,'5','road_costs','Costos de Operación de Vehículos.xlsx'),sheet_name='Camión Pesado',skiprows=15,encoding='utf-8-sig').fillna(0)
     time_costs_df.columns = ['speed','tierra_cost_A','tierra_cost_B','tierra_cost_total',
                                 'ripio_cost_A','ripio_cost_B','ripio_cost_total',
                                 'paved_cost_A','paved_cost_B','paved_cost_total','speed_copy']
 
     time_costs_df = time_costs_df[time_costs_df['speed'] > 0]
 
-    tariff_costs_df = pd.read_excel(os.path.join(incoming_data_path,'5','Costs','tariff_costs.xlsx'),sheet_name='road',encoding='utf-8')
+    tariff_costs_df = pd.read_excel(os.path.join(incoming_data_path,'5','road_costs','tariff_costs.xlsx'),sheet_name='road',encoding='utf-8')
 
     nodes = gpd.read_file(road_nodes_path,encoding='utf-8').fillna(0)
     nodes.columns = map(str.lower, nodes.columns)

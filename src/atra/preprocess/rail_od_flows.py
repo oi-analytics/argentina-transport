@@ -166,7 +166,7 @@ def main(config):
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
 
-    rail_od_folder = os.path.join(incoming_data_path,'5','rail_od_matrices_06082018','Matrices OD FFCC')
+    rail_od_folder = os.path.join(incoming_data_path,'5','rail_od_matrices','Matrices OD FFCC')
     file_desc = [{'file_name':'OD BcyL',
         'sheet_name':'BCYLBEL',
         'line_name':'Belgrano',
@@ -270,7 +270,7 @@ def main(config):
 
     provinces_df = pd.concat(provinces_df,axis=0,sort='False', ignore_index=True)
 
-    cost_df = pd.read_excel(os.path.join(incoming_data_path,'5','rail_od_matrices_06082018','rail_costs.xlsx'),sheet_name='route_costs')
+    cost_df = pd.read_excel(os.path.join(incoming_data_path,'5','rail_od_matrices','rail_costs.xlsx'),sheet_name='route_costs')
     '''Get industries
     '''
     industries_df = pd.read_excel(os.path.join(data_path,'economic_IO_tables','commodity_classifications-hp.xlsx'),sheet_name='rail',index_col=[0,1])
@@ -342,7 +342,7 @@ def main(config):
     rail_nodes = list(rail_nodes.itertuples(index=False))
 
 
-    cost_df = pd.read_excel(os.path.join(incoming_data_path,'5','rail_od_matrices_06082018','rail_costs.xlsx'),sheet_name='baseline_values')
+    cost_df = pd.read_excel(os.path.join(incoming_data_path,'5','rail_od_matrices','rail_costs.xlsx'),sheet_name='baseline_values')
 
     od_output_excel = os.path.join(incoming_data_path,'rail_ods','rail_ods_paths.xlsx')
     excel_writer = pd.ExcelWriter(od_output_excel)

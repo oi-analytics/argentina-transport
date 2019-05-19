@@ -128,8 +128,11 @@ The essential attributes in the Argentina boundary datasets are listed below. Se
 Macroeconomic Data
 ------------------
 1. For the macroeconomic analysis we use the national IO table for Argentina:
-	- In the file in path - ``data/economic_IO_tables/input/IO_ARGENTINA.xlsx``
-	- In the file in path - ``data/economic_IO_tables/input/MRIO_ARGENTINA_FULL.xlsx``
+	- In the file in path - ``data/economic_IO_tables/output/IO_ARGENTINA.xlsx``
+	- In the file in path - ``data/economic_IO_tables/output/MRIO_ARGENTINA_FULL.xlsx``
+
+2. A set of look-up tables are created to match commdities in the OD matrices to IO industries
+	- In the file in path - ``data/economic_IO_tables/input/commodity_classifications-hp.xlsx``  
 
 
 Adaptation Options
