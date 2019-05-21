@@ -35,8 +35,15 @@ licensing](https://www.gams.com/latest/docs/UG_MAIN.htm) instructions.
 
 ## Configuration
 
-The location of data and output files are configured by a `config.json` file. Copy
-`config.template.json` and edit the file path details to locate the files on your system.
+The location of data and output files are configured by a `config.json` file. 
+To point the scripts to the shared folder locations:
+- copy `config.template.json` to `config.json`
+- edit `config.json` to provide the paths to your working copy of your system
+  directories (scripts may assume that file locations within the shared folders are consistent)
+  - `incoming_data`: /incoming_data
+  - `data`: /data
+  - `figures`: /figures
+  - `output`: /results
 
 Note that on Windows, you will need to use double backslashes (`\\`) in the file paths, for
 example:
@@ -55,30 +62,6 @@ Install git hooks to filter notebooks when committing to git:
 
     cd /path/to/argentina-transport
     nbstripout --install
-
-
-Data processing and model scripts for Argentina Transport Risk Analysis.
-
-## Code organisation
-
-- `src` contains project-specific processing, analysis and visualisation scripts
-
-## Setup
-
-To add the packages in `src` to your python environment, run:
-
-```
-python setup.py develop
-```
-
-To point the scripts to the shared folder locations:
-- copy `config.template.json` to `config.json`
-- edit `config.json` to provide the paths to your working copy of the OneDrive shared
-  directories (scripts may assume that file locations within the shared folders are consistent)
-  - `incoming_data`: /incoming_data
-  - `data`: /data
-  - `figures`: /figures
-  - `output`: /results
 
 
 ## Acknowledgements
