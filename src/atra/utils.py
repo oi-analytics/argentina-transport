@@ -413,7 +413,13 @@ def get_nearest_node_within_region(x, input_nodes, id_column, region_id):
         return ''
 
 def extract_nodes_within_gdf(x, input_nodes, column_name):
-    return input_nodes.loc[list(input_nodes.geometry.within(x.geometry))][column_name].values[0]
+    a = list(input_nodes.geometry.within(x.geometry))
+    if len(input_nodes.loc[a][column_name].values) > 0:
+        return input_nodes.loc[list(a)][column_name].values[0]
+    else:
+        return input_nodes.loc[list(input_nodes.sindex.nearest(x.geometry.bounds[:2]))][column_name].values[0]
+
+    # return input_nodes.loc[list(input_nodes.geometry.within(x.geometry))][column_name].values[0]
 
 def count_points_in_polygon(x, points_sindex):
     """Count points in a polygon

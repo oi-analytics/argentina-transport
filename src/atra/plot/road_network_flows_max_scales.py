@@ -70,24 +70,16 @@ def main():
         },
     ]
 
-    # plot_sets = [
-    #     {
-    #         'file_tag': 'commodities',
-    #         'legend_label': "AADF ('000 tons/day)",
-    #         'divisor': 1000,
-    #         'columns': ['max_{}'.format(x) for x in ['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-    #                 'Carnes','Combustibles',
-    #                 'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-    #                 'INDUSTRIA MANUFACTURERA','Industrializados',
-    #                 'Mineria','PESCA','Regionales','Semiterminados']],
-    #         'title_cols': ['Total tonnage','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-    #                 'Carnes','Combustibles',
-    #                 'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-    #                 'INDUSTRIA MANUFACTURERA','Industrializados',
-    #                 'Mineria','PESCA','Regionales','Semiterminados'],
-    #         'significance':0
-    #     },
-    # ]
+    plot_sets = [
+        {
+            'file_tag': 'commodities',
+            'legend_label': "AADF ('000 tons/day)",
+            'divisor': 1000,
+            'columns': ['max_{}'.format(x) for x in ['total_tons']],
+            'title_cols': ['Total tonnage'],
+            'significance':0
+        },
+    ]
 
 
     for plot_set in plot_sets:

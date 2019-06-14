@@ -36,13 +36,18 @@ def assign_node_weights_by_area_population_proximity(commune_path,nodes,commune_
     sindex_communes = communes.sindex
 
     # create Voronoi polygons for the nodes
+    # nodes = nodes.reset_index()
     xy_list = []
-    for iter_, values in nodes.iterrows():
+    for values in nodes.itertuples():
         xy = list(values.geometry.coords)
         xy_list += [list(xy[0])]
 
     vor = Voronoi(np.array(xy_list))
+    # print (vor.)
     regions, vertices = voronoi_finite_polygons_2d(vor)
+    # regions = vor.regions
+    # vertices = vor.vertices
+
     min_x = vor.min_bound[0] - 0.1
     max_x = vor.max_bound[0] + 0.1
     min_y = vor.min_bound[1] - 0.1
@@ -67,12 +72,13 @@ def assign_node_weights_by_area_population_proximity(commune_path,nodes,commune_
     poly_df = pd.DataFrame(list(zip(poly_index, poly_list)),
                                    columns=['gid', 'geometry'])
     gdf_voronoi = gpd.GeoDataFrame(poly_df, crs='epsg:4326')
+
     gdf_voronoi['node_id'] = gdf_voronoi.progress_apply(
         lambda x: extract_nodes_within_gdf(x, nodes, 'node_id'), axis=1)
-
+     
     gdf_voronoi[commune_pop_col] = 0
     gdf_voronoi = assign_value_in_area_proportions(communes, gdf_voronoi, commune_pop_col)
-
+    
     gdf_voronoi.rename(columns={commune_pop_col: 'weight'}, inplace=True)
     gdf_pops = gdf_voronoi[['node_id', 'weight']]
     del gdf_voronoi, poly_list, poly_df
@@ -193,7 +199,7 @@ def main(config):
     '''Get industries
     '''
     print('* Reading industry dataframe')
-    industries_df = pd.read_excel(os.path.join(data_path,'economic_IO_tables','commodity_classifications-hp.xlsx'),sheet_name='road',index_col=[0,1]).reset_index()
+    industries_df = pd.read_excel(os.path.join(data_path,'economic_IO_tables','input','commodity_classifications-hp.xlsx'),sheet_name='road',index_col=[0,1]).reset_index()
     industry_cols = list(set(industries_df['high_level_industry'].values.tolist()))
     industries_df = list(industries_df.itertuples(index=False))
 
@@ -223,7 +229,7 @@ def main(config):
     road_nodes.columns = map(str.lower, road_nodes.columns)
     road_nodes.rename(columns={'id':'node_id'},inplace=True)
     road_nodes = road_nodes[(road_nodes['road_type'] == 'national')| (road_nodes['road_type'] == 'province')]
-    # road_nodes = road_nodes[(road_nodes['road_type'] == 'national')]
+    # # road_nodes = road_nodes[(road_nodes['road_type'] == 'national')]
     road_nodes['provincia'] = road_nodes.progress_apply(lambda x: extract_gdf_values_containing_nodes(
         x, sindex_provinces, provinces,'nombre'), axis=1)
     road_nodes['od_id'] = road_nodes.progress_apply(lambda x: extract_gdf_values_containing_nodes(

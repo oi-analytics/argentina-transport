@@ -31,16 +31,15 @@ def assign_road_name(x):
 
 
     # This is an national and provincial roads with paved surfaces
-    if asset_type == 'national':
-        if str(x.road_name) != '0':
-            return x.road_name
-        else:
-            return 'no number'
-    elif str(x.nombre) != '0':
-        # Anything else not included above
-        return str(x.nombre)
+    if str(x.road_name) != '0':
+        return x.road_name
     else:
         return 'no number'
+    # elif str(x.nombre) != '0':
+    #     # Anything else not included above
+    #     return str(x.nombre)
+    # else:
+    #     return 'no number'
 
 def assign_road_surface(x):
     """Assign road conditions as paved or unpaved to Province roads
@@ -162,9 +161,13 @@ def assign_min_max_speeds_to_roads(x,speeds_list):
     Returns
         String value of terrain as flat or mountain
     """
-    road_no = x.road_no
-    if str(road_no).isdigit():
-        road_no = int(road_no)
+    road_names = str(x.road_name).split(',')
+    road_no = []
+    for rn in road_names:
+        if str(rn).isdigit():
+            road_no.append(int(rn))
+        else:
+            road_no.append(rn)
 
     min_speed = 0
     max_speed = 0
@@ -174,7 +177,7 @@ def assign_min_max_speeds_to_roads(x,speeds_list):
             if str(rn).isdigit():
                 rn = int(rn)
 
-            if road_no == rn and x.prog_min >= vals.inicio and x.prog_max <= vals.fin:
+            if rn in road_no and x.prog_min >= vals.inicio and x.prog_max <= vals.fin:
                 min_speed = vals.vmpes
                 max_speed = vals.percentilpes
                 break
@@ -251,7 +254,7 @@ def road_shapefile_to_dataframe(edges,road_properties_dataframe,
         'min_speed','max_speed',
         'min_time','max_time',
         'min_time_cost','max_time_cost',
-        'min_tariff_cost','max_tariff_cost'
+        'min_tariff_cost','max_tariff_cost', 'tmda_count'
         ]
 
     # assign road name
@@ -380,7 +383,11 @@ def get_numeric_attributes(road_gpd,attribute_gpd,attribute_id_column,attribute_
             attr_tot += poly[0]*length_m
             length_tot += length_m
 
-        attr_tot = 1.0*attr_tot/length_tot
+        if length_tot > 0:
+            attr_tot = 1.0*attr_tot/length_tot
+        else:
+            attr_tot = 0
+
         edge_vals.append((e_id,attr_tot))
 
         print ('Done with attribute {} for edge {}'.format(road_column_name,e_id))
@@ -450,8 +457,8 @@ def main(config):
 
     '''Get road edge network
     '''
-    road_edges_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','combined_roads_edges.shp')
-    road_nodes_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','combined_roads_nodes.shp')
+    road_edges_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','test_edges.shp')
+    road_nodes_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','test_nodes.shp')
     '''Get the road properties, which are mainly the widths of national roads
     '''
     skiprows = 4
@@ -482,24 +489,24 @@ def main(config):
     edges = gpd.read_file(edges_in,encoding='utf-8').fillna(0)
     edges.columns = map(str.lower, edges.columns)
 
-    new_edges = {}
-    new_edges['from_id'] = 'roadn_65'
-    new_edges['to_id'] = 'roadn_66'
-    new_edges['road_name'] = 3
-    new_edges['road_no'] = 275
-    new_edges['road_type'] = 'national'
-    new_edges['sentido'] = 'A'
-    new_edges = pd.DataFrame([new_edges],columns=new_edges.keys())
-    new_edges['from_geom'] = nodes[nodes['node_id'] == 'roadn_65'].geometry.values[0]
-    new_edges['to_geom'] = nodes[nodes['node_id'] == 'roadn_66'].geometry.values[0]
-    new_edges['geometry'] = new_edges.apply(lambda x: LineString([x.from_geom,x.to_geom]),axis = 1)
-    new_edges.drop('from_geom',axis=1,inplace=True)
-    new_edges.drop('to_geom',axis=1,inplace=True)
-    edges = gpd.GeoDataFrame(pd.concat([edges,new_edges],axis=0,sort='False', ignore_index=True).fillna(0),geometry='geometry',crs={'init' :'epsg:4326'})
+    # new_edges = {}
+    # new_edges['from_id'] = 'roadn_65'
+    # new_edges['to_id'] = 'roadn_66'
+    # new_edges['road_name'] = 3
+    # new_edges['road_no'] = 275
+    # new_edges['road_type'] = 'national'
+    # new_edges['sentido'] = 'A'
+    # new_edges = pd.DataFrame([new_edges],columns=new_edges.keys())
+    # new_edges['from_geom'] = nodes[nodes['node_id'] == 'roadn_65'].geometry.values[0]
+    # new_edges['to_geom'] = nodes[nodes['node_id'] == 'roadn_66'].geometry.values[0]
+    # new_edges['geometry'] = new_edges.apply(lambda x: LineString([x.from_geom,x.to_geom]),axis = 1)
+    # new_edges.drop('from_geom',axis=1,inplace=True)
+    # new_edges.drop('to_geom',axis=1,inplace=True)
+    # edges = gpd.GeoDataFrame(pd.concat([edges,new_edges],axis=0,sort='False', ignore_index=True).fillna(0),geometry='geometry',crs={'init' :'epsg:4326'})
     # print (edges['geometry'])
     # edges[['id','geometry']].to_csv('test.csv')
 
-    edges['id'] = ['{}_{}'.format('roade', i) for i in range(len(edges.index))]
+    # edges['id'] = ['{}_{}'.format('roade', i) for i in range(len(edges.index))]
 
     edges.rename(columns={'id':'edge_id','from_id':'from_node','to_id':'to_node'},inplace=True)
 

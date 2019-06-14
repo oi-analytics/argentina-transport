@@ -306,6 +306,7 @@ def main():
 	root_dir = os.path.join(data_path,'flood_data','FATHOM')
 
 	thresholds = [1,2,3,4,999]
+	thresholds_label = ['50cm','1m','2m','3m','4m','999m']
 	f_all = []
 	for root, dirs, files in os.walk(root_dir):
 		for file in files:
@@ -326,7 +327,8 @@ def main():
 					in_file = os.path.join(root,file)
 					tmp_1 = os.path.join(root,file.split(".tif")[0] + '_mask.tiff')
 					tmp_2 = os.path.join(root,file.split(".tif")[0] + '_mask.shp')
-					out_file = os.path.join(root,file.split(".tif")[0] + '_{0}m-{1}m_threshold.shp'.format(thr_1,thr_2))
+					out_file = os.path.join(root,file.split(".tif")[0] + \
+								'_{0}-{1}_threshold.shp'.format(thresholds_label[t],thresholds_label[t+1]))
 					convert_geotiff_to_vector_with_threshold(thr_1,thr_2,in_file,s_crs,tmp_1, tmp_2, out_file)
 
 
