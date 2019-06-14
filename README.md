@@ -28,7 +28,7 @@ Set up the `atra` package (this project) for development use:
 
 ### GAMS
 
-The economic model uses [GAMS](https://www.gams.com/) (General Algebraic Modeling System) via
+The macroeconomic loss model uses [GAMS](https://www.gams.com/) (General Algebraic Modeling System) via
 its python API. GAMS provide [installation and
 licensing](https://www.gams.com/latest/docs/UG_MAIN.htm) instructions.
 
