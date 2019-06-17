@@ -12,19 +12,14 @@ dependencies:
   - dask
   - fiona
   - GDAL
-  - geoalchemy2
   - geopandas==0.4.0
   - geopy
-  - haversine
   - ipopt
-  - jupyter
   - matplotlib
-  - nbstripout
   - networkx
   - numpy
   - openpyxl
   - pandas
-  - pathos
   - pylint  # dev
   - pyomo
   - pytest  # test
@@ -37,5 +32,7 @@ dependencies:
   - scipy
   - shapely
   - sphinx  # docs
-  - sqlalchemy
   - tqdm
+  - xlrd
+  - pip:
+    - snkit

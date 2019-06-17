@@ -28,14 +28,14 @@ Set up the `atra` package (this project) for development use:
 
 ### GAMS
 
-The macroeconomic loss model uses [GAMS](https://www.gams.com/) (General Algebraic Modeling System) via
-its python API. GAMS provide [installation and
+The macroeconomic loss model uses [GAMS](https://www.gams.com/) (General Algebraic Modeling
+System) via its python API. GAMS provide [installation and
 licensing](https://www.gams.com/latest/docs/UG_MAIN.htm) instructions.
 
 
 ## Configuration
 
-The location of data and output files are configured by a `config.json` file. 
+The location of data and output files are configured by a `config.json` file.
 To point the scripts to the shared folder locations:
 - copy `config.template.json` to `config.json`
 - edit `config.json` to provide the paths to your working copy of your system
@@ -48,20 +48,7 @@ To point the scripts to the shared folder locations:
 Note that on Windows, you will need to use double backslashes (`\\`) in the file paths, for
 example:
 
-    "data": "C:\\Users\\Username\\projects\\vtra\\data"
-
-
-## Development notes
-
-### Notebooks in git
-
-Make sure not to commit data inadvertently if working with jupyter notebooks. Suggest using
-[nbstripout](https://github.com/kynan/nbstripout) to automatically strip output.
-
-Install git hooks to filter notebooks when committing to git:
-
-    cd /path/to/argentina-transport
-    nbstripout --install
+    "data": "C:\\Users\\Username\\projects\\atra\\data"
 
 
 ## Acknowledgements

@@ -63,7 +63,6 @@ mock_modules = [
     'fiona',
     'fiona.crs',
     'gams',
-    'geoalchemy2',
     'geopandas',
     'geopy.distance',
     'haversine',
@@ -74,7 +73,6 @@ mock_modules = [
     'openpyxl',
     'osgeo',
     'osgeo.ogr',
-    'pathos.multiprocessing',
     'pyomo.environ',
     'pyomo.opt',
     'rasterio',
@@ -91,7 +89,6 @@ mock_modules = [
     'shapely.ops',
     'snkit',
     'snkit.utils',
-    'sqlalchemy',
     'tqdm',
 ]
 sys.modules.update((mod_name, Mock()) for mod_name in mock_modules)
