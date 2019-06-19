@@ -1,12 +1,12 @@
-===============================
+=================================
 Argentina Transport Risk Analysis
-===============================
+=================================
 
 .. image:: https://img.shields.io/badge/github-oi--analytics%2Fargentina--transport-brightgreen.png
     :target: https://github.com/oi-analytics/argentina-transport/
 
-This documentation describes the modelling and analysis of climate-related risks to transport
-networks in Argentina.
+
+This documentation describes the datasets assembled and created, with the Python scripts that require implementation for the analysis of the Argentina Transport Risk Analysis (ATRA).
 
 The modelling and analysis aims to support decision-making by identifying the performance of
 adaptation options under current and future scenarios. It comprises a network flow model,
@@ -20,6 +20,7 @@ Contents
    :maxdepth: 3
 
     Installation <requirements>
+    Organization of Data <organisation>
     Collected Data <predata>
     Processed Data Assembly <data>
     Analysis and Results <results>
@@ -40,7 +41,7 @@ Acknowledgements
 ================
 
 This project has been developed by Oxford Infrastructure Analytics as part of a project funded
-by the World Bank.
+by the World Bank and the Global Facility for Disaster Reduction and Recovery (GFDRR).
 
 All code is copyright Oxford Infrastructure Analytics, licensed MIT (see the license for
 details) and is available on GitHub at

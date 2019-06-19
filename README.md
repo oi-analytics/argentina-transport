@@ -54,7 +54,7 @@ example:
 ## Acknowledgements
 
 This project has been developed by Oxford Infrastructure Analytics as part of a project funded
-by the World Bank.
+by the World Bank and the Global Facility for Disaster Reduction and Recovery (GFDRR).
 
 All code is copyright Oxford Infrastructure Analytics, licensed MIT (see the `LICENSE` file for
 details) and is available on GitHub at

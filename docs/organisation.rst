@@ -1,0 +1,20 @@
+====================
+Organization of Data
+====================
+.. Important::
+	- This section describes how the data for the Argentina Transport Risk Analysis (ATRA) is organized in folders
+	- To implement the ATRA pre-processing without any changes in existing codes, all data described here should be stored exactly as indicated below
+
+Input and Output folders
+------------------------
+1. All data are organised within the folders:
+	- ``incoming_data``: Contains data obtained from various organizations in Argentina, which is cleaned and processed for setting up the model analysis
+	- ``data``: Contains cleaned data that used in the model analysis
+	- ``results``: Contains the results of the model analysis
+	- ``figures``: Contains maps and graph outputs
+
+.. Important::
+	- Changes made to contents of the ``incoming_data`` and ``data`` folders will affect the Python scripts
+	- If the users change the file and folder paths within the ``incoming_data`` and ``data`` folders then they will
+	have to modify the Python script that need these filees and folders as inputs
+	- All data in the ``results`` and ``figures`` folders can be recreated by implmenting the Python scripts

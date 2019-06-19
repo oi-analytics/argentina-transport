@@ -33,7 +33,9 @@ def main(config):
     }
 
     transform_geo_file(
-        source_file=os.path.join(incoming_data_path,'pre_processed_network_data','air', 'observ-_3.4.4.1.5_aerodromos_anac_2018.view.gml'),
+        source_file=os.path.join(incoming_data_path,'pre_processed_network_data',
+                                    'air', 
+                                    'observ-_3.4.4.1.5_aerodromos_anac_2018.view.gml'),
         sink_file=os.path.join(data_path, 'network', 'air_nodes.shp'),
         sink_schema=node_schema,
         transform_record=transform_node
@@ -94,7 +96,7 @@ def main(config):
     with fiona.open(edge_input_file) as source:
         with open(os.path.join(data_path, 'usage', 'air_passenger.csv'), 'w', newline='') as fh:
             w = csv.writer(fh)
-            w.writerow(('edge_id', 'from_node', 'to_node', 'from_iata', 'to_iata', 'passengers_2016'))
+            w.writerow(('edge_id', 'from_node', 'to_node', 'from_iata', 'to_iata', 'passengers'))
             for record in source:
                 props = record['properties']
                 row = (
