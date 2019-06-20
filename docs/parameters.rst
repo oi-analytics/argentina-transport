@@ -1,50 +1,79 @@
-====================================
-Required model paramaters and inputs
-====================================
+==================================
+Required data inputs and paramters
+==================================
 .. Important::
-	- This section describes collected datasets that are used to create data for the Argentina Transport Risk Analysis (ATRA)
-	- The datasets listed here are specfic to Argentina and are used as inputs to data in the Processed Data Assembly steps
-	- To implement the ATRA pre-processing without any changes in existing codes, all data described here should be created and stored exactly as indicated below
+	- This section describes the required data inputs and parameters for the Argentina Transport Risk Analysis (ATRA)
+	- To implement the ATRA all data described here should be created with the data properties and column names as described below
+	- If these data properties and column names are not provided in the data then the Python scripts will give run-time errors
 
-Network GIS
------------
-1. All pre-processed networks data are stored:
-	- In sub-folders in the file path - ``/data/pre_processed_networks_data/``
-	- Roads are extracted from the sub-folder - ``/roads/combined_roads``
-	- Railways are extracted from the sub-folder - ``/railways/national_rail/``
-	- Ports are extracted from the sub-folder - ``/ports/``
-	- Airlines are extracted from the sub-folder - ``/air/``
-	- As Shapefiles with topology of network nodes and edges
-	- The names of files are self-explanatory
-	
-2. All nodes should have the following attributes:
+Spatial data requirements
+-------------------------
+1. All spatial data inputs must:
+	- Be projected to a valid coordinate system. Spatial data with no projection system will give errors 
+	- Have valid geometries. Null or Invalid geometries will give errors  
+
+.. Note::
+	- The assumed projection system used in the model is EPSG:4326
+	- If the users change any spatial data they have to create new data with a valid projection system 
+
+Topological network requirements
+--------------------------------
+1. A topological network is defined as a graph composed of nodes and edges  
+
+2. All finalised networks data are created and stored:
+	- In the file path - ``/data/network/``
+	- As csv file with post-processed network nodes and edges
+	- As Shapefiles with post-processed network nodes and edges
+	- The created networks are: ``road``, ``rail``,``port``,``air``
+	- ``bridge`` files are also created but they are not networks, as explained below  
+
+.. Note::
+	The names and properties of the attributes listed below are the essential network parameters for the whole model analysis. If the users wish to replace or change these datasets then they must retain the same names of columns with same types of values as given in the original data. It is recommended that changes in parameter values should be made in the csv files, while the Shapefiles are mainly used for associating the geometries of the features. While we have provided the Shapefiles with parameter values as well, the model uses the Shapeflies mainly for performing geometry operations.
+
+	For example if a new road edge is added to the road network, then all its properties should be added to the ``road_edges.csv`` file, while in the ``road_edges.shp`` file the ``edge_id`` and valid ``geometry`` should be added.
+
+3. All nodes have the following attributes:
 	- ``node_id`` - String Node ID
 	- ``geometry`` - Point geometry of node with projection ESPG:4326
-	- variable list of attributes depending upon sector
+	- Several other atttributes depending upon the specific transport sector
 
-3. All edges should have the following attributes:
+4. All edges have the following attributes:
 	- ``edge_id`` - String edge ID
 	- ``from_node`` - String node ID that should be present in node_id column
 	- ``to_node`` - String node ID that should be present in node_id column
 	- ``geometry`` - LineString geometry of edge with projection ESPG:4326
-	- variable list of attributes depending upon sector
+	- ``length`` - Float estimated length in kilometers of edge
+	- ``min_speed`` - Float estimated minimum speed in km/hr on edge
+	- ``max_speed`` - Float estimated maximum speed in km/hr on edge
+	- ``min_time`` - Float estimated minimum time of travel in hours on edge
+	- ``max_time`` - Float estimated maximum time of travel in hours on edge
+	- ``min_gcost`` - Float estimated minimum generalized cost in USD/ton on edge (not present in road edge files)
+	- ``max_gcost`` - Float estimated maximum generalized cost in USD/ton on edge (not present in road edge files)
+	- Several other atttributes depending upon the specific transport sector 
 
-4. National Roads specifc GIS data are stored: 
-	- In sub-folders in the path - ``/incoming_data/pre_processed_network_data/roads/national_roads/``
-	- As Shapefiles with attributes
-	- File in sub-folder ``/indice_de_estado/`` contains road surface quality as numeric values
-	- File in sub-folder ``/indice_de_serviciabilidad/`` contains road service quality as numeric values
-	- File in sub-folder ``/materialcarril_sel/`` contains road surface meterial as string values
-	- File in sub-folder ``/tmda/`` contains TMDA counts as numeric values
-	- File in sub-folder ``/v_mojon/`` contains locations of kilometer markers
-	
-5. National-roads bridges GIS data are stored:
-	- In the path - ``/incoming_data/pre_processed_network_data/roads/national_roads//puente_sel/``
-	- As Shapefiles with Point geometry of nodes with projection ESPG:4326
-	- As Excel file with bridges attributes
+5. Attributes only present in roads edges:
+	- ``road_name`` - String name or number of road
+	- ``surface`` - String value for surface material of the road
+	- ``road_type`` - String value of either national, province or rural
+	- ``width`` - Float width of edge in meters
+	- ``min_time_cost`` - Float estimated minimum cost of time in USD on edge
+	- ``max_time_cost`` - Float estimated maximum cost of time in USD on edge
+	- ``min_tariff_cost`` - Float estimated minimum tariff cost in USD on edge
+	- ``max_tariff_cost`` - Float estimated maximum tariff cost in USD on edge
+	- ``tmda_count`` - Integer number of daily vehicle counts on edge
+
+6. National-roads bridges GIS data are also created as nodes containing:
 	- ``bridge_id`` - String bridge ID
 	- ``edge_id`` - String edge ID matching ``edge_id`` of national-roads edges intersecting with bridges
+	- ``width`` - Float with of bridge in meters
+	- ``length`` - Float length of bridge in meters
 	- ``geometry`` - Point geometry of node with projection ESPG:4326
+	- Several other atttributes depending upon the specific bridge input data
+
+7. National-roads bridges GIS data are also created as edges containing:
+	- ``bridge_id`` - String bridge ID
+	- ``length`` - Float length of bridge in meters
+	- ``geometry`` - LineString geometry of bridge with projection ESPG:4326
 
 .. Note::
 	We assume that networks are provided as topologically correct connected graphs: each edge
@@ -55,45 +84,38 @@ Network GIS
 	Wherever two edges meet, we assume that there is a shared node, matching each of the intersecting edge endpoints. For example, at a t-junction there will be three edges meeting
 	at one node.
 
-Network OD data
----------------
-1. Road commodity OD matrices data are stored:
-	- In the path - ``/incoming_data/5/Matrices OD 2014- tablas/``
-	- As Excel files
-	- TThe name of the excel file and excel sheet correspond to commodity groups and subgroups
-	- Each Excel Sheet is a 123-by-123 matrix of OD tons with first row and first column showing Zone IDs
-	- We use the sheets ``Total Toneladas 2014`` if given otherwise add tons across sheets
-	- Each Excel Sheet is a 123-by-123 matrix with first row and first column showing Zone IDs
+	Due to gaps in geometries and connectivity in the raw datasets several dummy nodes and edges have been created in the node and edges join points and lines. For example there are more nodes in the rail network than stations in Argentina, and similarly in the port network. The road network contains severral edges with ``road_type = 0`` which represent a dummy edge created to join two roads.
 
-2. Road commodity OD Zone data is stored:
-	- In the path - ``/incoming_data/5/Lineas de deseo OD- 2014/3.6.1.10.zonas/``
-	- As Shapefile
-	- ``data`` - The ``od_id`` that matches the OD matrices Excel data
-	- ``geometry`` - Polygon geometry of zone with projection ESPG:4326 
+	The bridge datasets are not networks because they do not have a topology. Bridge nodes are matched to the road network to later match road flow and failure results with failed bridges. For example we estimate the failure consequence of a road edge of the national route 12 first, and if we know there is a bridge on this road that is also flooded then we assign the failure consequence to the bridge as well. Bridge edges are created to intersect with flood outlines to estimate the length of flooding of bridges.  
 
-3. Rail OD matrices data are stored:
-	- In the path - ``/incoming_data/5/rail_od_matrices/Matrices OD FFCC/``
-	- As Excel files
-	- The OD data in each excel sheet varies, but some information is necessary for OD matrix creation
-	- ``origin_station`` - String name of origin station
-	- ``origin_date`` - Datetime object for date of journey
-	- ``destination_station`` - String name of destination station
-	- ``commodity_group`` - String name of commodity groups
-	- ``line_name`` - String name of thee line used for transport  
-	- ``tons`` - Numeric values of tonnages
 
-4. Port OD matrices data are stored:
-	- In the Excel file path - ``/incoming_data/5/Puertos/Cargas No Containerizadas - SSPVNYMM.xlsx``
-	- The OD data in each excel sheet varies, but some information is necessary for OD matrix creation
-	- ``origin_port`` - String name of origin port
-	- ``origin_date`` - Datetime object for date of journey
-	- ``destination_port`` - String name of destination port
-	- ``commodity_group`` - String name of commodity groups
-	- ``operation_type`` - String name of operation type, associated to exports, imports, and transit
-	- ``tons`` - Numeric values of tonnages
+OD matrices requirements
+------------------------
+1. All finalised OD matrices are stored:
+	- In the path - ``/data/OD_data/``
+	- As csv file with names ``{mode}_nodes_daily_ods.csv`` where ``mode = {road, rail, port}``
+	- As csv file with names ``{mode}_province_annual_ods.csv``
+	- As Excel sheets with combined Province level annual OD matrices
 
-5. Air passenger OD data is contained in the airlines shapefile
-	- In the file - ``/data/pre_processed_networks_data/air/SIAC2016pax.shp``
+The essential attributes in these OD matrices are listed below. See the data for all attributes
+
+2. All node-level daily OD matrices contain mode-wise and total OD flows and should have attributes:
+	- ``origin_id`` - String node IDs of origin nodes
+	- ``destination_id`` - String node IDs of destination nodes
+	- ``origin_province`` - String names of origin Provinces
+	- ``destination_province`` - String names of destination Provinces
+	- ``min_total_tons`` - Float values of minimum daily tonnages between OD nodes
+	- ``max_total_tons`` - Float values of maximum daily tonnages between OD nodes
+	- ``commodity_names`` - Float values of daily min-max tonnages of commodities/industries between OD nodes: here based on OD data
+	- If min-max values cannot be estimated then there is a ``total_tons`` column - for roads only
+
+3. All aggregated province-level OD matrices contain mode-wise and total OD flows and should have attributes:
+	- ``origin_province`` - String names of origin Provinces
+	- ``destination_province`` - String names of destination Provinces
+	- ``min_total_tons`` - Float values of minimum daily tonnages between OD Provinces
+	- ``max_total_tons`` - Float values of maximum daily tonnages between OD Provinces
+	- ``commodity_names`` - Float values of daily min-max tonnages of commodities/industries between OD Provinces
+	- If min-max values cannot be estimated then there is a ``total_tons`` column - for roads only
 
 
 Network Transport Costs

@@ -21,6 +21,7 @@ Contents
 
     Installation <requirements>
     Organization of Data <organisation>
+    Required data inputs and paramters <parameters>
     Collected Data <predata>
     Processed Data Assembly <data>
     Analysis and Results <results>
