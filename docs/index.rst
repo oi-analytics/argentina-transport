@@ -2,7 +2,7 @@
 Argentina Transport Risk Analysis
 =================================
 
-.. image:: https://img.shields.io/badge/github-oi--analytics%2Fargentina--transport-brightgreen.png
+.. figure:: https://img.shields.io/badge/github-oi--analytics%2Fargentina--transport-brightgreen.png
     :target: https://github.com/oi-analytics/argentina-transport/
 
 
