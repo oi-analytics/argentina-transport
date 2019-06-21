@@ -36,7 +36,7 @@ Topological network requirements
 
     The essential attributes in these networks are listed below. See the data for all attributes and try to recreate your data with similar column names and attribute values.
 
-    Several of these parameters and their values are created from ``incoming_data`` which is explained later
+    Several of these parameters and their values are created from ``incoming_data`` which is explained in the section `Preparing data for the model <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/predata.html>`_ 
 
 3. All nodes have the following attributes:
     - ``node_id`` - String Node ID
@@ -209,7 +209,7 @@ Macroeconomic data requirements
 -------------------------------
 1. For the macroeconomic analysis first a multi-regional IO matrix for 24 provinces in Argentina is created from a national-level IO matrix and province level Gross Production Values (GPV) of IO Industries
 
-2. The multi-regional macroeconoic IO data is created from data downloaded from the INDEC website. The data is stored as: 
+2. The multi-regional macroeconoic IO data is created from data downloaded from the Instituto Nacional de Estadística y Censos  (INDEC) website. The data is stored as: 
     - Industry and Commodity level IO accounts in the file path ``data/economic_IO_tables/input/sh_cou_06_16.xls`` 
     - Industry level GPV in the file path ``data/economic_IO_tables/input/PIB_provincial_06_17.xls``
     - Names of aggregated industries classification for Argentina in the file path ``data/economic_IO_tables/input/industry_high_level_classification.xlsx``, which should be present in the IO and GPV data files   
@@ -228,7 +228,7 @@ Macroeconomic data requirements
 
 .. Note::
     The macroeconomic data are obtained from INDEC at https://www.indec.gob.ar/nivel3_default.asp?id_tema_1=3&id_tema_2=9&fbclid=IwAR02qnMIJeu86xUM5TFK5hrABN3FcJLGx6k5BYNhxLe4o0FhqJxuV2wxb5E. The PIB and COU datasets are used in the model
-      
+
     If the users want to update the IO tables for Argentina then it is recommended that they replace the above files ``sh_cou_06_16.xls`` and ``PIB_provincial_06_17.xls`` with exactly the same sheetnames and data structures as given in the original data used by the IO model scripts.
 
     If the industry classifications are modified in the IO data then the changeas should also be made in ``industry_high_level_classification.xlsx`` and ``commodity_classifications-hp.xlsx`` files.  

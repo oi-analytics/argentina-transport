@@ -1,4 +1,5 @@
-"""Copy water network from `C Incoming Data` to `D Work Processes`
+"""Create the road network for Argentina by combining properties 
+    For roads based on different road inputs and model assumptions 
 """
 import csv
 import os
@@ -29,28 +30,25 @@ def assign_road_name(x):
     """
     asset_type = str(x.road_type).lower().strip()
 
-
-    # This is an national and provincial roads with paved surfaces
     if str(x.road_name) != '0':
         return x.road_name
     else:
         return 'no number'
-    # elif str(x.nombre) != '0':
-    #     # Anything else not included above
-    #     return str(x.nombre)
-    # else:
-    #     return 'no number'
+
 
 def assign_road_surface(x):
-    """Assign road conditions as paved or unpaved to Province roads
+    """Assign road surface to roads
 
     Parameters
         x - Pandas DataFrame of values
-            - code - Numeric code for type of asset
-            - level - Numeric code for level of asset
+            - road_type - String name for type of road: national, province or rural
+            - material_code - String code for road materials: 
+                [('A','Asfalto'),('H','Hormigon'), ('R','Ripio'), ('T','Tierra'), ('B','Tratamiento')]
+            - surface - String name of already assigned road surface 
 
     Returns
-        String value as paved or unpaved
+        String value of road surface as one or more of: 
+            ['Asfalto','Hormigon', 'Ripio', 'Tierra','Tratamiento']
     """
     asset_type = str(x.road_type).lower().strip()
 
@@ -81,18 +79,15 @@ def assign_road_conditions(x):
 
     Parameters
         x - Pandas DataFrame of values
-            - code - Numeric code for type of asset
-            - level - Numeric code for level of asset
+            - road_type - String name for type of road: national, province or rural
+            - material_code - String code for road materials: 
+                [('A','Asfalto'),('H','Hormigon'), ('R','Ripio'), ('T','Tierra'), ('B','Tratamiento')]
 
     Returns
         String value as paved or unpaved
     """
     asset_type = str(x.road_type).lower().strip()
 
-
-    # This is an national and provincial roads with paved surfaces
-    '''A - Asphalt, H - Hormigon, R - Ripio, T - Tierra, B - Tratamiento
-    '''
     if asset_type == 'national':
         if ('A' in str(x.material_code)) or ('B' in str(x.material_code)) or ('H' in str(x.material_code)):
             return 'paved'
@@ -108,13 +103,14 @@ def assign_road_conditions(x):
 
 
 def assign_road_terrain_and_width(x,width_terrain_list):
-    """Assign terrain as flat or mountain to national roads
+    """Assign width and terrain to roads
 
     Parameters
         x - Pandas DataFrame of values
-            - dia_hinh__ - String value of type of terrain
+            - road_name - String value of road name
 
     Returns
+        Numeric value of road width
         String value of terrain as flat or mountain
     """
     road_names = str(x.road_name).split(',')
@@ -152,14 +148,14 @@ def assign_road_terrain_and_width(x,width_terrain_list):
     return assumed_width, terrain
 
 def assign_min_max_speeds_to_roads(x,speeds_list):
-    """Assign terrain as flat or mountain to national roads
+    """Assign speeds to roads
 
     Parameters
         x - Pandas DataFrame of values
-            - dia_hinh__ - String value of type of terrain
+            - road_name - String value of road name
 
     Returns
-        String value of terrain as flat or mountain
+        Numeric values of roads min-max speeds
     """
     road_names = str(x.road_name).split(',')
     road_no = []
@@ -203,6 +199,19 @@ def assign_min_max_speeds_to_roads(x,speeds_list):
     return min_speed, max_speed
 
 def assign_minmax_time_costs_roads(x, road_costs,exchange_rate):
+    """Assign time costs to roads
+
+    Parameters
+        x - Pandas DataFrame of values
+            - min_speed - Numeric minimum speed of roads
+            - min_speed - NUmeric maximum speed of roads
+            - surface - String surface of road
+        road_costs - Pandas DataFrame of cost values
+        exchange_rate - Numeric exchange rate of ARG to USD
+
+    Returns
+        Numeric values of roads min-max time costs
+    """
     design_speeds = road_costs['speed'].values.tolist()
     if x.min_speed == 0 and x.max_speed == 0:
         min_cost = 0
@@ -228,6 +237,16 @@ def assign_minmax_time_costs_roads(x, road_costs,exchange_rate):
     return exchange_rate*min_cost*x.length, exchange_rate*max_cost*x.length
 
 def assign_minmax_tariff_costs_roads_apply(x,tariff_costs_dataframe,exchange_rate):
+    """Assign tariff costs to roads
+
+    Parameters
+        x - Pandas DataFrame of values
+        tariff_costs_dataframe - Pandas DataFrame of cost values
+        exchange_rate - Numeric exchange rate of ARG to USD
+
+    Returns
+        Numeric values of roads min-max tariff costs
+    """
     min_cost = tariff_costs_dataframe['min_tariff_cost'].values[0]*x.length*exchange_rate
     max_cost = tariff_costs_dataframe['max_tariff_cost'].values[0]*x.length*exchange_rate
 
@@ -423,6 +442,14 @@ def main(config):
     data_path = config['paths']['data']
     exchange_rate = 0.026
 
+    '''Provide different data inputs to the code
+    '''
+
+    '''Describe the inputs for the datasets used to assign:
+         Road quality, service, materials and TMDA on nationa roads
+        These are datasets in the path /incoming_data/roads/nationa_roads/
+    '''
+
     attributes_desc = [
         {
             'folder_name':'indice_de_estado',
@@ -454,32 +481,65 @@ def main(config):
         },
     ]
 
-
-    '''Get road edge network
+    '''Read the data on the kilometer markers
     '''
-    road_edges_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','test_edges.shp')
-    road_nodes_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','test_nodes.shp')
-    '''Get the road properties, which are mainly the widths of national roads
+    marker_df = gpd.read_file(os.path.join(incoming_data_path,
+            'pre_processed_network_data',
+            'roads',
+            'national_roads',
+            'v_mojon',
+            'v_mojonPoint.shp'),encoding='utf-8').fillna(0)
+    
+    '''Get the input data on road widths of some national roads and general costs for roads
     '''
-    skiprows = 4
-    road_properties_df = pd.read_excel(os.path.join(incoming_data_path,'5','DNV_data','Tramos por Rutas.xls'),sheet_name='Hoja1',skiprows=skiprows,encoding='utf-8-sig').fillna(0)
-    # road_properties_df = road_properties_df.iloc[skiprows:]
+    road_properties_df = pd.read_excel(os.path.join(incoming_data_path,
+                        'road_properties',
+                        'Tramos por Rutas.xls'),
+                        sheet_name='Hoja1',
+                        skiprows=4,
+                        encoding='utf-8-sig').fillna(0)
     road_properties_df.columns = ['road_no','location','inital_km','final_km',
                                 'purpose','description','length_km','left_surface',
                                 'left_width','right_surface','right_width','lanes','terrain']
 
 
-    road_speeds_df = pd.read_excel(os.path.join(incoming_data_path,'5','DNV_data','TMDA y Clasificación 2016.xlsx'),sheet_name='Clasificación 2016',skiprows=14,encoding='utf-8-sig').fillna(0)
+    road_speeds_df = pd.read_excel(os.path.join(incoming_data_path,
+                    'road_properties',
+                    'TMDA y Clasificación 2016.xlsx'),
+                    sheet_name='Clasificación 2016',
+                    skiprows=14,encoding='utf-8-sig').fillna(0)
     road_speeds_df.columns = map(str.lower, road_speeds_df.columns)
 
-    time_costs_df = pd.read_excel(os.path.join(incoming_data_path,'5','road_costs','Costos de Operación de Vehículos.xlsx'),sheet_name='Camión Pesado',skiprows=15,encoding='utf-8-sig').fillna(0)
+    time_costs_df = pd.read_excel(os.path.join(incoming_data_path,
+                    'costs',
+                    'road',
+                    'Costos de Operación de Vehículos.xlsx'),
+                    sheet_name='Camión Pesado',
+                    skiprows=15,encoding='utf-8-sig').fillna(0)
     time_costs_df.columns = ['speed','tierra_cost_A','tierra_cost_B','tierra_cost_total',
                                 'ripio_cost_A','ripio_cost_B','ripio_cost_total',
                                 'paved_cost_A','paved_cost_B','paved_cost_total','speed_copy']
 
+    
     time_costs_df = time_costs_df[time_costs_df['speed'] > 0]
 
-    tariff_costs_df = pd.read_excel(os.path.join(incoming_data_path,'5','road_costs','tariff_costs.xlsx'),sheet_name='road',encoding='utf-8')
+    tariff_costs_df = pd.read_excel(os.path.join(incoming_data_path,
+                    'costs',
+                    'road',
+                    'tariff_costs.xlsx'),sheet_name='road',encoding='utf-8')
+
+    '''Read the road edge and node network Shapefiles
+    '''
+    road_edges_path = os.path.join(incoming_data_path,
+                    'pre_processed_network_data',
+                    'roads',
+                    'combined_roads',
+                    'combined_roads_edges.shp')
+    road_nodes_path = os.path.join(incoming_data_path,
+                    'pre_processed_network_data',
+                    'roads',
+                    'combined_roads',
+                    'combined_roads_nodes.shp')
 
     nodes = gpd.read_file(road_nodes_path,encoding='utf-8').fillna(0)
     nodes.columns = map(str.lower, nodes.columns)
@@ -489,36 +549,18 @@ def main(config):
     edges = gpd.read_file(edges_in,encoding='utf-8').fillna(0)
     edges.columns = map(str.lower, edges.columns)
 
-    # new_edges = {}
-    # new_edges['from_id'] = 'roadn_65'
-    # new_edges['to_id'] = 'roadn_66'
-    # new_edges['road_name'] = 3
-    # new_edges['road_no'] = 275
-    # new_edges['road_type'] = 'national'
-    # new_edges['sentido'] = 'A'
-    # new_edges = pd.DataFrame([new_edges],columns=new_edges.keys())
-    # new_edges['from_geom'] = nodes[nodes['node_id'] == 'roadn_65'].geometry.values[0]
-    # new_edges['to_geom'] = nodes[nodes['node_id'] == 'roadn_66'].geometry.values[0]
-    # new_edges['geometry'] = new_edges.apply(lambda x: LineString([x.from_geom,x.to_geom]),axis = 1)
-    # new_edges.drop('from_geom',axis=1,inplace=True)
-    # new_edges.drop('to_geom',axis=1,inplace=True)
-    # edges = gpd.GeoDataFrame(pd.concat([edges,new_edges],axis=0,sort='False', ignore_index=True).fillna(0),geometry='geometry',crs={'init' :'epsg:4326'})
-    # print (edges['geometry'])
-    # edges[['id','geometry']].to_csv('test.csv')
-
-    # edges['id'] = ['{}_{}'.format('roade', i) for i in range(len(edges.index))]
-
     edges.rename(columns={'id':'edge_id','from_id':'from_node','to_id':'to_node'},inplace=True)
 
+    '''Done with reading input data
+    '''
+
+    '''Start calculations from here
+    '''
     # get the right linelength
     edges['length'] = edges.geometry.progress_apply(line_length)
 
     '''Add properties to the national roads
     '''
-    '''Add the kilometer markers
-    '''
-    marker_df = gpd.read_file(os.path.join(incoming_data_path,'pre_processed_network_data','roads','national_roads','v_mojon','v_mojonPoint.shp'),encoding='utf-8').fillna(0)
-    km_markers = find_km_markers(edges[edges['road_type']=='national'][['edge_id','length','geometry']],marker_df)
     edges = pd.merge(edges,km_markers,how='left',on=['edge_id']).fillna(0)
     '''Add the quality and service
     '''

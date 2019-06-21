@@ -22,7 +22,7 @@ Contents
     Installation <requirements>
     Organization of Data <organisation>
     Required data inputs and paramters <parameters>
-    Creating topological network data <predata>
+    Pre-processing data for the model <predata>
     Analysis and Results <results>
     API Reference <api/atra>
     License <license>

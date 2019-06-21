@@ -1,5 +1,5 @@
 =================================
-Creating topological network data
+Pre-processing data for the model
 =================================
 .. Important::
     The topological network data and parameters described in `Topological network requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#topological-network-requirements>`_ had to be created from several data sources, which had several gaps.
@@ -9,7 +9,7 @@ Creating topological network data
     - To implement the ATRA pre-processing without any changes in existing codes, all data described here should be created and stored exactly as indicated below
     - Python scripts were created specific to clean and modify these datasets, due to which changes made to the way the data are organized will most probably also result in making changes to the Python scripts
     - In some instances some values for data are encoded within the Python scripts, so the users should be able to make changes directly in the Python scripts
-    - All pre-processed networks data are stored in sub-folders in the file path - ``/data/pre_processed_networks_data/``
+    - If the users want to use the same data and make modifications in values of data then they can follow the steps and codes explained below. Otherwise this whole process can be skipped if the users know how to create the networks in the formats specified in the `Topological network requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#topological-network-requirements>`_
 
 Creating the road network
 -------------------------
@@ -23,58 +23,89 @@ Creating the road network
        "Province", "Provided through World Bank from MoT"
        "Rural", "Provided through World Bank from MoT"
        "National roads bridges","https://www.argentina.gob.ar/vialidad-nacional/sig-vial"
-       "OpenStreetMaps", "https://openmaptiles.com/downloads/dataset/osm/south-america/argentina/#2.96/-40.83/-63.6"
+       "OpenStreetMaps (OSM)", "https://openmaptiles.com/downloads/dataset/osm/south-america/argentina/#2.96/-40.83/-63.6"
        "National roads widths", "Provided through World Bank from DNV"
-       "National roads speeds", "Provided through World Bank from DNV" 
+       "National roads speeds", "Provided through World Bank from DNV"
+       "Road vehicle costs", "Provided through World Bank from DNV" 
 
     The portal https://ide.transporte.gob.ar/geoserver/web/ also contains open-source transport data that was downloaded, including the province and rural road networks. See the Python script :py:mod:`atra.preprocess.scrape_wfs` 
 
-1. All pre-processed networks data are stored:
-    - In sub-folders in the file path - ``/data/pre_processed_networks_data/``
-    - Roads are extracted from the sub-folder - ``/roads/combined_roads``
-    - Railways are extracted from the sub-folder - ``/railways/national_rail/``
-    - Ports are extracted from the sub-folder - ``/ports/``
-    - Airlines are extracted from the sub-folder - ``/air/``
-    - As Shapefiles with topology of network nodes and edges
-    - The names of files are self-explanatory
-    
-2. All nodes should have the following attributes:
-    - ``node_id`` - String Node ID
-    - ``geometry`` - Point geometry of node with projection ESPG:4326
-    - variable list of attributes depending upon sector
+1. The road network data is stored:
+    - In sub-folders in the file path - ``/data/pre_processed_networks_data/roads/``
+    - As Shapefiles with attributes
+    - File in sub-folder ``/national_roads/rutas/`` contains national roads
+        - We extract the columns ``cod_ruta`` (for ``road_name``), ``sentido = A`` and ``geometry``
+    - File in sub-folder ``/province_roads/`` contains province roads
+        - We extract the columns ``nombre`` (for ``road_name``), ``clase`` (for ``surface``) and ``geometry``
+    - File in sub-folder ``/rural_roads/`` contains rural roads
+        - We extract the columns ``characteris`` (for ``surface``) and ``geometry``
+    - File in sub-folder ``/osm_roads/`` contains OSM roads for gap filling
+        - We extract the columns ``road_name``, ``road_type`` and ``geometry``
 
-3. All edges should have the following attributes:
-    - ``edge_id`` - String edge ID
-    - ``from_node`` - String node ID that should be present in node_id column
-    - ``to_node`` - String node ID that should be present in node_id column
-    - ``geometry`` - LineString geometry of edge with projection ESPG:4326
-    - variable list of attributes depending upon sector
-
-4. National Roads specifc GIS data are stored: 
+2. National Roads specifc GIS data are stored: 
     - In sub-folders in the path - ``/incoming_data/pre_processed_network_data/roads/national_roads/``
     - As Shapefiles with attributes
     - File in sub-folder ``/indice_de_estado/`` contains road surface quality as numeric values
+        - We use the columns ``nro_regist`` as id,``valor`` for ``road_quality``, ``sentido = A`` and ``geometry``
+        - Road surface quality is used to estimate speeds on the national roads
     - File in sub-folder ``/indice_de_serviciabilidad/`` contains road service quality as numeric values
+        - We use the columns ``nro_regist`` as id,``valor`` for ``road_service``, ``sentido = A`` and ``geometry``
+        - Road service quality is used to estimate speeds on the national roads
     - File in sub-folder ``/materialcarril_sel/`` contains road surface meterial as string values
+        - We use the columns ``id_materia`` as id,``grupo`` for ``material_group``,``sentido = A`` and ``geometry``
+        - Surface material determines the conditon of the national roads for adaptation investments
     - File in sub-folder ``/tmda/`` contains TMDA counts as numeric values
+        - We use the columns ``nro_regist`` as id,``valor`` for ``road_service``, ``sentido = A`` and ``geometry``
+        - TMDA gives observed vehcile counts on national roads
     - File in sub-folder ``/v_mojon/`` contains locations of kilometer markers
-    
-5. National-roads bridges GIS data are stored:
-    - In the path - ``/incoming_data/pre_processed_network_data/roads/national_roads//puente_sel/``
+        - We use the columns ``id``, ``progresiva``, ``distancia`` and ``geometry``
+        - kilometer markers are used in assinging properties on national roads and locating bridges
+
+3. Data on select national roads widths and terrains are stored:
+    - In the Excel file path - ``incoming_data/road_properties/Tramos por Rutas.xls``
+    - We use the sheet ``Hoja1``
+
+4. Data on select national roads speeds are stored:
+    - In the Excel file path - ``incoming_data/road_properties/TMDA y Clasificación 2016.xlsx`` 
+    - We use the sheet ``Clasificación 2016``
+
+5. Road costs are stored:
+    - In the path - ``/incoming_data/costs/road/``
+    - As Excel files
+    - The Vehicle Operating Costs are in the file ``Costos de Operación de Vehículos.xlsx``
+    - We use the sheet ``Camión Pesado`` for costs
+    - The tariff costs are in the file ``tariff_costs.xlsx``
+
+.. Note::
+    The finalized road network is created by executing 3 Python scripts:
+        - Run :py:mod:`atra.preprocess.combine_roads` to extract data from the files described in Step 1 above
+        - Run :py:mod:`atra.preprocess.network_road_topology` to create road nodes and edges topology  
+        - Run :py:mod:`atra.preprocess.road_network_creation` to assign road properties described above. This is the main script that creates the finalized road network and requires several inputs
+
+    The Python codes require the specific inputs of the above datasets from the users to be able to identify the specific rows and columns in the data. If the users change these datasets in the future then, to use the same Python codes, then should preserve the column names and their properties
+
+    In the excel sheets in ``incoming_data/road_properties/`` and ``incoming_data/costs/road/`` the original data obtained from the DNV are preserved, and changing the locations and columns and rows will require making changes to the script :py:mod:`atra.preprocess.road_network_creation`. The users should familiarize themselves with line 445-554 where all the inputs are given to the code
+
+    When data is missing some assumptions of values are taken, which are hard coded in the Python script. The users should familiarize themselves with the functions in the code if they want to change the inputs
+        - Currency exchange rate from ARS to USD is 1 ARS = 0.026 USD. See :py:mod:`atra.preprocess.road_network_creation`
+        - The default ``surface`` of a national road is assumed to be ``Asfalto``, and other roads it is ``Tierra``. See the function :py:mod:`atra.preprocess.road_network_creation.assign_road_surface`
+        - The default ``width`` of national and province roads is assumed to be 7.3m (2-lane) and rural roads is 3.65m (1-lane). The default ``terrain`` is assumed flat. See the function :py:mod:`atra.preprocess.road_network_creation.assign_road_terrain_and_width`
+        - If no informattion on road speeds is provided through the data in ``incoming_data/road_properties/TMDA y Clasificación 2016.xlsx`` then the road speeds are assumed tto be as following. See the function :py:mod:`atra.preprocess.road_network_creation.assign_min_max_speeds_to_roads`
+            - For national roads with poor to fair quality (0 < ``road_service`` <= 1) or (0 < ``road_quality`` <= 3) speeds vary from 50-80 km/hr
+            - For national roads with fair to good quality (1 < ``road_service`` <= 2) or (3 < ``road_quality`` <= 6) speeds vary from 60-90 km/hr
+            - For national roads with good to very good quality speeds vary from 70-100 km/hr
+            - For all province roads speeds vary from 40-60 km/hr
+            - For all rural roads speeds vary from 20-40 km/hr      
+
+Creating the national roads bridges data
+----------------------------------------
+1. National-roads bridges GIS data are stored:
+    - In the path - ``/incoming_data/pre_processed_network_data/bridges/puente_sel/``
     - As Shapefiles with Point geometry of nodes with projection ESPG:4326
     - As Excel file with bridges attributes
     - ``bridge_id`` - String bridge ID
     - ``edge_id`` - String edge ID matching ``edge_id`` of national-roads edges intersecting with bridges
     - ``geometry`` - Point geometry of node with projection ESPG:4326
-
-.. Note::
-    We assume that networks are provided as topologically correct connected graphs: each edge
-    is a single LineString (may be straight line or more complex line), but must have exactly
-    two endpoints, which are labelled as ``from_node`` and ``to_node`` (the values of these
-    attributes must correspond to the ``node_id`` of a node).
-
-    Wherever two edges meet, we assume that there is a shared node, matching each of the intersecting edge endpoints. For example, at a t-junction there will be three edges meeting
-    at one node.
 
 Network OD data
 ---------------
@@ -127,19 +158,17 @@ Network Transport Costs
     - The tariff costs are in the file ``tariff_costs.xlsx``
 
 2. Rail costs are stored:
-    - In the Excel file path - ``incoming_data/5/rail_od_matrices/rail_costs.xlsx``
+    - In the Excel file path - ``incoming_data/costs/rail/rail_costs.xlsx``
     - We use the sheet ``route_costs``
 
 3. Port costs are stored:
-    - In the Excel file path - ``incoming_data/5/Puertos/port_costs.xlsx``  
+    - In the Excel file path - ``incoming_data/costs/port/port_costs.xlsx``  
 
-              
-National Road speeds and widths
--------------------------------
-1. Data on select national roads widths are stored:
-    - In the Excel file path - ``incoming_data/5/DNV_data/Tramos por Rutas.xls``
-    - We use the sheet ``Hoja1``
-
-2. Data on select national roads speeds are stored:
-    - In the Excel file path - ``incoming_data/5/DNV_data/TMDA y Clasificación 2016.xlsx`` 
-    - We use the sheet ``Clasificación 2016``
+Creating the rail, ports and air networks
+-----------------------------------------
+1. The network details are:
+    - Railways are extracted from the sub-folder - ``/railways/national_rail/``
+    - Ports are extracted from the sub-folder - ``/ports/``
+    - Airlines are extracted from the sub-folder - ``/air/``
+    - As Shapefiles with topology of network nodes and edges
+    - The names of files are self-explanatory

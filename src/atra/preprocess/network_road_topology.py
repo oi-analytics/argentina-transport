@@ -17,7 +17,7 @@ from tqdm import tqdm
 def main(config):
     data_path = config['paths']['incoming_data']
     roads_path = os.path.join(data_path, 'pre_processed_data', 'roads', 'combined_roads')
-    input_path = os.path.join(roads_path, 'combined_roads_2.shp')
+    input_path = os.path.join(roads_path, 'combined_roads.shp')
 
     edges = geopandas.read_file(input_path)
     edges = edges[edges.geometry.notnull()]
