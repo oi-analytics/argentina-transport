@@ -1,13 +1,33 @@
-=======================
-Network Collected Data
-=======================
+=================================
+Creating topological network data
+=================================
 .. Important::
-	- This section describes collected datasets that are used to create data for the Argentina Transport Risk Analysis (ATRA)
-	- The datasets listed here are specfic to Argentina and are used as inputs to data in the Processed Data Assembly steps
-	- To implement the ATRA pre-processing without any changes in existing codes, all data described here should be created and stored exactly as indicated below
+	The topological network data and parameters described in `Topological network requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#topological-network-requirements>`_ had to be created from several data sources, which had several gaps.
 
-Network GIS
------------
+	- This section describes collected datasets that are used to create data for the Argentina Transport Risk Analysis (ATRA)
+	- The datasets listed here are specfic to Argentina and are used as inputs to make the finalized data used in the rest of the model
+	- To implement the ATRA pre-processing without any changes in existing codes, all data described here should be created and stored exactly as indicated below
+	- Python scripts were created specific to clean and modify these datasets, due to which changes made to the way the data are organized will most probably also result in making changes to the Python scripts
+	- In some instances some values for data are encoded within the Python scripts, so the users should be able to make changes directly in the Python scripts
+	- All pre-processed networks data are stored in sub-folders in the file path - ``/data/pre_processed_networks_data/``
+
+Creating the road network
+-------------------------
+.. Note::
+	The road network is combined from datasets of national, provincial and rural roads in Argentina. The raw GIS data for these three types of networks were obtained from the Ministry of Transport and Dirección Nacional de Vialidad (DNV)
+
+	.. csv-table:: List of road datasets downloaded from online resources in Argentina
+		:header: "Road network", "Source"
+		:widths: 30, 30
+
+		"National", "https://www.argentina.gob.ar/vialidad-nacional/sig-vial"
+		"Province", "Provided through World Bank"
+		"Rural","", "Provided through World Bank"
+		"National roads bridges","https://www.argentina.gob.ar/vialidad-nacional/sig-vial"
+		"OpenStreetMaps", "https://openmaptiles.com/downloads/dataset/osm/south-america/argentina/#2.96/-40.83/-63.6" 
+
+	The portal https://ide.transporte.gob.ar/geoserver/web/ also contains open-source transport data that was downloaded, including the province and rural road networks. See the Python script :py:mod:`atra.preprocess.scrape_wfs` 
+
 1. All pre-processed networks data are stored:
 	- In sub-folders in the file path - ``/data/pre_processed_networks_data/``
 	- Roads are extracted from the sub-folder - ``/roads/combined_roads``
@@ -112,7 +132,7 @@ Network Transport Costs
 3. Port costs are stored:
 	- In the Excel file path - ``incoming_data/5/Puertos/port_costs.xlsx``	
 
-              
+			  
 National Road speeds and widths
 -------------------------------
 1. Data on select national roads widths are stored:
