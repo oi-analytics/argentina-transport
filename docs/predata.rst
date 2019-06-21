@@ -82,20 +82,23 @@ Creating the road network
         - Run :py:mod:`atra.preprocess.network_road_topology` to create road nodes and edges topology  
         - Run :py:mod:`atra.preprocess.road_network_creation` to assign road properties described above. This is the main script that creates the finalized road network and requires several inputs
 
+    The result of these scripts create the ``road_edges`` and ``road_nodes`` files described in the folder path ``data/network/``
+
     The Python codes require the specific inputs of the above datasets from the users to be able to identify the specific rows and columns in the data. If the users change these datasets in the future then, to use the same Python codes, then should preserve the column names and their properties
 
-    In the excel sheets in ``incoming_data/road_properties/`` and ``incoming_data/costs/road/`` the original data obtained from the DNV are preserved, and changing the locations and columns and rows will require making changes to the script :py:mod:`atra.preprocess.road_network_creation`. The users should familiarize themselves with line 445-554 where all the inputs are given to the code
+    In the excel sheets in ``incoming_data/road_properties/`` and ``incoming_data/costs/road/`` the original data obtained from the DNV are preserved, and changing the locations and columns and rows will require making changes to the scripts. When data is missing some assumptions of values are taken, which are hard coded in the Python script. 
 
-    When data is missing some assumptions of values are taken, which are hard coded in the Python script. The users should familiarize themselves with the functions in the code if they want to change the inputs
-        - Currency exchange rate from ARS to USD is 1 ARS = 0.026 USD. See :py:mod:`atra.preprocess.road_network_creation`
-        - The default ``surface`` of a national road is assumed to be ``Asfalto``, and other roads it is ``Tierra``. See the function :py:mod:`atra.preprocess.road_network_creation.assign_road_surface`
-        - The default ``width`` of national and province roads is assumed to be 7.3m (2-lane) and rural roads is 3.65m (1-lane). The default ``terrain`` is assumed flat. See the function :py:mod:`atra.preprocess.road_network_creation.assign_road_terrain_and_width`
-        - If no informattion on road speeds is provided through the data in ``incoming_data/road_properties/TMDA y Clasificación 2016.xlsx`` then the road speeds are assumed tto be as following. See the function :py:mod:`atra.preprocess.road_network_creation.assign_min_max_speeds_to_roads`
-            - For national roads with poor to fair quality (0 < ``road_service`` <= 1) or (0 < ``road_quality`` <= 3) speeds vary from 50-80 km/hr
-            - For national roads with fair to good quality (1 < ``road_service`` <= 2) or (3 < ``road_quality`` <= 6) speeds vary from 60-90 km/hr
-            - For national roads with good to very good quality speeds vary from 70-100 km/hr
-            - For all province roads speeds vary from 40-60 km/hr
-            - For all rural roads speeds vary from 20-40 km/hr      
+    The users should familiarize themselves with the functions in the script :py:mod:`atra.preprocess.road_network_creation` if they want to change data. Below the kinds of user inputs changes in this script are explained
+        - Lines 445-554 where all the inputs are given to the code. See the function:py:mod:`main`
+        - Currency exchange rate from ARS to USD is 1 ARS = 0.026 USD. See the function:py:mod:`main`
+        - The default ``surface`` of a national road is assumed to be ``Asfalto``, and other roads it is ``Tierra``. See the function :py:mod:`assign_road_surface`
+        - The default ``width`` of national and province roads is assumed to be 7.3m (2-lane) and rural roads is 3.65m (1-lane). The default ``terrain`` is assumed flat. See the function :py:mod:`assign_road_terrain_and_width`
+        - If no informattion on road speeds is provided through the data in ``incoming_data/road_properties/TMDA y Clasificación 2016.xlsx`` then the road speeds are assumed to be as following. See the function :py:mod:`assign_min_max_speeds_to_roads`
+        - For national roads with poor to fair quality (0 < ``road_service`` <= 1) or (0 < ``road_quality`` <= 3) speeds vary from 50-80 km/hr
+        - For national roads with fair to good quality (1 < ``road_service`` <= 2) or (3 < ``road_quality`` <= 6) speeds vary from 60-90 km/hr
+        - For national roads with good to very good quality speeds vary from 70-100 km/hr
+        - For all province roads speeds vary from 40-60 km/hr
+        - For all rural roads speeds vary from 20-40 km/hr      
 
 Creating the national roads bridges data
 ----------------------------------------
@@ -105,7 +108,18 @@ Creating the national roads bridges data
     - As Excel file with bridges attributes
     - ``bridge_id`` - String bridge ID
     - ``edge_id`` - String edge ID matching ``edge_id`` of national-roads edges intersecting with bridges
+    - ``length`` - Float values of bridge length in meters
+    - ``width`` - Float values to bridge width in meters
+    - ``type`` - String description of the type of bridge 
     - ``geometry`` - Point geometry of node with projection ESPG:4326
+    - Several other attributes which are not used in the rest of the model
+
+.. Note::
+    The finalized national-roads bridges data is created by executing 1 Python script after the road network has been already created:
+        - Run :py:mod:`atra.preprocess.road_bridge_matches` to extract data from the files described in Step 1 above
+    
+    The result of this script create the ``bridge_edges`` and ``bridges`` files described in the folder path ``data/network/``
+
 
 Network OD data
 ---------------
