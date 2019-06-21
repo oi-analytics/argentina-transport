@@ -16,12 +16,12 @@ Creating the road network
 .. Note::
     The road network is combined from datasets of national, provincial and rural roads in Argentina. The raw GIS data for these three types of networks were obtained from the Ministry of Transport and Dirección Nacional de Vialidad (DNV)
 
-    .. csv-table:: List of road datasets obtained different resources in Argentina
+    .. csv-table:: List of road datasets obtained from different resources in Argentina
        :header: "Road network", "Source"
 
        "National", "https://www.argentina.gob.ar/vialidad-nacional/sig-vial"
        "Province", "Provided through World Bank from MoT"
-       "Rural","", "Provided through World Bank from MoT"
+       "Rural", "Provided through World Bank from MoT"
        "National roads bridges","https://www.argentina.gob.ar/vialidad-nacional/sig-vial"
        "OpenStreetMaps", "https://openmaptiles.com/downloads/dataset/osm/south-america/argentina/#2.96/-40.83/-63.6"
        "National roads widths", "Provided through World Bank from DNV"
