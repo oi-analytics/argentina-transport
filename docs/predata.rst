@@ -84,6 +84,8 @@ Creating the road network
 
     The result of these scripts create the ``road_edges`` and ``road_nodes`` files described in the folder path ``data/network/``
 
+    The topology script above is very specific to the case of the particular input data provide here. Unfortunaly if the data is changed them the users might have to test their results again if they run the topology script. We had to manually clean, edit and add some new edges to complete the topology. But this depends upon the quality of input provided and not the python script!  
+
     The Python codes require the specific inputs of the above datasets from the users to be able to identify the specific rows and columns in the data. If the users change these datasets in the future then, to use the same Python codes, then should preserve the column names and their properties
 
     In the excel sheets in ``incoming_data/road_properties/`` and ``incoming_data/costs/road/`` the original data obtained from the DNV are preserved, and changing the locations and columns and rows will require making changes to the scripts. When data is missing some assumptions of values are taken, which are hard coded in the Python script. 
@@ -105,40 +107,96 @@ Creating the national roads bridges data
 1. National-roads bridges GIS data are stored:
     - In the path - ``/incoming_data/pre_processed_network_data/bridges/puente_sel/``
     - As Shapefiles with Point geometry of nodes with projection ESPG:4326
-    - As Excel file with bridges attributes
-    - ``bridge_id`` - String bridge ID
-    - ``edge_id`` - String edge ID matching ``edge_id`` of national-roads edges intersecting with bridges
-    - ``length`` - Float values of bridge length in meters
-    - ``width`` - Float values to bridge width in meters
-    - ``type`` - String description of the type of bridge 
-    - ``geometry`` - Point geometry of node with projection ESPG:4326
-    - Several other attributes which are not used in the rest of the model
+    - As Excel file with bridges attributes in sheetname ``Consulta``
 
-.. Note::
+.. Note::     
     The finalized national-roads bridges data is created by executing 1 Python script after the road network has been already created:
         - Run :py:mod:`atra.preprocess.road_bridge_matches` to extract data from the files described in Step 1 above
     
-    The result of this script create the ``bridge_edges`` and ``bridges`` files described in the folder path ``data/network/``
+    The original bridges data downloaded from https://www.argentina.gob.ar/vialidad-nacional/sig-vial provided a shapefile with only bridge locations, and the excel sheet with bridge properties. Unfortunately these two files did not have a common ID column to link them together. Hence the python script mainly matches the bridges to their location information using the kilometer marker locations specified for the bridge Excel data and matching these with the kilometer markers and national roads GIS data provided for the national roads, explained in `Creating the road network <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/predata.html#creating-the-road-network>`_. If the users alrready have a bridge dataset has all attribtues in a geocoded files, then they do not need to run the Python script. But they will still have to match the ``bridge_id`` to the ``edge_id`` column of the ``road_edges`` dataset.    
+
+    The result of this script creates the ``bridge_edges`` and ``bridges`` files described in the folder path ``data/network/``. If the users change the bridges datasets in the folder path ``/incoming_data/pre_processed_network_data/bridges/puente_sel/``, then to use the same Python script to create new ``bridge_edges`` and ``bridges`` files they should replace the shapefile and excel sheet data while still retaining the following column names in their data
+        - ``id_estruct`` - Numeric values to ID column only present in shapefile   
+        - ``ids`` - Numeric values of bridge ID. Renamed to ``bridge_id`` by the model
+        - ``longitud`` - Float values of bridge length in meters. Renamed to ``length`` by the model
+        - ``ancho de vereda derecha`` - Float values of right lane width of bridge in meters. Used for estimating ``width``
+        - ``ancho de vereda izquierda`` - Float values of left lane width of bridge in meters. Used for estimating ``width``
+        - ``ancho pavimento asc.`` - Float values of pavement width of bridge in meters. Used for estimating ``width``
+        - ``ancho pavimento desc.`` - Float values of pavement width of bridge in meters. Used for estimating ``width``
+        - ``tipo de estructura`` - String description of the type of bridge. Renamed to ``structure_type`` by the model
+        - ``ruta`` - String name to national road where bridge belongs
+        - ``geometry`` - Point and line geometries of bridges with projection ESPG:4326
+        - Several other attributes which are not used in the rest of the model
 
 
-Network OD data
----------------
+Creating road OD matrix at node level
+-------------------------------------
+.. Note::     
+    The road OD matrix data is matched to the ``road_nodes`` data by executing 1 Python script after the road network has been already created:
+        - Run :py:mod:`atra.preprocess.road_od_flows` to create the road OD matrix at node-node level 
+    
+    The original road OD data provided by the Secretaría de Planificación de Cargas contains high-level annual OD matrices for 123 domestic zones in Argentina. This data is disaggregated at the road node level based on follwing assumptions:
+        - The nodes on national and province roads are only considered as OD nodes
+        - For each node the near population (obtained from census data) is estimated and only those nodes with population above 1000 are considered as OD nodes
+        - The OD nodes flows allocation is similar to a gravity model based on the importance of origin and destination nodes in creating and attracting OD flows. 
+        - The OD matrices are annual and are converted to daily flows by dividing by 365   
+
+    If the users want to change the high-level OD data then they should replace the OD datasets as described below. They can also can update the ``road_nodes``, province and census shapefiles described in `Administrative areas with statistics data requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#administrative-areas-with-statistics-data-requirements>`_
+
 1. Road commodity OD matrices data are stored:
-    - In the path - ``/incoming_data/5/Matrices OD 2014- tablas/``
+    - In the path - ``/incoming_data/OD_data/road/Matrices OD 2014- tablas/``
     - As Excel files
-    - TThe name of the excel file and excel sheet correspond to commodity groups and subgroups
+    - The name of the excel file and excel sheet correspond to commodity groups and subgroups
     - Each Excel Sheet is a 123-by-123 matrix of OD tons with first row and first column showing Zone IDs
     - We use the sheets ``Total Toneladas 2014`` if given otherwise add tons across sheets
     - Each Excel Sheet is a 123-by-123 matrix with first row and first column showing Zone IDs
 
 2. Road commodity OD Zone data is stored:
-    - In the path - ``/incoming_data/5/Lineas de deseo OD- 2014/3.6.1.10.zonas/``
+    - In the path - ``/incoming_data/OD_data/road/Lineas de deseo OD- 2014/3.6.1.10.zonas/``
     - As Shapefile
     - ``data`` - The ``od_id`` that matches the OD matrices Excel data
-    - ``geometry`` - Polygon geometry of zone with projection ESPG:4326 
+    - ``geometry`` - Polygon geometry of zone with projection ESPG:4326
 
-3. Rail OD matrices data are stored:
-    - In the path - ``/incoming_data/5/rail_od_matrices/Matrices OD FFCC/``
+Creating the rail network and OD matrix
+---------------------------------------
+.. Note::     
+    The finalized rail network and OD matrix data are all created by executing 1 Python script:
+        - Run :py:mod:`atra.preprocess.rail_od_flows` to create the rail network and OD matrix at node-node level 
+    
+    .. csv-table:: List of rail datasets obtained from different resources in Argentina
+       :header: "Rail network", "Source"
+
+       "Rail lines", "Provided through World Bank from MoT"
+       "Stations", "Provided through World Bank from MoT"
+       "OD data", "Secretaría de Planificación de Cargas"
+       "Transport Costs","Estimated from COSFER model by Secretaría de Planificación de Transporte"
+
+    Rail GIS data can also be downloaded from the portal https://ide.transporte.gob.ar/geoserver/web/. See the Python script :py:mod:`atra.preprocess.scrape_wfs`
+
+    The original rail OD data provided by the Secretaría de Planificación de Cargas contains station-station OD matrices which are time-stamped for the year 2015. But there are several issues with using the rail GIS network and OD data directly:
+        - The names of the OD stations do not always match the nodes in the GIS data. So we do not always know the location of OD nodes
+        - The route information does not match any GIS data, if it exists.
+        - In several cases the time-stamps are missing, so we do not know the time of start and end of a jounrey
+        - In several cases the distance of travel is missing, so we do not know the length of the jounrey 
+        - Only is some instances does the data indicate the origin and destination provinces
+        - The GIS network shows several historic lines, which are no longer used. The GIS data does not indicate which lines are no longer in operation     
+
+    The script :py:mod:`atra.preprocess.rail_od_flows` resolves some of the issues above. The following operations are performed by the script:
+        - The OD nodes are matched to GIS nodes
+        - The OD flows are routed on the GIS network, to check as best whether the observed OD distances match the estimated OD distances obtained from the GIS network. This helps in validating whether OD nodes were assigned correctly on the GIS network
+        - The total OD tonnages are aggregated over a day, based on the start date. From this the minimum and maximum OD flows are estimated betwork OD pairs
+
+    Unfortunalety the script :py:mod:`atra.preprocess.rail_od_flows` is very specific to the input datasets, and relies on having the same column names and organisation of data as described in the input data used in this current version   
+
+1. Rail GIS data are stored:
+    - In the path - ``/incoming_data/pre_processed_network_data/railways/national_rail/``
+    - As Shapefiles
+
+.. Note::
+    The topology is assumed to have already been created in the rail network. We had to create some of this manually, so we cannot provide a automated Python script to do so. The user is recommended to check tools in the Python library `snkit <https://github.com/tomalrussell/snkit>`_ for creating network topology.
+
+2. Rail OD matrices data are stored:
+    - In the path - ``/incoming_data/OD_data/rail/Matrices OD FFCC/``
     - As Excel files
     - The OD data in each excel sheet varies, but some information is necessary for OD matrix creation
     - ``origin_station`` - String name of origin station
@@ -147,8 +205,42 @@ Network OD data
     - ``commodity_group`` - String name of commodity groups
     - ``line_name`` - String name of thee line used for transport  
     - ``tons`` - Numeric values of tonnages
+    - Several other column, which are referred to in the Python script
 
-4. Port OD matrices data are stored:
+3. A file to match names of OD stations to GIS nodes is stored:
+    - In the path - ``/incoming_data/pre_processed_network_data/railways/rail_data_cleaning/station_renames.xlsx``
+    - As Excel file
+    - This was created manually by looking at the OD and GIS data, and inferring matches based on Google searches and our judgement
+
+4. Rail costs are stored:
+    - In the Excel file path - ``incoming_data/costs/rail/rail_costs.xlsx``
+    - We use the sheet ``route_costs``
+
+Creating the port network and OD matrix
+---------------------------------------
+.. Note::     
+    The port network and OD matrix data are all created by executing 1 Python script:
+        - Run :py:mod:`atra.preprocess.port_od_flows` to create the port network and OD matrix at node-node level 
+    
+    .. csv-table:: List of port datasets obtained from different resources in Argentina
+       :header: "Rail network", "Source"
+
+       "Port locations", "Secretaría de Planificación de Cargas"
+       "Maritime routes", "Created manually from OSM data"
+       "OD data", "Secretaría de Planificación de Cargas"
+       "Transport Costs","Estimated from data from Secretaría de Planificación de Transporte"
+
+    Port GIS node data can also be downloaded from the portal https://ide.transporte.gob.ar/geoserver/web/. See the Python script :py:mod:`atra.preprocess.scrape_wfs`
+
+    The original port OD data provided by the Secretaría de Planificación de Cargas contains high-level annual OD matrices for 123 domestic zones in Argentina. This data is disaggregated at the road node level based on follwing assumptions:
+        - The nodes on national and province roads are only considered as OD nodes
+        - For each node the near population (obtained from census data) is estimated and only those nodes with population above 1000 are considered as OD nodes
+        - The OD nodes flows allocation is similar to a gravity model based on the importance of origin and destination nodes in creating and attracting OD flows
+        - The OD matrices are annual and are converted to daily flows by dividing by 365   
+
+    If the users want to change the high-level OD data then they should replace the OD datasets as described below. They can also can update the ``road_nodes``, province and census shapefiles described in `Administrative areas with statistics data requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#administrative-areas-with-statistics-data-requirements>`_
+
+1. Port OD matrices data are stored:
     - In the Excel file path - ``/incoming_data/5/Puertos/Cargas No Containerizadas - SSPVNYMM.xlsx``
     - The OD data in each excel sheet varies, but some information is necessary for OD matrix creation
     - ``origin_port`` - String name of origin port
@@ -158,25 +250,13 @@ Network OD data
     - ``operation_type`` - String name of operation type, associated to exports, imports, and transit
     - ``tons`` - Numeric values of tonnages
 
-5. Air passenger OD data is contained in the airlines shapefile
+2. Port costs are stored:
+    - In the Excel file path - ``incoming_data/costs/port/port_costs.xlsx`` 
+
+Creating the air network and passenger data
+-------------------------------------------
+1. Air passenger OD data is contained in the airlines shapefile
     - In the file - ``/data/pre_processed_networks_data/air/SIAC2016pax.shp``
-
-
-Network Transport Costs
------------------------
-1. Road costs are stored:
-    - In the path - ``/incoming_data/5/road_costs/Matrices OD FFCC/``
-    - As Excel files
-    - The Vehicle Operating Costs are in the file ``Costos de Operación de Vehículos.xlsx``
-    - We use the sheet ``Camión Pesado`` for costs
-    - The tariff costs are in the file ``tariff_costs.xlsx``
-
-2. Rail costs are stored:
-    - In the Excel file path - ``incoming_data/costs/rail/rail_costs.xlsx``
-    - We use the sheet ``route_costs``
-
-3. Port costs are stored:
-    - In the Excel file path - ``incoming_data/costs/port/port_costs.xlsx``  
 
 Creating the rail, ports and air networks
 -----------------------------------------

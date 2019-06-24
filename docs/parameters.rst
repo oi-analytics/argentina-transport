@@ -25,7 +25,8 @@ Topological network requirements
     - As csv file with post-processed network nodes and edges
     - As Shapefiles with post-processed network nodes and edges
     - The created networks are: ``road, rail, port, air``
-    - ``bridge`` files are also created but they are not networks, as explained below  
+    - The ``air`` network has fewer attributes due to lack of data and airlines not being important for commidity flows
+    - ``bridge`` files are also created but they are not networks, as explained below 
 
 .. Note::
     The names and properties of the attributes listed below are the essential network parameters for the whole model analysis. If the users wish to replace or change these datasets then they must retain the same names of columns with same types of values as given in the original data. 
@@ -44,9 +45,9 @@ Topological network requirements
     - Several other atttributes depending upon the specific transport sector
 
 4. All edges have the following attributes:
-    - ``edge_id`` - String edge ID
     - ``from_node`` - String node ID that should be present in node_id column
     - ``to_node`` - String node ID that should be present in node_id column
+    - ``edge_id`` - String edge ID
     - ``geometry`` - LineString geometry of edge with projection ESPG:4326
     - ``length`` - Float estimated length in kilometers of edge
     - ``min_speed`` - Float estimated minimum speed in km/hr on edge
@@ -55,7 +56,10 @@ Topological network requirements
     - ``max_time`` - Float estimated maximum time of travel in hours on edge
     - ``min_gcost`` - Float estimated minimum generalized cost in USD/ton on edge (not present in road edge files)
     - ``max_gcost`` - Float estimated maximum generalized cost in USD/ton on edge (not present in road edge files)
-    - Several other atttributes depending upon the specific transport sector 
+    - Several other atttributes depending upon the specific transport sector
+
+.. Note::
+    It is very important that the first 2 columns of the edge files should be ``from_node`` and ``to_node``. If it is not then the network graph creation with give run-time error. The order of other columns is flexible. For example ``edge_id`` could be column number 3 or any other column after the second column.
 
 5. Attributes only present in roads edges:
     - ``road_name`` - String name or number of road
@@ -87,8 +91,7 @@ Topological network requirements
     two endpoints, which are labelled as ``from_node`` and ``to_node`` (the values of these
     attributes must correspond to the ``node_id`` of a node).
 
-    Wherever two edges meet, we assume that there is a shared node, matching each of the intersecting edge endpoints. For example, at a t-junction there will be three edges meeting
-    at one node.
+    Wherever two edges meet, we assume that there is a shared node, matching each of the intersecting edge endpoints. For example, at a t-junction there will be three edges meeting at one node.
 
     Due to gaps in geometries and connectivity in the raw datasets several dummy nodes and edges have been created in the node and edges join points and lines. For example there are more nodes in the rail network than stations in Argentina, and similarly in the port network. The road network contains severral edges with ``road_type = 0`` which represent a dummy edge created to join two roads.
 

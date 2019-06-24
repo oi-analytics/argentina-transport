@@ -1,4 +1,4 @@
-"""Copy water network from `C Incoming Data` to `D Work Processes`
+"""Create bridge dataset from national-roads in Argentina
 """
 import csv
 import os
@@ -73,9 +73,98 @@ def main(config):
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
     epsg_utm_20s = 32720
-    '''Get road edge network
+
+    '''Get inputs from the datasets
     '''
-    road_edges_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','national_roads','rutas','rutas.shp')
+    '''Names of all columns that exist in the input excel sheet on bridges
+    '''
+    columns = ['altura de barandas',
+        'altura libre',
+        'ancho de vereda derecha',
+        'ancho de vereda izquierda',
+        'ancho pavimento asc.',
+        'ancho pavimento desc.',
+        'año de construcción',
+        'clase de estructura',
+        'color',
+        'distances',
+        'distrito',
+        'gálibo horizontal asc.',
+        'gálibo horizontal desc.',
+        'gálibo vertical asc.',
+        'gálibo vertical desc.',
+        'ids',
+        'iluminación',
+        'index',
+        'longitud',
+        'longitud luces',
+        'límite de carga',
+        'material de barandas',
+        'material pavimento asc.',
+        'material pavimento desc.',
+        'material sub estructura',
+        'material super estructura',
+        'nro luces',
+        'peaje',
+        'prog. final',
+        'prog. inicial',
+        'protección de tablero',
+        'ruta',
+        'tipo de estructura',
+        'tipo de tablero',
+        'ubicación']
+
+    '''Renaming columns that exist in the input excel sheet on bridges
+    '''
+    columns_rename = ['railing_height',
+        'free_height',
+        'right_lane_width',
+        'left_lane_width',
+        'pavement_width_asc',
+        'pavement_width_desc',
+        'construction_year',
+        'structure_class',
+        'color',
+        'distances',
+        'province',
+        'horizontal_clearance_asc',
+        'horizontal_clearance_desc',
+        'vertical_clearance_asc',
+        'vertical_clearance_desc',
+        'bridge_id',
+        'illumination',
+        'index',
+        'length',
+        'length_lights',
+        'load_limit',
+        'railing_material',
+        'pavement_material_asc',
+        'pavement_material_desc',
+        'substructure_mateerial',
+        'superstructure_mateerial',
+        'nro_lights',
+        'toll',
+        'final_km_marker',
+        'initial_km_marker',
+        'board_protection',
+        'ruta',
+        'structure_type',
+        'board_type',
+        'location'
+        ]
+
+    columns_dict= {}
+    for c in range(len(columns)):
+        columns_dict[columns[c]] = columns_rename[c]
+
+    '''Get the national road edge network
+    '''
+    road_edges_path = os.path.join(incoming_data_path,
+                                    'pre_processed_network_data',
+                                    'roads',
+                                    'national_roads',
+                                    'rutas',
+                                    'rutas.shp')
     edges_in = road_edges_path
     edges = gpd.read_file(edges_in,encoding='utf-8').fillna(0)
     edges = edges.to_crs(epsg=epsg_utm_20s)
@@ -83,14 +172,25 @@ def main(config):
 
     '''Add the kilometer markers
     '''
-    km_markers = gpd.read_file(os.path.join(incoming_data_path,'pre_processed_network_data','roads','national_roads','v_mojon','v_mojonPoint.shp'),encoding='utf-8').fillna(0)
+    km_markers = gpd.read_file(os.path.join(incoming_data_path,
+                                                'pre_processed_network_data',
+                                                'roads',
+                                                'national_roads',
+                                                'v_mojon',
+                                                'v_mojonPoint.shp'),
+                                                encoding='utf-8').fillna(0)
     km_markers = km_markers.to_crs(epsg=epsg_utm_20s)
     km_markers['id_ruta'] = km_markers.progress_apply(lambda x:find_closest_edges(x,edges,'id_ruta'),axis=1)
     km_markers = pd.merge(km_markers,edges[['id_ruta','cod_ruta']],how='left',on=['id_ruta'])
 
     '''Find the bridge locations
     '''
-    marker_df = gpd.read_file(os.path.join(incoming_data_path,'pre_processed_network_data','roads','national_roads','puente_sel','puente_selPoint.shp'),encoding='utf-8').fillna(0)
+    marker_df = gpd.read_file(os.path.join(incoming_data_path,
+                                            'pre_processed_network_data',
+                                            'bridges',
+                                            'puente_sel',
+                                            'puente_selPoint.shp'),
+                                            encoding='utf-8').fillna(0)
     marker_df.drop_duplicates(subset='id_estruct', keep='first', inplace=True)
 
     marker_df = marker_df.to_crs(epsg=epsg_utm_20s)
@@ -99,10 +199,19 @@ def main(config):
     bridge_markers = copy.deepcopy(bm)
     del marker_df
 
-    bridge_df = pd.read_excel(os.path.join(incoming_data_path,'pre_processed_network_data','roads',
-                'national_roads','puente_sel','Consulta Puentes - 2017.xlsx'),sheet_name='Consulta',encoding='utf-8-sig').fillna(0)
+    '''Get all the input properties of the bridges
+    '''
+    bridge_df = pd.read_excel(os.path.join(incoming_data_path,
+                                            'pre_processed_network_data',
+                                            'bridges',
+                                            'puente_sel',
+                                            'Consulta Puentes - 2017.xlsx'),
+                                            sheet_name='Consulta',
+                                            encoding='utf-8-sig').fillna(0)
     bridge_df.columns = map(str.lower, bridge_df.columns)
 
+    '''Match the bridge locations and attributes
+    '''
     all_ids = list(set(bridge_markers['id_estruct'].values.tolist()))
     ids = copy.deepcopy(all_ids)
     multiple_ids = []
@@ -196,12 +305,22 @@ def main(config):
             bridge_matches.append(bridge_ids)
             id_matches += bridge_ids['id_estruct'].values.tolist()
 
-    bridge_markers = gpd.GeoDataFrame(pd.concat(bridge_matches,axis=0,sort='False', ignore_index=True).fillna(0),geometry='geometry',crs={'init' :'epsg:32720'})
+    bridge_markers = gpd.GeoDataFrame(pd.concat(bridge_matches,
+                                                axis=0,
+                                                sort='False',
+                                                ignore_index=True).fillna(0),
+                                                geometry='geometry',
+                                                crs={'init' :'epsg:32720'})
 
-    '''Match bridge locations to markers
+    '''Match finalised bridge locations to markers
     '''
     bridge_markers['distances'] = bridge_markers.progress_apply(lambda x:get_marker(x,km_markers,'id_ruta','progresiva'),axis=1)
-    bridge_markers.to_csv(os.path.join(incoming_data_path,'pre_processed_network_data','roads','national_roads','puente_sel','bridge_markers.csv'),encoding='utf-8-sig',index=False)
+    # bridge_markers.to_csv(os.path.join(incoming_data_path,
+    #                                     'pre_processed_network_data',
+    #                                     'bridges',
+    #                                     'puente_sel',
+    #                                     'bridge_markers.csv'),
+    #                                     encoding='utf-8-sig',index=False)
 
     # bridge_markers = pd.read_csv('bridge_markers.csv',encoding='utf-8-sig').fillna(0)
     # bridge_markers['geometry'] = bridge_markers['geometry'].apply(wkt.loads)
@@ -278,87 +397,9 @@ def main(config):
         else:
             print (r,len(bridge_info.index),len(bridge_ids.index))
 
-    columns = ['altura de barandas',
-        'altura libre',
-        'ancho de vereda derecha',
-        'ancho de vereda izquierda',
-        'ancho pavimento asc.',
-        'ancho pavimento desc.',
-        'año de construcción',
-        'clase de estructura',
-        'color',
-        'distances',
-        'distrito',
-        'geometry',
-        'gálibo horizontal asc.',
-        'gálibo horizontal desc.',
-        'gálibo vertical asc.',
-        'gálibo vertical desc.',
-        'ids',
-        'iluminación',
-        'index',
-        'longitud',
-        'longitud luces',
-        'límite de carga',
-        'material de barandas',
-        'material pavimento asc.',
-        'material pavimento desc.',
-        'material sub estructura',
-        'material super estructura',
-        'nro luces',
-        'peaje',
-        'prog. final',
-        'prog. inicial',
-        'protección de tablero',
-        'ruta',
-        'tipo de estructura',
-        'tipo de tablero',
-        'ubicación']
-
-    columns_rename = ['railing_height',
-        'free_height',
-        'right_lane_width',
-        'left_lane_width',
-        'pavement_width_asc',
-        'pavement_width_desc',
-        'construction_year',
-        'structure_class',
-        'color',
-        'distances',
-        'province',
-        'geometry',
-        'horizontal_clearance_asc',
-        'horizontal_clearance_desc',
-        'vertical_clearance_asc',
-        'vertical_clearance_desc',
-        'bridge_id',
-        'illumination',
-        'index',
-        'length',
-        'length_lights',
-        'load_limit',
-        'railing_material',
-        'pavement_material_asc',
-        'pavement_material_desc',
-        'substructure_mateerial',
-        'superstructure_mateerial',
-        'nro_lights',
-        'toll',
-        'final_km_marker',
-        'initial_km_marker',
-        'board_protection',
-        'ruta',
-        'structure_type',
-        'board_type',
-        'location'
-        ]
-
-    columns_dict= {}
-    for c in range(len(columns)):
-        columns_dict[columns[c]] = columns_rename[c]
-
     bridges = gpd.GeoDataFrame(pd.concat(bridge_data,axis=0,sort='False', ignore_index=True).fillna(0),geometry='geometry',crs={'init' :'epsg:32720'})
     bridges.rename(columns=columns_dict,inplace=True)
+    bridges['width'] = bridges['right_lane_width'] + bridges['left_lane_width'] + bridges['pavement_width_asc'] + bridges['pavement_width_desc']
 
     edges = gpd.read_file(os.path.join(data_path,'network','road_edges.shp'),encoding='utf-8').fillna(0)
     edges = edges.to_crs(epsg=epsg_utm_20s)
@@ -379,7 +420,12 @@ def main(config):
     bridges = gpd.read_file(os.path.join(data_path,'network','bridges.shp'),encoding='utf-8')
     bridges = bridges[['bridge_id','geometry']]
     bridges = bridges.to_crs(epsg=epsg_utm_20s)
-    bridges = pd.merge(bridges,pd.read_csv(os.path.join(data_path,'network','bridges.csv'),encoding='utf-8-sig'),how='left',on=['bridge_id'])
+    bridges = pd.merge(bridges,pd.read_csv(os.path.join(data_path,
+                                                        'network',
+                                                        'bridges.csv'),
+                                                        encoding='utf-8-sig'),
+                                                        how='left',
+                                                        on=['bridge_id'])
 
     edges = gpd.read_file(os.path.join(data_path,'network','road_edges.shp'),encoding='utf-8').fillna(0)
     edges = edges.to_crs(epsg=epsg_utm_20s)
@@ -416,7 +462,9 @@ def main(config):
 
         bridge_lines.append((val['bridge_id'],merged_line,0.001*merged_line.length))
 
-    bridge_lines = gpd.GeoDataFrame(pd.DataFrame(bridge_lines,columns=['bridge_id','geometry','length']).fillna(0),geometry='geometry',crs={'init' :'epsg:32720'})
+    bridge_lines = gpd.GeoDataFrame(pd.DataFrame(bridge_lines,
+                                                columns=['bridge_id','geometry','length']).fillna(0),
+                                                geometry='geometry',crs={'init' :'epsg:32720'})
     bridge_lines = bridge_lines.to_crs(epsg=4326)
     bridge_lines.to_file(os.path.join(data_path,'network','bridge_edges.shp'),encoding='utf-8')
 

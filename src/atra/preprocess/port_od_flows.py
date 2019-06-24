@@ -1,4 +1,4 @@
-"""Copy water network from `C Incoming Data` to `D Work Processes`
+"""Create port network and OD data from Argentina
 """
 import csv
 import os
@@ -103,9 +103,6 @@ def port_name_to_node_matches(port_reference,named_port,commodity_group,country,
 
 def main(config):
     """
-    Flanders Marine Institute (2018).
-    Maritime Boundaries Geodatabase: Maritime Boundaries and Exclusive Economic Zones (200NM), version 10.
-    Available online at http://www.marineregions.org/ https://doi.org/10.14284/312
     """
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
@@ -240,9 +237,6 @@ def main(config):
                 'entrance_date','entrance_time','exit_date','exit_time','tons','unit'])
     od_dfs['industry_name'] = od_dfs.apply(lambda x:assign_industry_names(x,industries_df),axis=1)
     od_dfs.to_csv(os.path.join(incoming_data_path,'port_ods','od_flows_raw.csv'),encoding='utf-8-sig',index=False)
-    # od_dfs.to_excel(excel_writer,'od_flows_raw',encoding='utf-8-sig',index=False)
-    # excel_writer.save()
-
 
     '''Match industries
     '''
@@ -323,8 +317,6 @@ def main(config):
     province_ods = od_df[['origin_province','destination_province']+industry_cols + ['total_tons']]
     province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index()
     province_ods.to_csv(os.path.join(data_path,'OD_data','port_province_annual_ods.csv'),index=False,encoding='utf-8-sig')
-    # province_ods.to_excel(province_excel_writer,'industries',index=False,encoding='utf-8-sig')
-    # province_excel_writer.save()
 
     '''Add operators
     '''

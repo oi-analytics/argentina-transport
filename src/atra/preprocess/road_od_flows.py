@@ -1,4 +1,4 @@
-"""Copy water network from `C Incoming Data` to `D Work Processes`
+"""Create road OD matrices matched to network nodes in Argentina
 """
 import csv
 import os
@@ -15,38 +15,34 @@ from atra.utils import *
 import datetime
 from tqdm import tqdm
 
-def assign_node_weights_by_area_population_proximity(commune_path,nodes,commune_pop_col):
-    """Assign weights to nodes based on their nearest commune populations
+def assign_node_weights_by_area_population_proximity(region_path,nodes,region_pop_col):
+    """Assign weights to nodes based on their nearest regional populations
 
-        - By finding the communes that intersect with the Voronoi extents of nodes
+        - By finding the regions_data that intersect with the Voronoi extents of nodes
 
     Parameters
-        - commune_path - Path of commune shapefile
+        - region_path - Path of region shapefile
         - nodes_in - Path of nodes shapefile
-        - commune_pop_col - String name of column containing commune population values
+        - region_pop_col - String name of column containing region population values
 
     Outputs
         - nodes - Geopandas dataframe of nodes with new column called weight
     """
 
-    # load provinces and get geometry of the right communes within the provinces
+    # load provinces and get geometry of the right regions data
     tqdm.pandas()
-    communes = gpd.read_file(commune_path,encoding='utf-8')
-    communes = communes.to_crs({'init': 'epsg:4326'})
-    sindex_communes = communes.sindex
+    regions_data = gpd.read_file(region_path,encoding='utf-8')
+    regions_data = regions_data.to_crs({'init': 'epsg:4326'})
+    sindex_regions_data = regions_data.sindex
 
     # create Voronoi polygons for the nodes
-    # nodes = nodes.reset_index()
     xy_list = []
     for values in nodes.itertuples():
         xy = list(values.geometry.coords)
         xy_list += [list(xy[0])]
 
     vor = Voronoi(np.array(xy_list))
-    # print (vor.)
     regions, vertices = voronoi_finite_polygons_2d(vor)
-    # regions = vor.regions
-    # vertices = vor.vertices
 
     min_x = vor.min_bound[0] - 0.1
     max_x = vor.max_bound[0] + 0.1
@@ -76,15 +72,15 @@ def assign_node_weights_by_area_population_proximity(commune_path,nodes,commune_
     gdf_voronoi['node_id'] = gdf_voronoi.progress_apply(
         lambda x: extract_nodes_within_gdf(x, nodes, 'node_id'), axis=1)
      
-    gdf_voronoi[commune_pop_col] = 0
-    gdf_voronoi = assign_value_in_area_proportions(communes, gdf_voronoi, commune_pop_col)
+    gdf_voronoi[region_pop_col] = 0
+    gdf_voronoi = assign_value_in_area_proportions(regions_data, gdf_voronoi, region_pop_col)
     
-    gdf_voronoi.rename(columns={commune_pop_col: 'weight'}, inplace=True)
+    gdf_voronoi.rename(columns={region_pop_col: 'weight'}, inplace=True)
     gdf_pops = gdf_voronoi[['node_id', 'weight']]
     del gdf_voronoi, poly_list, poly_df
 
     nodes = pd.merge(nodes, gdf_pops, how='left', on=['node_id']).fillna(0)
-    del gdf_pops, communes
+    del gdf_pops, regions_data
 
     return nodes
 
@@ -92,7 +88,7 @@ def assign_industry_names(x,industries_df):
     return industries_df.loc[(x.commodity_group,x.commodity_subgroup),'high_level_industry']
 
 def assign_industry_od_flows_to_nodes(national_ods_df,ind_cols,modes_df,modes,od_fracs,o_id_col,d_id_col):
-    """Assign VITRANSS 2 OD flows to nodes
+    """Assign commodity OD flows to nodes
 
     Parameters
         - national_ods_df - List of lists of Pandas dataframes
@@ -165,7 +161,12 @@ def main(config):
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
 
-    road_od_folder = os.path.join(incoming_data_path,'5','Matrices OD 2014- tablas')
+    '''Specify the input data paths, excel files and sheetnames for the OD datasets 
+    '''
+    road_od_folder = os.path.join(incoming_data_path,
+                                    'OD_data',
+                                    'road',
+                                    'Matrices OD 2014- tablas')
     total_tons_sheet = 'Total Toneladas 2014'
     file_desc = [{'file_name':'07. Matrices Grupo Granos',
         'commodity_group':'Granos'
@@ -190,22 +191,27 @@ def main(config):
         },
     ]
 
-    od_ids = ['origin_id','net_origin_name','net_origin_line','net_origin_province','net_origin_operator',
-            'destination_id','net_destination_name','net_destination_line','net_destination_province','net_destination_operator',
-            'net_speed','chosen_speed','net_path','net_distance']
-
-
+    '''Specify the population threshold for considering OD nodes
+        Nodes that attract population above this threshold are only conidered as OD nodes
+    '''
     population_threshold = 1000
-    '''Get industries
+    '''Get industries names that map to the commodities in the OD data
     '''
     print('* Reading industry dataframe')
-    industries_df = pd.read_excel(os.path.join(data_path,'economic_IO_tables','input','commodity_classifications-hp.xlsx'),sheet_name='road',index_col=[0,1]).reset_index()
+    industries_df = pd.read_excel(os.path.join(data_path,
+                                        'economic_IO_tables',
+                                        'input',
+                                        'commodity_classifications-hp.xlsx'),
+                                        sheet_name='road',index_col=[0,1]).reset_index()
     industry_cols = list(set(industries_df['high_level_industry'].values.tolist()))
     industries_df = list(industries_df.itertuples(index=False))
 
     # load provinces and get geometry of the right province
     print('* Reading provinces dataframe')
-    province_path = os.path.join(incoming_data_path,'2','provincia','Provincias.shp')
+    province_path = os.path.join(incoming_data_path,
+                                    'admin_boundaries_and_census',
+                                    'provincia',
+                                    'Provincias.shp')
     provinces = gpd.read_file(province_path,encoding='utf-8')
     provinces = provinces.to_crs({'init': 'epsg:4326'})
     sindex_provinces = provinces.sindex
@@ -213,14 +219,18 @@ def main(config):
     '''Assign provinces to zones
     '''
     print('* Reading zones dataframe')
-    zones_path = os.path.join(incoming_data_path,'5','Lineas de deseo OD- 2014','3.6.1.10.zonas','ZonasSHP.shp')
+    zones_path = os.path.join(incoming_data_path,
+                                    'OD_data',
+                                    'road',
+                                    '3.6.1.10.zonas',
+                                    'ZonasSHP.shp')
     zones = gpd.read_file(zones_path,encoding='utf-8')
     zones = zones.to_crs({'init': 'epsg:4326'})
     zones.columns = map(str.lower, zones.columns)
     zones.rename(columns={'data':'od_id'},inplace=True)
     sindex_zones = zones.sindex
 
-    '''Assign provinces to roads
+    '''Assign provinces to roads. Only national and province nodes are considered as OD nodes
     '''
     print('* Reading nodes dataframe and adding provinces and zone ids')
     road_nodes_path = os.path.join(data_path,'network','road_nodes.shp')
@@ -229,7 +239,6 @@ def main(config):
     road_nodes.columns = map(str.lower, road_nodes.columns)
     road_nodes.rename(columns={'id':'node_id'},inplace=True)
     road_nodes = road_nodes[(road_nodes['road_type'] == 'national')| (road_nodes['road_type'] == 'province')]
-    # # road_nodes = road_nodes[(road_nodes['road_type'] == 'national')]
     road_nodes['provincia'] = road_nodes.progress_apply(lambda x: extract_gdf_values_containing_nodes(
         x, sindex_provinces, provinces,'nombre'), axis=1)
     road_nodes['od_id'] = road_nodes.progress_apply(lambda x: extract_gdf_values_containing_nodes(
@@ -241,13 +250,13 @@ def main(config):
     '''
     print('* Adding weights to selective nodes')
     road_nodes = assign_node_weights_by_area_population_proximity(os.path.join(incoming_data_path,
-        '3','radios censales','radioscensales.shp'),
+        'admin_boundaries_and_census','radios censales','radioscensales.shp'),
         road_nodes,'poblacion')
 
     road_nodes_subset = road_nodes[road_nodes['weight'] > population_threshold]
     road_nodes_subset.drop('weight', axis=1, inplace=True)
     road_nodes_subset = assign_node_weights_by_area_population_proximity(os.path.join(incoming_data_path,
-        '3','radios censales','radioscensales.shp'),
+        'admin_boundaries_and_census','radios censales','radioscensales.shp'),
         road_nodes_subset,'poblacion')
     # road_nodes.to_csv('test0.csv',index=False)
     road_nodes_sums = road_nodes_subset.groupby(['od_id', 'node_id']).agg({'weight': 'sum'})
@@ -257,33 +266,12 @@ def main(config):
     road_nodes.drop('weight', axis=1, inplace=True)
     road_nodes = pd.merge(road_nodes, road_nodes_frac[['node_id', 'weight']],
                          how='left', on=['node_id']).fillna(0)
-    # road_nodes = road_nodes[['node_id','weight']]
-    # road_nodes = pd.merge(road_nodes,road_nodes_subset,how='left', on=['node_id']).fillna(0)
 
-    # road_nodes.to_csv('test.csv',index=False)
     del zones, road_nodes_subset,road_nodes_frac,road_nodes_sums
     road_nodes = list(road_nodes.itertuples(index=False))
 
-    '''Get road edge network
+    '''Create node-node OD matrices
     '''
-    # print('* Reading edges, addiing attributes and creating graph')
-    # road_edges_path = os.path.join(incoming_data_path,'pre_processed_network_data','roads','combined_roads','combined_roads_edges_4326.shp')
-    # road_edges = gpd.read_file(road_edges_path,encoding='utf-8').fillna(0)
-    # road_edges.columns = map(str.lower, road_edges.columns)
-    # road_edges.rename(columns={'id':'edge_id','from_id':'from_node','to_id':'to_node'},inplace=True)
-    # # get the right linelength
-    # road_edges['length'] = road_edges.geometry.progress_apply(line_length)
-    # road_edges = road_edges[['edge_id','length','from_node','to_node','tmda','geometry']]
-    # road_edges = road_edges.reindex(list(road_edges.columns)[2:]+list(road_edges.columns)[:2], axis=1)
-    # road_net = ig.Graph.TupleList(road_edges.itertuples(index=False), edge_attrs=list(road_edges.columns)[2:])
-
-
-    od_output_excel = os.path.join(incoming_data_path,'road_ods','road_ods.xlsx')
-    excel_writer = pd.ExcelWriter(od_output_excel)
-
-    od_output_excel = os.path.join(incoming_data_path,'road_ods','province_ods.xlsx')
-    province_excel_writer = pd.ExcelWriter(od_output_excel)
-
     print('* Creating OD assignments')
     od_vals = []
     od_vals_group_industry = {}
@@ -365,22 +353,16 @@ def main(config):
     province_ods = od_df[['origin_province','destination_province']+industry_cols + ['total_tons']]
     province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index()
     province_ods.to_csv(os.path.join(data_path,'OD_data','road_province_annual_ods.csv'),index=False,encoding='utf-8-sig')
-    province_ods.to_excel(province_excel_writer,'industries',index=False,encoding='utf-8-sig')
-    province_excel_writer.save()
 
     val_cols = [c for c in od_df.columns.values.tolist() if c not in ['origin_id','origin_province','origin_zone_id','destination_id','destination_province','destination_zone_id']]
     od_df[val_cols] = 1.0*od_df[val_cols]/365.0
     od_df = od_df[od_df['total_tons'] > 0.5]
     print ('Number of unique OD pairs',len(od_df.index))
-    # od_df.to_csv(os.path.join(incoming_data_path,'road_ods','road_ods.csv'),index=False,encoding='utf-8-sig')
     od_df.to_csv(os.path.join(data_path,'OD_data','road_nodes_daily_ods.csv'),index=False,encoding='utf-8-sig')
 
     od_df = pd.DataFrame(od_vals,columns=['origin_id','destination_id','origin_zone_id','destination_zone_id',
                                 'origin_province','destination_province','commodity_subgroup','commodity_group','industry_name','tons'])
     province_ods = od_df.groupby(['origin_province','destination_province','industry_name'])['tons'].sum().reset_index()
-    province_ods.to_excel(province_excel_writer,'road',index=False,encoding='utf-8-sig')
-    province_excel_writer.save()
-
 
 if __name__ == '__main__':
     CONFIG = load_config()
