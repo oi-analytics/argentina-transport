@@ -5,62 +5,6 @@ Analysis and Results
     - This section describes the steps Analysis and Results steps of the Argentina Transport Risk Analysis (ATRA)
     - To implement the ATRA without any changes in existing codes, all data described here should be created and stored exactly as indicated below
 
-Preparing Network Data
-----------------------
-Purpose:
-    - Create post-processed transport networks with attributes
-    - From pre-processed input Shapefiles and collected network attributes data
-
-Execution:
-    - Load data as described in `Network Collected Data <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/predata.html>`_ `Network GIS <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/predata.html#network-gis>`_, `Network Transport Costs <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/predata.html#network-transport-costs>`_, `National Road speeds and widths <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/predata.html#national-road-speeds-and-widths>`_ and `Network OD data <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/predata.html#network-od-data>`_ 
-    - For roads run :py:mod:`atra.preprocess.road_network_creation`
-    - For bridges run :py:mod:`atra.preprocess.road_bridge_matches`
-    - For railways run :py:mod:`atra.preprocess.rail_od_flows`
-    - For ports run :py:mod:`atra.preprocess.port_od_flows`
-    - For airlines run :py:mod:`atra.preprocess.network_air`
-    - Fro multi-modal edges run :py:mod:`atra.preprocess.multi_modal_network_creation`
-
-Result:
-    - Create networks with formats and attributes described in `Processed Data Assembly <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html>`_ `Networks <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#networks>`_
-    - Store outputs in ``/data/network/``
-
-
-Preparing OD matrix Data
-------------------------
-Purpose:
-    - Create OD matrices at node and province levels from:
-        - Road zone level OD data
-        - Node level OD data for rail and ports
-    - Create passenger OD data for airlines
-
-Execution:
-    - Rail OD matrix is created with network from the script :py:mod:`atra.preprocess.rail_od_flows`
-    - Port OD matrix is created with network from the script :py:mod:`atra.preprocess.port_od_flows`
-    - Air OD matrix is created with network from the script :py:mod:`atra.preprocess.network_air`
-    - Load road data as described in `Networks <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#networks>`_, `Network OD data <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/predata.html#network-od-data>`_ , and `Administrative Areas with Statistics <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#administrative-areas-with-statistics>`_
-    - For road OD matrix run :py:mod:`atra.preprocess.road_od_flows`
-
-Result:
-    - Create OD matrices with attributes described in `Processed Data Assembly <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html>`_ `OD matrices <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#od-matrices>`_
-    - Store road, rail, port outputs in ``/data/OD_data/``
-    - Store air outputs in ``data/usage`` 
-
-Preparing Hazard Data
----------------------
-Purpose:
-    - Convert GeoTiff raster hazard datasets to shapefiles based on masking and selecting values from
-        - Single-band raster files
-
-Execution:
-    - Load data as described in `Processed Data Assembly <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html>`_ `Hazards <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#hazards>`_
-    - Run :py:mod:`atra.preprocess.convert_hazard_data`
-
-Result:
-    - Create hazard shapefiles with names described in excel sheet in `Processed Data Assembly <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html>`_ `Hazards <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#hazards>`_ and attributes:
-        - ``ID`` - equal to 1
-        - ``geometry`` - Polygon outline of selected hazard
-    - Store outputs in same paths in directory ``/data/flood_data/FATTHOM``
-
 
 Mapping Flows onto Networks
 ---------------------------
@@ -71,7 +15,7 @@ Purpose:
         - Based on MIN-MAX generalised costs estimates
 
 Execution:
-    - Load data as described in `Networks <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#networks>`_ and `OD matrices <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#od-matrices>`_
+    - Load data as described in `Topological network requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#topological-network-requirements>`_ and `OD matrices requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#od-matrices-requirements>`_
     - For road, rail, port OD matrices run :py:mod:`atra.analysis.flow_mapping`
 
 Result:
@@ -100,7 +44,7 @@ Result:
         - ``edge_id`` - String edge ID
         - ``min_total_tons`` - Float values of estimated daily minimum total tonnages on edge
         - ``max_total_tons`` - Float values of estimated daily maximum total tonnages on edge
-        - ``industry_columns`` - All total daily tonnages of industry columns on edge
+        - ``commodity/industry_columns`` - All total daily tonnages of commodity/industry columns on edge
 
 
 Hazard Exposure
@@ -113,7 +57,7 @@ Purpose:
         - Write final results to an Excel sheet
 
 Execution:
-    - Load data as described in `Networks <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#networks>`_ and `Hazards <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#hazards>`_, and `Administrative Areas with Statistics <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#administrative-areas-with-statistics>`_
+    - Load data as described in `Topological network requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#topological-network-requirements>`_ and `Preparing Hazard Data <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/predata.html#preparing-hazard-data>`_, and `Administrative areas with statistics data requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#administrative-areas-with-statistics-data-requirements>`_
     - Run :py:mod:`atra.analysis.hazards_networks_intersections`
     - Run :py:mod:`atra.analysis.hazards_network_intersections_results_collect`
 
@@ -128,8 +72,8 @@ Result:
         - ``node_id`` - String name of intersecting node ID
         - ``geometry`` - Point geometry of intersecting node ID
 
-    - Store summarised results in Excel sheet in path ``/results/hazard_scenarios/national_scale_hazard_intersections.xlsx``
-    - Generate excel sheet of network-hazard-boundary intersection with attributes:
+    - Store summarised results in csv files in path ``/results/hazard_scenarios/``
+    - csv files of network-hazard-boundary intersection with attributes:
         - ``edge_id``/``node_id`` - String name of intersecting edge ID or node ID
         - ``length`` - Float length of intersection of edge LineString and hazard Polygon: Only for edges
         - ``province_id`` - String/Integer ID of Province
@@ -145,20 +89,21 @@ Result:
         - ``max_depth`` - Integer value of maximum value of flood depth of exposure
 
 
-Combine hazard scenarios across for risk estimation
----------------------------------------------------
+Combine hazard scenarios for risk weights
+-----------------------------------------
 Purpose
     - Combine failure scenarios across probability levels into single value per
       hazard type, scenario, network edges
+    - The risk weights are the sum of probability*exposure for each hazard type intersecting network edges
 
 Execution
-    - Load results from `Hazard exposure <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#hazard-exposure>`_
+    - Load results from `Hazard exposure <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#hazard-exposure>`_ and `Topological network requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#topological-network-requirements>`_
     - Run :py:mod:`atra.analysis.collect_network_hazard_scenarios_national`
 
 Result
     - Combined scenarios in
-      ``results/network_stats/national_{mode}_hazard_intersections_risks.csv``
-        - ``edge_id`` - string, name of failed edge
+      ``results/network_stats/{mode}_hazard_intersections_risk_weights.csv``
+        - ``edge_id/bridge_id`` - string, name of failed edge
         - ``hazard_type`` - string, name of hazard
         - ``model`` - string, name of hazard model (if any)
         - ``climate_scenario`` - string, name of climate scenario (if any)
@@ -181,7 +126,7 @@ Purpose:
         - To estimate flow isolations and rerouting effects with multi-modal options
 
 Execution:
-    - Load network and flow excel data as described in `Networks <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#networks>`_, `Mapping Flows onto Networks <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#mapping-flows-onto-networks>`_, and failure scenarios from `Hazard exposure <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#hazard-exposure>`_
+    - Load network and flow excel data as described in `Topological network requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#topological-network-requirements>`_, `Mapping Flows onto Networks <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#mapping-flows-onto-networks>`_, and failure scenarios from `Hazard exposure <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#hazard-exposure>`_
     - For all networks failure analysis run :py:mod:`atra.analysis.failure_estimation`
     - For networks failure analysis with multi-modal options run :py:mod:`atra.analysis.multi_modal_failure_estimation`
     
@@ -245,7 +190,7 @@ Purpose:
         - To understand the wider economic impacts of these disruptions
 
 Execution:
-    - Load data described in `Macroeconomic Data <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#macroeconomic-data>`_ and `OD matrices <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#od-matrices>`_
+    - Load data described in `Macroeconomic Data <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#macroeconomic-data-requirements>`_ and `OD matrices requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#od-matrices-requirements>`_
     - To create the multiregional input-output table for Argentina, run :py:mod:`atra.mrio.run_mrio`
     - To perform the loss analysis, run :py:mod:`atra.mria.run_mria`
 
@@ -292,6 +237,18 @@ Result:
         - ``min/max_econ_loss`` - Float values of total daily macroeconomic losses
         - ``min/max_econ_impact`` - Float values of sum of transport loss and macroeconomic loss
 
+Estimating the bridge flows and failure losses
+----------------------------------------------
+Purpose:
+    - Estimate the flows and failure losses on the national-roads bridges
+    - This done after all road failure analysis is performed because bridges results are estimated through the road failures
+
+Execution:
+    - Run :py:mod:`atra.analysis.failure_estimation_bridges` 
+
+Result:
+    - Creates outputs for bridges similar to the ones explained in `Mapping Flows onto Networks <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#mapping-flows-onto-networks>`_
+    - Creates outputs for bridges similar to the ones explained in `Combining Network Failure and Macroeconomic loss Results <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#combining-network-failure-and-macroeconomic-loss-results>`_
 
 Adaptation
 ----------
@@ -302,7 +259,7 @@ Purpose:
       climate-change conditions
 
 Execution:
-    - Load data described in `Networks <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#networks>`_, `Combining Network Failure and Macroeconomic loss Results <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#combining-network-failure-and-macroeconomic-loss-results>`_, and `Adaptation Options <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#adaptation-options>`_
+    - Load data described in `Topological network requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#topological-network-requirements>`_, `Combining Network Failure and Macroeconomic loss Results <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#combining-network-failure-and-macroeconomic-loss-results>`_, and `Adaptation Options <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#adaptation-options>`_
     - Common functions are in :py:mod:`atra.adaptation_options`
     - Run :py:mod:`atra.analysis.run_options_national`
 
@@ -329,3 +286,11 @@ Result:
         - ``min/max_bc_ratio`` - float, minimum/maximum benefit cost ratio
         - ``min/max_bc_diff`` - float, minimum/maximum benefit cost difference
         - Attributes specific to the roads or bridges
+
+
+Processing outputs and plots
+----------------------------
+Purpose:
+    - Several scripts are written to generate statistics and plots to process results
+    - These codes are very specific to the kinds of data and outputs produced from the analysis
+    - See the scripts with :py:mod:`atra.stats` and :py:mod:`atra.plot` 

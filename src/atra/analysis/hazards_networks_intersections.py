@@ -205,14 +205,13 @@ def main():
         - Output results
 
     2. Supply input data and parameters
-        - Names of the three Provinces - List of string types
-        - Paths of the mode files - List of tuples of strings
         - Names of modes - List of strings
-        - Names of output modes - List of strings
+        - Names of mode id columns - List of strings
         - Condition 'Yes' or 'No' is the users wants to process results
 
     3. Give the paths to the input data files:
         - Hazard directory
+        - Paths to the network shapefiles
     """
     data_path, calc_path, output_path = load_config()['paths']['data'], load_config()[
         'paths']['calc'], load_config()['paths']['output']

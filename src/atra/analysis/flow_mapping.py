@@ -5,7 +5,7 @@ Purpose
 
 Mapping the OD node level matrix values to network paths
 
-For all transport modes at national scale: ['road', 'rail', 'air', 'inland', 'coastal']
+For all transport modes at national scale: ['road', 'rail', 'port']
 
 The code estimates 2 values - A MIN and a MAX value of flows between each selected OD node pair
     - Based on MIN-MAX generalised costs estimates
@@ -41,8 +41,8 @@ Results
 1. Excel sheets with results of flow mapping based on MIN-MAX generalised costs estimates:
     - origin - String node ID of Origin
     - destination - String node ID of Destination
-    - o_region - String name of Province of Origin node ID
-    - d_region - String name of Province of Destination node ID
+    - origin_province - String name of Province of Origin node ID
+    - destination_province - String name of Province of Destination node ID
     - min_edge_path - List of string of edge ID's for paths with minimum generalised cost flows
     - max_edge_path - List of string of edge ID's for paths with maximum generalised cost flows
     - min_distance - Float values of estimated distance for paths with minimum generalised cost flows
@@ -63,8 +63,8 @@ Results
 
 References
 ----------
-1. Pant, R., Koks, E.E., Russell, T., Schoenmakers, R. & Hall, J.W. (2018).
-   Analysis and development of model for addressing climate change/disaster risks in multi-modal transport networks in Vietnam.
+1. Pant, R., Koks, E.E., Paltan, H., Russell, T. & Hall, J.W. (2019).
+   Transport risk analysis in Argentina.
    Final Report, Oxford Infrastructure Analytics Ltd., Oxford, UK.
 2. All input data folders and files referred to in the code below.
 
@@ -175,17 +175,17 @@ def main():
         - Output results
 
     2. Supply input data and parameters
-        - Names of modes: List of strings
-        - Unit weight of vehicle assumed for each mode: List of float types
-        - Names of all industry sector and crops in VITRANSS2 and IFPRI datasets: List of string types
-        - Names of commodity/industry columns for which min-max tonnage column names already exist: List of string types
         - Percentage of OD flow we want to send along path: FLoat type
+        - Names of modes: List of dictionaries
+        - 
+        - Unit weight of vehicle assumed for each mode: List of float types. 
+            Only used for roads where unit truck weight is 15 tons for estimating Generalised Cost (GC)
+            For other sectors we already know the GC
+        - Names of min-max tonnage column names in OD data
 
     3. Give the paths to the input data files:
-        - Network edges Excel file
-        - OD flows Excel file
-        - Costs of modes Excel file
-        - Road properties Excel file
+        - Network edges csv files
+        - OD daily flows csv file
 
     4. Specify the output files and paths to be created
     """
@@ -193,9 +193,6 @@ def main():
     incoming_data_path, data_path, calc_path, output_path = load_config()['paths']['incoming_data'],load_config()['paths']['data'], load_config()[
         'paths']['calc'], load_config()['paths']['output']
 
-    # Supply input data and parameters
-    # modes = ['road', 'rail', 'air', 'inland', 'coastal']
-    # percentage = [10,90,100]
     percentage = [100]
     index_cols = ['origin_id','destination_id','destination_province', 'destination_zone_id', 'origin_province', 'origin_zone_id']
     modes = [
@@ -204,62 +201,19 @@ def main():
                 'vehicle_wt':15,
                 'min_tons_column':'total_tons',
                 'max_tons_column':'total_tons',
-                'min_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                    'Carnes','Combustibles',
-                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-                    'INDUSTRIA MANUFACTURERA','Industrializados',
-                    'Mineria','PESCA','Regionales','Semiterminados'],
-                'max_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                    'Carnes','Combustibles',
-                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-                    'INDUSTRIA MANUFACTURERA','Industrializados',
-                    'Mineria','PESCA','Regionales','Semiterminados']},
+                },
                 {
                 'sector':'rail',
                 'vehicle_wt':1,
                 'min_tons_column':'min_total_tons',
                 'max_tons_column':'max_total_tons',
-                'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                                'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
-                                'min_total_tons'],
-                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES',
-                                'max_total_tons']
                 },
                 {
                 'sector':'port',
                 'vehicle_wt':1,
                 'min_tons_column':'min_total_tons',
                 'max_tons_column':'max_total_tons',
-                'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                                'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'min_INDUSTRIA MANUFACTURERA','min_PESCA','min_TRANSPORTE Y COMUNICACIONES',
-                                'min_total_tons'],
-                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'max_INDUSTRIA MANUFACTURERA','max_PESCA', 'max_TRANSPORTE Y COMUNICACIONES',
-                                'max_total_tons']
                 }
-    ]
-
-    modes = [
-                {
-                'sector':'road',
-                'vehicle_wt':15,
-                'min_tons_column':'total_tons',
-                'max_tons_column':'total_tons',
-                'min_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                    'Carnes','Combustibles',
-                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-                    'INDUSTRIA MANUFACTURERA','Industrializados',
-                    'Mineria','PESCA','Regionales','Semiterminados'],
-                'max_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                    'Carnes','Combustibles',
-                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-                    'INDUSTRIA MANUFACTURERA','Industrializados',
-                    'Mineria','PESCA','Regionales','Semiterminados']},
     ]
 
     # Give the paths to the input data files
@@ -285,6 +239,7 @@ def main():
             print ('* Loading {} igraph network and GeoDataFrame'.format(modes[m]['sector']))
             edges_in = pd.read_csv(os.path.join(network_data_path,'{}_edges.csv'.format(modes[m]['sector'])),encoding='utf-8-sig')
             G = ig.Graph.TupleList(edges_in.itertuples(index=False), edge_attrs=list(edges_in.columns)[2:])
+            # Create the road generlised cost based on the unit vehicle weights
             if modes[m]['sector'] == 'road':
                 G = add_igraph_generalised_costs(G, 1.0/modes[m]['vehicle_wt'], 1)
             del edges_in
@@ -295,11 +250,16 @@ def main():
             print ('* Loading {} OD nodes pairs and tonnages'.format(modes[m]['sector']))
             ods = pd.read_csv(os.path.join(data_path,'OD_data','{}_nodes_daily_ods.csv'.format(modes[m]['sector'])),encoding='utf-8-sig')
             print ('Number of unique OD pairs',len(ods.index))
-
+            
             all_ods = copy.deepcopy(ods)
-            # all_ods_tons_cols = [col for col in all_ods.columns.values.tolist() if col not in ['origin','o_region','destination','d_region']]
             all_ods_tons_cols = [col for col in all_ods.columns.values.tolist() if col not in index_cols]
-            print (all_ods_tons_cols)
+
+            min_ind_cols = [m for m in all_ods_tons_cols if 'min_' == m[:4]]
+            max_ind_cols = [m for m in all_ods_tons_cols if 'max_' == m[:4]]
+            if len(min_ind_cols) == 0 or len(max_ind_cols) == 0:
+                min_ind_cols = all_ods_tons_cols
+                max_ind_cols = all_ods_tons_cols
+            
             if modes[m]['sector'] == 'road':
                 all_ods['vehicle_nums'] = np.maximum(1, np.ceil(all_ods['total_tons']/modes[m]['vehicle_wt']))
 
@@ -322,7 +282,7 @@ def main():
             csv_output_path = os.path.join(flow_csv_dir,'weighted_flows_{}_{}_percent.csv'.format(modes[m]['sector'],int(perct)))
 
             write_flow_paths_to_network_files(all_paths,
-                modes[m]['min_ind_cols'],modes[m]['max_ind_cols'],gdf_edges,
+                min_ind_cols,max_ind_cols,gdf_edges,
                 save_csv=True, save_shapes=True, shape_output_path=shp_output_path,csv_output_path=csv_output_path)
 
 

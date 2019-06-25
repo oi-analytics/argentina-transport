@@ -150,7 +150,7 @@ def main():
     # Give the paths to the input data files
     network_data_path = os.path.join(data_path,'network')
     fail_scenarios_data = os.path.join(
-        output_path, 'hazard_scenarios', 'national_scale_hazard_intersections.xlsx')
+        output_path, 'hazard_scenarios', 'bridge_hazard_intersections.csv')
 
     # Specify the output files and paths to be created
     fail_output_path = os.path.join(output_path, 'failure_results')
@@ -169,47 +169,47 @@ def main():
 
     # Create failure scenarios
     print ('* Creating bridge failure scenarios')
-    fail_df = pd.read_excel(fail_scenarios_data, sheet_name='bridge')
+    fail_df = pd.read_csv(fail_scenarios_data)
     ef_sc_list = edge_failure_sampling(fail_df,'bridge_id')
     print ('Number of failure scenarios',len(ef_sc_list))
 
-    # for perct in percentage:
-    #     # Load flow paths
-    #     flow_file_path = os.path.join(output_path, 'flow_mapping_combined',
-    #                                        'weighted_flows_road_{}_percent.csv'.format(int(perct)))
-    #     flow_file = pd.read_csv(flow_file_path,encoding='utf-8-sig').fillna(0)
-    #     df = pd.merge(G_df,flow_file,how='left',on=['edge_id']).fillna(0)
-    #     df.drop('edge_id',axis=1,inplace=True)
-    #     df.to_csv(os.path.join(output_path,
-    #             'flow_mapping_combined',
-    #             'weighted_flows_bridge_{}_percent.csv'.format(int(perct))),
-    #             encoding='utf-8-sig')
+    for perct in percentage:
+        # Load flow paths
+        flow_file_path = os.path.join(output_path, 'flow_mapping_combined',
+                                           'weighted_flows_road_{}_percent.csv'.format(int(perct)))
+        flow_file = pd.read_csv(flow_file_path,encoding='utf-8-sig').fillna(0)
+        df = pd.merge(G_df,flow_file,how='left',on=['edge_id']).fillna(0)
+        df.drop('edge_id',axis=1,inplace=True)
+        df.to_csv(os.path.join(output_path,
+                'flow_mapping_combined',
+                'weighted_flows_bridge_{}_percent.csv'.format(int(perct))),
+                encoding='utf-8-sig')
 
-    #     del df
+        del df
 
-    #     print ('* Loading road failure results')
-    #     if single_edge == True:
-    #         file_name = 'single_edge_failures_minmax_road_{}_percent_disrupt'.format(int(perct))
-    #     else:
-    #         file_name = 'multiple_edge_failures_minmax_road_{1}_percent_disrupt'.format(int(perct))
+        print ('* Loading road failure results')
+        if single_edge == True:
+            file_name = 'single_edge_failures_minmax_road_{}_percent_disrupt'.format(int(perct))
+        else:
+            file_name = 'multiple_edge_failures_minmax_road_{1}_percent_disrupt'.format(int(perct))
 
-    #     df_path = os.path.join(minmax_combine,file_name + '.csv')
-    #     edge_impact = pd.read_csv(df_path,encoding='utf-8-sig')
+        df_path = os.path.join(minmax_combine,file_name + '.csv')
+        edge_impact = pd.read_csv(df_path,encoding='utf-8-sig')
 
-    #     print ('* Merging road and bridge files')
-    #     G_df = G_df[G_df['bridge_id'].isin(ef_sc_list)]
-    #     G_df = pd.merge(G_df,edge_impact,how='left',on=['edge_id']).fillna(0)
-    #     G_df.drop('edge_id',axis=1,inplace=True)
-    #     G_df = G_df[G_df['max_econ_impact'] > 0]
+        print ('* Merging road and bridge files')
+        G_df = G_df[G_df['bridge_id'].isin(ef_sc_list)]
+        G_df = pd.merge(G_df,edge_impact,how='left',on=['edge_id']).fillna(0)
+        G_df.drop('edge_id',axis=1,inplace=True)
+        G_df = G_df[G_df['max_econ_impact'] > 0]
 
-    #     if single_edge == True:
-    #         file_name = 'single_edge_failures_minmax_bridge_{}_percent_disrupt'.format(int(perct))
-    #     else:
-    #         file_name = 'multiple_edge_failures_minmax_bridge_{}_percent_disrupt'.format(int(perct))
+        if single_edge == True:
+            file_name = 'single_edge_failures_minmax_bridge_{}_percent_disrupt'.format(int(perct))
+        else:
+            file_name = 'multiple_edge_failures_minmax_bridge_{}_percent_disrupt'.format(int(perct))
 
-    #     print ('* Write min-max bridge results')
-    #     df_path = os.path.join(minmax_combine,file_name + '.csv')
-    #     G_df.to_csv(df_path, index = False,encoding='utf-8-sig')
+        print ('* Write min-max bridge results')
+        df_path = os.path.join(minmax_combine,file_name + '.csv')
+        G_df.to_csv(df_path, index = False,encoding='utf-8-sig')
 
 
 if __name__ == "__main__":

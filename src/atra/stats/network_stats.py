@@ -162,23 +162,5 @@ def main():
     print ('* Number of airports:',len(air_nodes.index))
 
 
-
-    # '''Flood stats
-    # '''
-    # for m in range(len(modes)):
-    #     flood_df = pd.read_excel(os.path.join(output_path,'hazard_scenarios','national_scale_hazard_intersections.xlsx'),sheet_name=modes[m])
-    #     flood_df = flood_df[['hazard_type','climate_scenario','probability','length']].groupby(['hazard_type','climate_scenario','probability'])['length'].sum().reset_index()
-    #     flood_df['length'] = 0.001*flood_df['length']
-    #     flood_df['return period'] = 1/flood_df['probability']
-
-    #     if modes[m] == 'road':
-    #         total_length = road_edges['length'].values.sum()
-    #     elif modes[m] == 'rail':
-    #         total_length = rail_edges['length'].values.sum()
-
-    #     flood_df['percentage_exposure'] = 1.0*flood_df['length']/total_length
-    #     flood_df.to_csv(os.path.join(output_path,'network_stats','{}_flood_exposure.csv'.format(modes[m])))
-
-
 if __name__ == "__main__":
     main()

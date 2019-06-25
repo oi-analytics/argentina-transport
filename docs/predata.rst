@@ -337,4 +337,4 @@ Preparing Hazard Data
         - ``ID`` - equal to 1
         - ``geometry`` - Polygon outline of selected hazard
     
-    - Store outputs in same paths in directory ``/data/flood_data/FATTHOM``
+    - Store outputs in same paths in directory ``/data/flood_data/FATHOM/``

@@ -200,7 +200,10 @@ def main():
     # Give the paths to the input data files
     # load provinces and get geometry of the right province
     print('* Reading provinces dataframe')
-    province_path = os.path.join(incoming_data_path,'2','provincia','Provincias.shp')
+    province_path = os.path.join(incoming_data_path,
+                                    'admin_boundaries_and_census',
+                                    'provincia',
+                                    'Provincias.shp')
     provinces = gpd.read_file(province_path,encoding='utf-8')
     provinces = provinces.to_crs({'init': 'epsg:4326'})
     provinces.rename(columns={'OBJECTID':'province_id','nombre':'province_name','Geometry':'geom_type'},inplace=True)
@@ -209,8 +212,10 @@ def main():
     '''Assign provinces to zones
     '''
     print('* Reading department dataframe')
-    zones_path = os.path.join(incoming_data_path, '2',
-                                'departamento', 'Departamentos.shp')
+    zones_path = os.path.join(incoming_data_path, 
+                                'admin_boundaries_and_census',
+                                'departamento',
+                                'Departamentos.shp')
     zones = gpd.read_file(zones_path,encoding='utf-8')
     zones = zones.to_crs({'init': 'epsg:4326'})
     zones.rename(columns={'OBJECTID':'department_id','Name':'department_name','Geometry':'geom_type'},inplace=True)
@@ -253,9 +258,6 @@ def main():
     # Process national scale results
     if national_results == 'Yes':
         print ('* Processing national scale results')
-        # data_excel = os.path.join(
-        #     output_dir,'national_scale_hazard_intersections.xlsx')
-        # nat_excel_writer = pd.ExcelWriter(data_excel)
         for m in range(len(modes)):
             mode_data_df = []
             for cl_sc in range(len(climate_scenarios)):
@@ -276,8 +278,6 @@ def main():
                 del data_df
 
             mode_data_df = pd.concat(mode_data_df,axis=0,sort='False', ignore_index=True)
-            # mode_data_df.to_excel(nat_excel_writer, modes[m], index=False,encoding='utf-8-sig')
-            # nat_excel_writer.save()
             data_path = os.path.join(output_dir,'{}_hazard_intersections.csv'.format(modes[m]))
             mode_data_df.to_csv(data_path,index=False,encoding='utf-8-sig')
             del mode_data_df
