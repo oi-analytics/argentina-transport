@@ -1,4 +1,4 @@
-"""Copy air network from `C Incoming Data` to `D Work Processes`
+"""Create air network and passenger usage data for Argentina
 """
 import csv
 import os
@@ -11,6 +11,7 @@ def main(config):
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
 
+    passenger_field = 'Pax_2016'
     # from 5/aeropuertos/aeropuerto.shp
     # to network/air_nodes.shp
     # - "air_{}".format(CODIG_IATA) => id
@@ -48,7 +49,7 @@ def main(config):
     # to usage/air_passenger.csv
     # - "air_{}".format(Cod_Orig) => from_id
     # - "air_{}".format(Cod_Dest) => to_id
-    # - Pax_2016 => passengers_2016
+    # - Pax_2016 => passengers
     # TODO fix origin and destination ids - they all use three-letter codes but DO NOT MATCH
     # the IATA codes used for nodes
     def transform_edge(record):
@@ -105,7 +106,7 @@ def main(config):
                     "air_{}".format(props['Cod_Dest']),
                     props['Cod_Orig'],
                     props['Cod_Dest'],
-                    int(props['Pax_2016'])
+                    int(props[passenger_field])
                 )
                 if props['Cod_Orig'] == 'BAR' and props['Cod_Dest'] == 'MDP' and props['Long'] == 898:
                     print("Correcting", props)
@@ -115,7 +116,7 @@ def main(config):
                         'MDP',
                         'air_DRY',
                         'DRY',
-                        int(props['Pax_2016'])
+                        int(props[passenger_field])
                     )
                 w.writerow(row)
 

@@ -212,7 +212,8 @@ Macroeconomic data requirements
 -------------------------------
 1. For the macroeconomic analysis first a multi-regional IO matrix for 24 provinces in Argentina is created from a national-level IO matrix and province level Gross Production Values (GPV) of IO Industries
 
-2. The multi-regional macroeconoic IO data is created from data downloaded from the Instituto Nacional de Estadística y Censos  (INDEC) website. The data is stored as: 
+2. The multi-regional macroeconoic IO data is created from data downloaded 
+from the Instituto Nacional de Estadística y Censos  (INDEC) website. The data is stored as: 
     - Industry and Commodity level IO accounts in the file path ``data/economic_IO_tables/input/sh_cou_06_16.xls`` 
     - Industry level GPV in the file path ``data/economic_IO_tables/input/PIB_provincial_06_17.xls``
     - Names of aggregated industries classification for Argentina in the file path ``data/economic_IO_tables/input/industry_high_level_classification.xlsx``, which should be present in the IO and GPV data files   

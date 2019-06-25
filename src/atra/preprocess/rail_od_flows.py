@@ -322,7 +322,7 @@ def main(config):
     rail_nodes_path = os.path.join(incoming_data_path,
                                     'pre_processed_network_data',
                                     'railways',
-                                    'national_rail',
+                                    'rail_network',
                                     'ffcc_nodes.shp')
     rail_nodes = gpd.read_file(rail_nodes_path,encoding='utf-8').fillna(0)
     rail_nodes = rail_nodes.to_crs({'init': 'epsg:4326'})
@@ -352,7 +352,7 @@ def main(config):
     rail_edges_path = os.path.join(incoming_data_path,
                                     'pre_processed_network_data',
                                     'railways',
-                                    'national_rail',
+                                    'rail_network',
                                     'lineas_ffcc_edges.shp')
     rail_edges = gpd.read_file(rail_edges_path,encoding='utf-8').fillna(0)
     rail_edges.columns = map(str.lower, rail_edges.columns)
@@ -538,23 +538,6 @@ def main(config):
         od_mismatch_df.to_excel(mismatch_excel_writer, fd['file_name'] + ' ' + fd['line_name'] + ' pairs', index=False,encoding='utf-8-sig')
         mismatch_excel_writer.save()
 
-        # od_com_day_totals = od_df[['origin_id','destination_id','commodity_group','commodity_subgroup','o_date','tons']].groupby(['origin_id','destination_id','commodity_group','commodity_subgroup','o_date'])['tons'].sum()
-        # od_com_day_totals.to_excel(day_total_excel_writer,fd['file_name'] + ' ' + fd['line_name'],encoding='utf-8-sig')
-        # day_total_excel_writer.save()
-
-        # od_com_day_totals = od_com_day_totals.reset_index()
-        # od_com_tot = od_com_day_totals[['origin_id','destination_id','commodity_group','commodity_subgroup','tons']].groupby(['origin_id','destination_id','commodity_group','commodity_subgroup']).sum().rename(columns={'tons': 'total_annual_tons'})
-        # od_com_max = od_com_day_totals[['origin_id','destination_id','commodity_group','commodity_subgroup','tons']].groupby(['origin_id','destination_id','commodity_group','commodity_subgroup']).max().rename(columns={'tons': 'max_daily_tons'})
-        # od_com_min = od_com_day_totals[['origin_id','destination_id','commodity_group','commodity_subgroup','tons']].groupby(['origin_id','destination_id','commodity_group','commodity_subgroup']).min().rename(columns={'tons': 'min_daily_tons'})
-
-        # pd.concat([od_com_tot,od_com_max,od_com_min],axis=1).to_excel(annual_excel_writer,fd['file_name'] + ' ' + fd['line_name'],encoding='utf-8-sig')
-        # annual_excel_writer.save()
-
-
-    # province_ods = pd.concat(province_ods,axis=0,sort='False', ignore_index=True)
-    # province_ods = province_ods.groupby(['net_origin_province','net_destination_province','industry_name'])['tons'].sum().reset_index()
-    # province_ods.rename(columns={'net_origin_province':'origin_province','net_destination_province':'destination_province'})
-
 
     print ('* Create finalised OD data at industry level')
     od_vals_group_industry = {}
@@ -623,8 +606,6 @@ def main(config):
     province_ods = od_df[['origin_province','destination_province']+industry_cols + ['total_tons']]
     province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index()
     province_ods.to_csv(os.path.join(data_path,'OD_data','rail_province_annual_ods.csv'),index=False,encoding='utf-8-sig')
-    # province_ods.to_excel(province_excel_writer,'industries',index=False,encoding='utf-8-sig')
-    # province_excel_writer.save()
 
     print ('* Write the finalised rail edge file')
     esp = []

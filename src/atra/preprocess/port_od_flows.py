@@ -106,6 +106,15 @@ def main(config):
     """
     incoming_data_path = config['paths']['incoming_data']
     data_path = config['paths']['data']
+
+    '''Specify the min-max speeds in km/hr
+    '''
+    min_speed = 4.0
+    max_speed = 5.0
+
+    '''Specify the columns in the input excel data 
+        With their Spanish names and translated English names
+    '''
     translate_columns = {
         'Puerto':'port',
         'mes':'month',
@@ -121,25 +130,67 @@ def main(config):
         'Producto Corregido':'commodity_subgroup',
         'Rubro':'commodity_group',
         'Total Tn':'tons',
-        'Medida':'unit',
-        'Contenedores Totales':'total_containers',
-        'TEUS Totales':'total_teus'
+        'Medida':'unit'
     }
+    '''Assumed start date by default, when no date is given
+    '''
     ref_date = '2017-01-01 00:00:00'
+    '''Specify the types of port operations, which will be used to infer OD flow direction
+        If it is an export operation at a port, then the port is an origin
+        If it is an import operation at a port, then the port is a destination
+        Transit operations are later included within exports
+        The names of the operations are dervied from the input data provided to us
+    '''
     export_operations = ['Exportación','Vehículos Expo','Transbordo Expo','Cabotaje Salido']
     import_operations = ['Importación','Transbordo Impo','Vehículos Impo','Cabotaje Entrado']
     transit_operattions = ['Tránsito','Otros']
-    port_df = gpd.read_file(os.path.join(incoming_data_path,'pre_processed_network_data','ports','water_nodes.shp'),encoding='utf-8').fillna('none')
-    port_df.crs = {'init' :'epsg:4326'}
-    # port_df.rename(columns={'id':'node_id'},inplace=True)
-    port_df.to_file(os.path.join(data_path,'network','port_nodes.shp'),encoding = 'utf-8')
-    port_names = port_df[['name','id','province']]
+
+    '''Specify the input files for the port nodes, matches to rename ports and the OD data
+    '''
+    print ('* Reading input data')
+    port_nodes = gpd.read_file(os.path.join(incoming_data_path,
+                                'pre_processed_network_data',
+                                'ports',
+                                'port_network',
+                                'water_nodes.shp'),encoding='utf-8').fillna('none')
+    port_nodes.crs = {'init' :'epsg:4326'}
+    port_names = port_nodes[['name','id','province']]
 
 
-    port_renames = pd.read_excel(os.path.join(incoming_data_path,'port_ods','od_port_matches.xlsx'),sheet_name='matches',encoding='utf-8-sig')
-    port_countries = pd.read_excel(os.path.join(incoming_data_path,'port_ods','od_port_matches.xlsx'),sheet_name='country_ports',encoding='utf-8-sig')
+    port_renames = pd.read_excel(os.path.join(incoming_data_path,
+                                                'pre_processed_network_data',
+                                                'ports',
+                                                'port_od_cleaning',
+                                                'od_port_matches.xlsx'),
+                                                sheet_name='matches',
+                                                encoding='utf-8-sig')
+    port_countries = pd.read_excel(os.path.join(incoming_data_path,
+                                                    'pre_processed_network_data',
+                                                    'ports',
+                                                    'port_od_cleaning',
+                                                    'od_port_matches.xlsx'),
+                                                    sheet_name='country_ports',
+                                                    encoding='utf-8-sig')
 
-    port_df = pd.read_excel(os.path.join(incoming_data_path,'5','Puertos','Cargas No Containerizadas - SSPVNYMM.xlsx'),sheet_name='2017',encoding='utf-8-sig').fillna(0)
+    port_df = pd.read_excel(os.path.join(incoming_data_path,
+                                            'OD_data',
+                                            'port',
+                                            'Cargas No Containerizadas - SSPVNYMM.xlsx'),
+                                            sheet_name='2017',
+                                            encoding='utf-8-sig').fillna(0)
+
+    '''Get the high level industries and commodity matches
+    '''
+    industries_df = pd.read_excel(os.path.join(data_path,
+                                                'economic_IO_tables',
+                                                'input',
+                                                'commodity_classifications-hp.xlsx'),
+                                                sheet_name='port',index_col=[0,1])
+    industry_cols = list(set(industries_df['high_level_industry'].values.tolist()))
+
+    '''Start the process of creating OD flows
+    '''
+    print ('* Cleaning data and creating OD matrix')
     port_df.columns = port_df.columns.str.strip()
     port_df.rename(columns=translate_columns,inplace=True)
     port_df = port_df[port_df['tons'] > 0]
@@ -223,20 +274,18 @@ def main(config):
             od_matrix.append((port_id,port_province,d_id,d_province,operation, \
                     p.commodity_group,p.commodity_subgroup,p.entrance_date,p.exit_date,tons))
 
-    '''Get industries
-    '''
-    industries_df = pd.read_excel(os.path.join(data_path,'economic_IO_tables','commodity_classifications-hp.xlsx'),sheet_name='port',index_col=[0,1])
-    industry_cols = list(set(industries_df['high_level_industry'].values.tolist()))
-
-
-    # excel_writer = pd.ExcelWriter(os.path.join(incoming_data_path,'port_ods','od_flows.xlsx'))
+    
     od_dfs = pd.DataFrame(od_ports,columns=['origin_id','origin_port','origin_country',
                 'intermediate_id','intermediate_port','intermediate_province',
                 'destination_id','destination_port','destination_country',
                 'operation_type','commodity_group','commodity_subgroup',
                 'entrance_date','entrance_time','exit_date','exit_time','tons','unit'])
     od_dfs['industry_name'] = od_dfs.apply(lambda x:assign_industry_names(x,industries_df),axis=1)
-    od_dfs.to_csv(os.path.join(incoming_data_path,'port_ods','od_flows_raw.csv'),encoding='utf-8-sig',index=False)
+    od_dfs.to_csv(os.path.join(incoming_data_path,
+                                'pre_processed_network_data',
+                                'ports',
+                                'port_od_cleaning',
+                                'od_flows_raw.csv'),encoding='utf-8-sig',index=False)
 
     '''Match industries
     '''
@@ -247,22 +296,22 @@ def main(config):
     od_dfs['entrance_date'] = od_dfs['entrance_date'].apply(lambda x:set_reference_date(x,ref_date))
     od_dfs['o_date'] = od_dfs['entrance_date'].dt.date
     od_dfs['industry_name'] = od_dfs.apply(lambda x:assign_industry_names(x,industries_df),axis=1)
-    od_dfs.to_csv(os.path.join(incoming_data_path,'port_ods','od_matrix.csv'),encoding='utf-8-sig',index=False)
-    # od_dfs.to_excel(excel_writer,'od_matrix',encoding='utf-8-sig',index=False)
-    # excel_writer.save()
 
     od_vals_group_industry = {}
 
-    gr_cols = ['origin_id','destination_id','origin_province','destination_province','commodity_group','commodity_subgroup','industry_name','o_date']
+    gr_cols = ['origin_id','destination_id',
+                'origin_province','destination_province',
+                'commodity_group','commodity_subgroup','industry_name','o_date']
     od_com_day_totals = od_dfs[gr_cols+['tons']].groupby(gr_cols)['tons'].sum().reset_index()
     od_dfs[['o_date','tons']].groupby('o_date')['tons'].sum().reset_index().to_csv(os.path.join(incoming_data_path,'port_ods','od_daily_total.csv'),encoding='utf-8-sig',index=False)
 
-    gr_cols = ['origin_id','destination_id','origin_province','destination_province','commodity_group','commodity_subgroup','industry_name']
+    gr_cols = ['origin_id','destination_id',
+                'origin_province','destination_province',
+                'commodity_group','commodity_subgroup','industry_name']
     od_com_max = od_com_day_totals[gr_cols + ['tons']].groupby(gr_cols).max().rename(columns={'tons': 'max_daily_tons'}).reset_index()
     od_com_min = od_com_day_totals[gr_cols + ['tons']].groupby(gr_cols).min().rename(columns={'tons': 'min_daily_tons'}).reset_index()
     od_minmax = pd.merge(od_com_min,od_com_max,how='left',on=gr_cols).fillna(0)
 
-    # print (od_minmax)
     for iter_,row in od_minmax.iterrows():
         if '{}-{}'.format(row.origin_id,row.destination_id) not in od_vals_group_industry.keys():
             od_vals_group_industry['{}-{}'.format(row.origin_id,row.destination_id)] = {}
@@ -318,9 +367,14 @@ def main(config):
     province_ods = province_ods.groupby(['origin_province','destination_province'])[industry_cols + ['total_tons']].sum().reset_index()
     province_ods.to_csv(os.path.join(data_path,'OD_data','port_province_annual_ods.csv'),index=False,encoding='utf-8-sig')
 
-    '''Add operators
+    '''Add properties to port edges
     '''
-    port_edges_path = os.path.join(incoming_data_path,'pre_processed_network_data','ports','water_edges.shp')
+    print ('* Creating port network with parameters')
+    port_edges_path = os.path.join(incoming_data_path,
+                                    'pre_processed_network_data',
+                                    'ports',
+                                    'port_network',
+                                    'water_edges.shp')
     port_edges = gpd.read_file(port_edges_path,encoding='utf-8').fillna(0)
     port_edges.columns = map(str.lower, port_edges.columns)
     port_edges.rename(columns={'id':'edge_id','from_id':'from_node','to_id':'to_node'},inplace=True)
@@ -332,7 +386,7 @@ def main(config):
     port_edges['min_time'] = port_edges['length']/port_edges['max_speed']
     port_edges['max_time'] = port_edges['length']/port_edges['min_speed']
 
-    cost_df = pd.read_excel(os.path.join(incoming_data_path,'5','Puertos','port_costs.xlsx'),sheet_name='costs')
+    cost_df = pd.read_excel(os.path.join(incoming_data_path,'costs','port','port_costs.xlsx'),sheet_name='costs')
     port_edges['min_gcost'] = cost_df['min_cost'].values[0]
     port_edges['max_gcost'] = cost_df['max_cost'].values[0]
     port_edges.crs = {'init' :'epsg:4326'}
@@ -341,6 +395,8 @@ def main(config):
     port_edges.drop('geometry', axis=1, inplace=True)
     port_edges.to_csv(os.path.join(data_path,'network','port_edges.csv'),encoding='utf-8-sig',index=False)
 
+    port_nodes.rename(columns={'id':'node_id'},inplace=True)
+    port_nodes.to_file(os.path.join(data_path,'network','port_nodes.shp'),encoding = 'utf-8')
     port_nodes.drop('geometry', axis=1, inplace=True)
     port_nodes.to_csv(os.path.join(data_path,'network','port_nodes.csv'),encoding='utf-8-sig',index=False)
 
