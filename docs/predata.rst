@@ -177,7 +177,8 @@ Creating the rail network and OD matrix
        "OD data", "Secretaría de Planificación de Cargas"
        "Transport Costs","Estimated from COSFER model by Secretaría de Planificación de Transporte"
 
-    Rail GIS data can also be downloaded from the portal https://ide.transporte.gob.ar/geoserver/web/. See the Python script :py:mod:`atra.preprocess.scrape_wfs`
+    Rail GIS data can also be downloaded from the portal https://ide.transporte.gob.ar/geoserver/web/. 
+    See the Python script :py:mod:`atra.preprocess.scrape_wfs`
 
     The original rail OD data provided by the Secretaría de Planificación de Cargas contains station-station OD matrices which are time-stamped for the year 2015. But there are several issues with using the rail GIS network and OD data directly:
         - The names of the OD stations do not always match the nodes in the GIS data. So we do not always know the location of OD nodes
@@ -326,16 +327,14 @@ Industry specific province-level OD matrix
 
 Preparing Hazard Data
 ---------------------
-Purpose:
-    - Convert GeoTiff raster hazard datasets to shapefiles based on masking and selecting values from
-        - Single-band raster files
+.. Note::
+    - Convert GeoTiff raster hazard datasets to shapefiles based on flood depth thresholds 
+        - Run :py:mod:`atra.preprocess.convert_hazard_data`
 
-Execution:
-    - Load data as described in `Processed Data Assembly <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html>`_ `Hazards <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#hazards>`_
-    - Run :py:mod:`atra.preprocess.convert_hazard_data`
+    - Load data as described in `Hazards data requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#hazards-data-requirements>`_
 
-Result:
-    - Create hazard shapefiles with names described in excel sheet in `Processed Data Assembly <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html>`_ `Hazards <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#hazards>`_ and attributes:
+    - Create hazard shapefiles with:
         - ``ID`` - equal to 1
         - ``geometry`` - Polygon outline of selected hazard
+    
     - Store outputs in same paths in directory ``/data/flood_data/FATTHOM``
