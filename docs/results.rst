@@ -293,4 +293,4 @@ Processing outputs and plots
 Purpose:
     - Several scripts are written to generate statistics and plots to process results
     - These codes are very specific to the kinds of data and outputs produced from the analysis
-    - See the scripts with :py:mod:`atra.stats` and :py:mod:`atra.plot` 
+    - See the scripts with :py:mod:`atra.stats` and :py:mod:`atra.plot`
