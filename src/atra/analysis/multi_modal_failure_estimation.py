@@ -1,19 +1,18 @@
 """Failure analysis of national-scale networks
 For transport modes at national scale:
-
-    - road
     - rail
+    - Can do raod as well
 
 Input data requirements
 -----------------------
 
 1. Correct paths to all files and correct input parameters
-2. Excel sheets with results of flow mapping based on MIN-MAX generalised costs estimates:
+2. csv sheets with results of flow mapping based on MIN-MAX generalised costs estimates:
 
     - origin - String node ID of Origin
     - destination - String node ID of Destination
-    - o_region - String name of Province of Origin node ID
-    - d_region - String name of Province of Destination node ID
+    - origin_province - String name of Province of Origin node ID
+    - destination_province - String name of Province of Destination node ID
     - min_edge_path - List of string of edge ID's for paths with minimum generalised cost flows
     - max_edge_path - List of string of edge ID's for paths with maximum generalised cost flows
     - min_distance - Float values of estimated distance for paths with minimum generalised cost flows
@@ -22,8 +21,6 @@ Input data requirements
     - max_time - Float values of estimated time for paths with maximum generalised cost flows
     - min_gcost - Float values of estimated generalised cost for paths with minimum generalised cost flows
     - max_gcost - Float values of estimated generalised cost for paths with maximum generalised cost flows
-    - min_vehicle_nums - Float values of estimated vehicle numbers for paths with minimum generalised cost flows
-    - max_vehicle_nums - Float values of estimated vehicle numbers for paths with maximum generalised cost flows
     - industry_columns - All daily tonnages of industry columns given in the OD matrix data
 
 3. Shapefiles
@@ -40,13 +37,12 @@ Csv sheets with results of failure analysis:
     - edge_id - String name or list of failed edges
     - origin - String node ID of Origin of disrupted OD flow
     - destination - String node ID of Destination of disrupted OD flow
-    - o_region - String name of Province of Origin node ID of disrupted OD flow
-    - d_region - String name of Province of Destination node ID of disrupted OD flow
+    - origin_province - String name of Province of Origin node ID of disrupted OD flow
+    - destination_province - String name of Province of Destination node ID of disrupted OD flow
     - no_access - Boolean 1 (no reroutng) or 0 (rerouting)
     - min/max_distance - Float value of estimated distance of OD journey before disruption
     - min/max_time - Float value of estimated time of OD journey before disruption
     - min/max_gcost - Float value of estimated travel cost of OD journey before disruption
-    - min/max_vehicle_nums - Float value of estimated vehicles of OD journey before disruption
     - new_cost - Float value of estimated cost of OD journey after disruption
     - new_distance - Float value of estimated distance of OD journey after disruption
     - new_path - List of string edge ID's of estimated new route of OD journey after disruption
@@ -54,22 +50,22 @@ Csv sheets with results of failure analysis:
     - dist_diff - Float value of Post disruption minus per-disruption distance
     - time_diff - Float value Post disruption minus per-disruption timee
     - min/max_tr_loss - Float value of estimated change in rerouting cost
-    - industry_columns - Float values of all daily tonnages of industry columns along disrupted OD pairs
     - min/max_tons - Float values of total daily tonnages along disrupted OD pairs
+    - industry_columns - Float values of all daily tonnages of industry columns along disrupted OD pairs
 
 2. Isolated OD scenarios - OD flows with no rerouting options
 
     - edge_id - String name or list of failed edges
-    - o_region - String name of Province of Origin node ID of disrupted OD flow
-    - d_region - String name of Province of Destination node ID of disrupted OD flow
+    - origin_province - String name of Province of Origin node ID of disrupted OD flow
+    - destination_province - String name of Province of Destination node ID of disrupted OD flow
     - industry_columns - Float values of all daily tonnages of industry columns along disrupted OD pairs
     - min/max_tons - Float values of total daily tonnages along disrupted OD pairs
 
 3. Rerouting scenarios - OD flows with rerouting options
 
     - edge_id - String name or list of failed edges
-    - o_region - String name of Province of Origin node ID of disrupted OD flow
-    - d_region - String name of Province of Destination node ID of disrupted OD flow
+    - origin_province - String name of Province of Origin node ID of disrupted OD flow
+    - destination_province - String name of Province of Destination node ID of disrupted OD flow
     - min/max_tr_loss - Float value of change in rerouting cost
     - min/max_tons - Float values of total daily tonnages along disrupted OD pairs
 
@@ -79,14 +75,6 @@ Csv sheets with results of failure analysis:
     - no_access - Boolean 1 (no reroutng) or 0 (rerouting)
     - min/max_tr_loss - Float values of change in rerouting cost
     - min/max_tons - Float values of total daily tonnages affted by disrupted edge
-
-5. Shapefile Min-max combined scenarios - Combined min-max reults along each edge
-    - edge_id - String name or list of failed edges
-    - no_access - Boolean 1 (no reroutng) or 0 (rerouting)
-    - min/max_tr_loss - Float values of change in rerouting cost
-    - min/max_tons - Float values of total daily tonnages affted by disrupted edge
-    - geometry - Shapely LineString geomtry of edges
-
 """
 import ast
 import copy
@@ -117,27 +105,23 @@ def main():
     Supply input data and parameters
 
     1. Names of modes
-        List of strings
-    2. Unit weight of vehicle assumed for each mode
-        List of float types
-    3. Range of usage factors for each mode to represent uncertainty in cost estimations
-        List of tuples of float types
-    4. Min-max names of names of different types of attributes - paths, distance, time, cost, vehicles, tons
+        String
+    2. Names of min-max tons columns in sector data
         List of string types
-    5. Names of commodity/industry columns for which min-max tonnage column names already exist
+    3. Min-max names of names of different types of attributes - paths, distance, time, cost, tons
         List of string types
-    6. Percentage of OD flows that are assumed disrupted
+    4. Names of commodity/industry columns for which min-max tonnage column names already exist
+        List of string types
+    5. Percentage of OD flows that are assumed disrupted
         List of float type
-    7. Condition on whether analysis is single failure or multiple failure
+    6. Condition on whether analysis is single failure or multiple failure
         Boolean condition True or False
 
     Give the paths to the input data files:
 
-    1. Network edges Excel and shapefiles
-    2. OD flows Excel file
-    3. Costs of modes Excel file
-    4. Road properties Excel file
-    5. Failure scenarios Excel file
+    1. Network edges csv and shapefiles
+    2. OD flows csv file
+    3. Failure scenarios csv file
 
     Specify the output files and paths to be created
     """
@@ -147,54 +131,11 @@ def main():
     # Supply input data and parameters
     modes = [
                 {
-                'sector':'road',
-                'vehicle_wt':15.0,
-                'min_tons_column':'total_tons',
-                'max_tons_column':'total_tons',
-                'min_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                    'Carnes','Combustibles',
-                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-                    'INDUSTRIA MANUFACTURERA','Industrializados',
-                    'Mineria','PESCA','Regionales','Semiterminados'],
-                'max_ind_cols':['total_tons','AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                    'Carnes','Combustibles',
-                    'EXPLOTACIÓN DE MINAS Y CANTERAS','Granos',
-                    'INDUSTRIA MANUFACTURERA','Industrializados',
-                    'Mineria','PESCA','Regionales','Semiterminados']},
-                {
                 'sector':'rail',
-                'vehicle_wt':1,
                 'min_tons_column':'min_total_tons',
                 'max_tons_column':'max_total_tons',
-                'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                                'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
-                                'min_total_tons'],
-                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES',
-                                'max_total_tons']
                 }
     ]
-
-    modes = [
-                {
-                'sector':'rail',
-                'vehicle_wt':1.0,
-                'min_tons_column':'min_total_tons',
-                'max_tons_column':'max_total_tons',
-                'min_ind_cols':['min_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                                'min_COMERCIO','min_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'min_INDUSTRIA MANUFACTURERA','min_TRANSPORTE Y COMUNICACIONES',
-                                'min_total_tons'],
-                'max_ind_cols':['max_AGRICULTURA, GANADERÍA, CAZA Y SILVICULTURA',
-                                'max_COMERCIO', 'max_EXPLOTACIÓN DE MINAS Y CANTERAS',
-                                'max_INDUSTRIA MANUFACTURERA', 'max_TRANSPORTE Y COMUNICACIONES',
-                                'max_total_tons']
-                }
-    ]
-
-
     types = ['min', 'max']
     path_types = ['min_edge_path', 'max_edge_path']
     dist_types = ['min_distance', 'max_distance']
@@ -207,7 +148,7 @@ def main():
     network_data_path = os.path.join(data_path,'network')
     flow_paths_data = os.path.join(output_path, 'flow_mapping_paths')
     fail_scenarios_data = os.path.join(
-        output_path, 'hazard_scenarios', 'national_scale_hazard_intersections.xlsx')
+        output_path, 'hazard_scenarios')
 
     # Specify the output files and paths to be created
     shp_output_path = os.path.join(output_path, 'failure_shapefiles')
@@ -253,9 +194,6 @@ def main():
             G_df = G_df[G_df['max_total_tons'] > 0]
         elif mds[m] == 'multi':
             G_df = G_df[G_df['operation_state'] == 'operational']
-        elif mds[m] == 'road':
-            veh_wt = 15.0
-            G_df = add_dataframe_generalised_costs(G_df, 1.0/veh_wt, 1)
 
         G_multi_df.append(G_df)
 
@@ -267,12 +205,11 @@ def main():
     for m in range(len(modes)):
         # Create failure scenarios
         print ('* Creating {} failure scenarios'.format(modes[m]['sector']))
-        fail_df = pd.read_excel(fail_scenarios_data, sheet_name=modes[m]['sector'])
+        fail_df = pd.read_csv(os.path.join(
+                        fail_scenarios_data, 
+                        '{}_hazard_intersections.csv'.format(modes[m]['sector'])))
         ef_sc_list = edge_failure_sampling(fail_df,'edge_id')
         print ('Number of failure scenarios',len(ef_sc_list))
-
-
-        # ef_sc_list = ef_sc_list[0:10]
 
         for perct in percentage:
             # Load flow paths
@@ -302,8 +239,8 @@ def main():
                     fail_edge = ef_sc_list[f_edge]
                     if isinstance(fail_edge,list) == False:
                         fail_edge = [fail_edge]
-                    ef_dict = igraph_scenario_edge_failures(
-                            G_multi_df, fail_edge, flow_df, modes[m]['vehicle_wt'],path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
+                    ef_dict = igraph_scenario_edge_failures_new(
+                            G_multi_df, fail_edge, flow_df,path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
                     if ef_dict:
                         ef_list += ef_dict
 
@@ -385,12 +322,6 @@ def main():
 
             df_path = os.path.join(minmax_combine,file_name + '.csv')
             edge_impact.to_csv(df_path, index = False,encoding='utf-8-sig')
-
-            # # Create network shapefiles with flows
-            # print ('* Creating {} network shapefiles with failure results'.format(modes[m]))
-            # shp_path = os.path.join(
-            #     shp_output_path,file_name + '.shp')
-            # network_failure_assembly_shapefiles(edge_impact,gdf_edges, save_edges=True, shape_output_path=shp_path)
 
 
 if __name__ == "__main__":

@@ -17,11 +17,18 @@ import numpy as np
 import pandas as pd
 from atra.utils import *
 from atra.transport_flow_and_failure_functions import *
+from tqdm import tqdm
 
+def correct_economic_loss_estimates(x):
+    if (x.min_total_tons == x.max_total_tons) and (x.min_econ_loss == 0) and (x.max_econ_loss > 0):
+        return x.max_econ_loss
+    else:
+        return x.min_econ_loss
 
 def main():
     """Process results
     """
+    tqdm.pandas()
     data_path, calc_path, output_path = load_config()['paths']['data'], load_config()[
         'paths']['calc'], load_config()['paths']['output']
 
@@ -108,6 +115,7 @@ def main():
                                            'edge_id']).fillna(0)
 
                     all_results = rearrange_minmax_values(all_results)
+                    all_results['min_econ_loss'] = all_results.progress_apply(correct_economic_loss_estimates,axis=1)
 
                     all_results['min_econ_impact'] = all_results['min_tr_loss'] + all_results['min_econ_loss']
                     all_results['max_econ_impact'] = all_results['max_tr_loss'] + all_results['max_econ_loss']

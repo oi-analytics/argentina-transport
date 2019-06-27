@@ -19,7 +19,9 @@ import pandas as pd
 from atra.utils import *
 from tqdm import tqdm
 
-def spatial_scenario_selection(network_shapefile, polygon_dataframe, hazard_dictionary, data_dictionary,network_id_column,network_type ='nodes'):
+def spatial_scenario_selection(network_shapefile, 
+                    polygon_dataframe, hazard_dictionary, 
+                    data_dictionary,network_id_column,network_type ='nodes'):
     """Intersect network edges/nodes and boundary Polygons to collect boundary and hazard attributes
 
     Parameters
@@ -371,16 +373,6 @@ def write_flow_paths_to_network_files(save_paths_df,
 
     del gdf_edges, save_paths_df
 
-def get_flow_paths_indexes_of_edges(flow_dataframe,path_criteria):
-    tqdm.pandas()
-    flow_dataframe[path_criteria] = flow_dataframe.progress_apply(lambda x:ast.literal_eval(x[path_criteria]),axis=1)
-    edge_path_index = defaultdict(list)
-    for k,v in zip(chain.from_iterable(flow_dataframe[path_criteria].ravel()), flow_dataframe.index.repeat(flow_dataframe[path_criteria].str.len()).tolist()):
-        edge_path_index[k].append(v)
-
-    del flow_dataframe
-    return edge_path_index
-
 def identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria):
     """Identify all paths that contain an edge
 
@@ -409,89 +401,9 @@ def identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,pat
     edge_path_index = list(set(edge_path_index))
     return network_df, edge_path_index
 
-def igraph_scenario_edge_failures_changing_tonnages(network_df_in, edge_failure_set,
-    flow_dataframe, vehicle_weight, path_criteria, tons_criteria, cost_criteria, time_criteria):
-    """Estimate network impacts of each failures
-    When the tariff costs of each path depends on the changing tonnages
-
-    Parameters
-    ---------
-    network_df_in - Pandas DataFrame of network
-    edge_failure_set - List of string edge ID's
-    flow_dataframe - Pandas DataFrame of list of edge paths
-    vehicle_weight - Float weight of vehcile weight
-    path_criteria - String name of column of edge paths in flow dataframe
-    tons_criteria - String name of column of path tons in flow dataframe
-    cost_criteria - String name of column of path costs in flow dataframe
-    time_criteria - String name of column of path travel time in flow dataframe
-
-
-    Returns
-    -------
-    edge_failure_dictionary : list[dict]
-        With attributes
-        edge_id - String name or list of failed edges
-        origin - String node ID of Origin of disrupted OD flow
-        destination - String node ID of Destination of disrupted OD flow
-        no_access - Boolean 1 (no reroutng) or 0 (rerouting)
-        new_cost - Float value of estimated cost of OD journey after disruption
-        new_distance - Float value of estimated distance of OD journey after disruption
-        new_path - List of string edge ID's of estimated new route of OD journey after disruption
-        new_time - Float value of estimated time of OD journey after disruption
-    """
-    edge_fail_dictionary = []
-
-    network_df,edge_path_index = identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria)
-
-    if edge_path_index:
-        if len(edge_failure_set) == 1:
-            edge_failure_set = edge_failure_set[0]
-
-        network_graph = ig.Graph.TupleList(network_df.itertuples(
-            index=False), edge_attrs=list(network_df.columns)[2:])
-
-        for e in edge_path_index:
-            origin = flow_dataframe.iloc[e]['origin_id']
-            destination = flow_dataframe.iloc[e]['destination_id']
-            origin_node = [x for x in network_graph.vs if x['name'] == origin]
-            destination_node = [x for x in network_graph.vs if x['name'] == destination]
-
-            if not origin_node or not destination_node:
-                # no alternative path exists
-                edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destination,
-                                             'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
-
-            else:
-                tons = flow_dataframe.iloc[e][tons_criteria]
-                vh_nums = math.ceil(1.0*tons/vehicle_weight)
-                network_graph = add_igraph_generalised_costs(
-                    network_graph, vh_nums, tons)
-                new_route = network_graph.get_shortest_paths(
-                    origin, destination, weights=cost_criteria, output='epath')[0]
-                if not new_route:
-                    # no alternative path exists
-                    edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destination,
-                                                 'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
-
-                else:
-                    new_dist = 0
-                    new_time = 0
-                    new_gcost = 0
-                    new_path = []
-                    for n in new_route:
-                        new_dist += network_graph.es[n]['length']
-                        new_time += network_graph.es[n][time_criteria]
-                        new_gcost += network_graph.es[n][cost_criteria]
-                        new_path.append(network_graph.es[n]['edge_id'])
-
-                    edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destination,
-                                                 'new_path':new_path,'new_distance': new_dist, 'new_time': new_time, 'new_cost': new_gcost, 'no_access': 0})
-
-    return edge_fail_dictionary
-
 
 def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
-    flow_dataframe,edge_flow_path_indexes, vehicle_weight, path_criteria,
+    flow_dataframe,edge_flow_path_indexes, path_criteria,
     tons_criteria, cost_criteria, time_criteria,transport_mode,new_path = True):
     """Estimate network impacts of each failures
     When the tariff costs of each path are fixed by vehicle weight
@@ -501,7 +413,6 @@ def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
     network_df_in - Pandas DataFrame of network
     edge_failure_set - List of string edge ID's
     flow_dataframe - Pandas DataFrame of list of edge paths
-    vehicle_weight - Float weight of vehcile weight
     path_criteria - String name of column of edge paths in flow dataframe
     tons_criteria - String name of column of path tons in flow dataframe
     cost_criteria - String name of column of path costs in flow dataframe
@@ -522,8 +433,7 @@ def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
         new_time - Float value of estimated time of OD journey after disruption
     """
     edge_fail_dictionary = []
-    # network_df,edge_path_index = identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria)
-
+    
     edge_path_index = list(set(list(chain.from_iterable([path_idx for path_key,path_idx in edge_flow_path_indexes.items() if path_key in edge_failure_set]))))
 
     if edge_path_index:

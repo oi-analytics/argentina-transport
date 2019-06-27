@@ -51,8 +51,6 @@ Results
     - max_time - Float values of estimated time for paths with maximum generalised cost flows
     - min_gcost - Float values of estimated generalised cost for paths with minimum generalised cost flows
     - max_gcost - Float values of estimated generalised cost for paths with maximum generalised cost flows
-    - min_vehicle_nums - Float values of estimated vehicle numbers for paths with minimum generalised cost flows
-    - max_vehicle_nums - Float values of estimated vehicle numbers for paths with maximum generalised cost flows
     - industry_columns - All daily tonnages of industry columns given in the OD matrix data
 
 2. Shapefiles
@@ -83,7 +81,7 @@ from tqdm import tqdm
 from atra.transport_flow_and_failure_functions import *
 from atra.utils import *
 
-def network_od_paths_assembly(points_dataframe, graph, vehicle_wt, transport_mode,
+def network_od_paths_assembly(points_dataframe, graph, transport_mode,
                                 min_tons_column,max_tons_column,csv_output_path=''):
     """Assemble estimates of OD paths, distances, times, costs and tonnages on networks
 
@@ -93,8 +91,6 @@ def network_od_paths_assembly(points_dataframe, graph, vehicle_wt, transport_mod
         OD nodes and their tonnages
     graph
         igraph network structure
-    vehicle_wt : float
-        unit weight of vehicle
     region_name : str
         name of Province
     excel_writer
@@ -117,8 +113,6 @@ def network_od_paths_assembly(points_dataframe, graph, vehicle_wt, transport_mod
         - max_time - Float values of estimated time for paths with maximum generalised cost flows
         - min_gcost - Float values of estimated generalised cost for paths with minimum generalised cost flows
         - max_gcost - Float values of estimated generalised cost for paths with maximum generalised cost flows
-        - min_vehicle_nums - Float values of estimated vehicle numbers for paths with minimum generalised cost flows
-        - max_vehicle_nums - Float values of estimated vehicle numbers for paths with maximum generalised cost flows
 
     """
     save_paths = []
@@ -177,10 +171,6 @@ def main():
     2. Supply input data and parameters
         - Percentage of OD flow we want to send along path: FLoat type
         - Names of modes: List of dictionaries
-        - 
-        - Unit weight of vehicle assumed for each mode: List of float types. 
-            Only used for roads where unit truck weight is 15 tons for estimating Generalised Cost (GC)
-            For other sectors we already know the GC
         - Names of min-max tonnage column names in OD data
 
     3. Give the paths to the input data files:
@@ -198,19 +188,16 @@ def main():
     modes = [
                 {
                 'sector':'road',
-                'vehicle_wt':15,
                 'min_tons_column':'total_tons',
                 'max_tons_column':'total_tons',
                 },
                 {
                 'sector':'rail',
-                'vehicle_wt':1,
                 'min_tons_column':'min_total_tons',
                 'max_tons_column':'max_total_tons',
                 },
                 {
                 'sector':'port',
-                'vehicle_wt':1,
                 'min_tons_column':'min_total_tons',
                 'max_tons_column':'max_total_tons',
                 }
@@ -239,9 +226,6 @@ def main():
             print ('* Loading {} igraph network and GeoDataFrame'.format(modes[m]['sector']))
             edges_in = pd.read_csv(os.path.join(network_data_path,'{}_edges.csv'.format(modes[m]['sector'])),encoding='utf-8-sig')
             G = ig.Graph.TupleList(edges_in.itertuples(index=False), edge_attrs=list(edges_in.columns)[2:])
-            # Create the road generlised cost based on the unit vehicle weights
-            if modes[m]['sector'] == 'road':
-                G = add_igraph_generalised_costs(G, 1.0/modes[m]['vehicle_wt'], 1)
             del edges_in
             gdf_edges = gpd.read_file(os.path.join(network_data_path,'{}_edges.shp'.format(modes[m]['sector'])),encoding='utf-8')
             gdf_edges = gdf_edges[['edge_id','geometry']]
@@ -260,15 +244,12 @@ def main():
                 min_ind_cols = all_ods_tons_cols
                 max_ind_cols = all_ods_tons_cols
             
-            if modes[m]['sector'] == 'road':
-                all_ods['vehicle_nums'] = np.maximum(1, np.ceil(all_ods['total_tons']/modes[m]['vehicle_wt']))
-
             all_ods[all_ods_tons_cols] = 0.01*perct*all_ods[all_ods_tons_cols]
             # Calculate mode OD paths
             print ('* Calculating {} OD paths'.format(modes[m]))
             csv_output_path = os.path.join(flow_paths_dir,'flow_paths_{}_{}_percent_assignment.csv'.format(modes[m]['sector'],int(perct)))
             all_paths = network_od_paths_assembly(
-                all_ods, G, modes[m]['vehicle_wt'], modes[m]['sector'],modes[m]['min_tons_column'],modes[m]['max_tons_column'],csv_output_path=csv_output_path)
+                all_ods, G, modes[m]['sector'],modes[m]['min_tons_column'],modes[m]['max_tons_column'],csv_output_path=csv_output_path)
 
             del all_ods
             # Create network shapefiles with flows

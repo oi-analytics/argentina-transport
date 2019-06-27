@@ -200,6 +200,8 @@ def assign_min_max_speeds_to_roads(x,speeds_list):
 
 def assign_minmax_time_costs_roads(x, road_costs,exchange_rate):
     """Assign time costs to roads
+        These are the Vehicle Operating Costs (VOC)
+        Based on DNV data
 
     Parameters
         x - Pandas DataFrame of values
@@ -252,6 +254,30 @@ def assign_minmax_tariff_costs_roads_apply(x,tariff_costs_dataframe,exchange_rat
 
     return min_cost,max_cost
 
+def add_roads_generalised_costs(G):
+    """Assign Generailsed costs to roads
+        The costs are assigned for a unit tonnage of an assumed prototype truck
+        Generalised Cost =  VOC per vehicle ton + Tariff Costs
+
+    Paramters
+        G - Pandas dataframe of roads containing time and tariff costs
+        vehicle_tonnage - Assumed unit weight of a truck in tons
+
+    Returns
+        Numeric values of roads min-max generalised costs
+    """
+    vehicle_tonnage = 15.0
+    G['max_gcost'] = list(
+
+            (1.0/vehicle_tonnage) * np.array(G['max_time_cost'])
+            + 1.0 * np.array(G['max_tariff_cost'])
+    )
+    G['min_gcost'] = list(
+            (1.0/vehicle_tonnage) * np.array(G['min_time_cost'])
+            + 1.0 * np.array(G['min_tariff_cost'])
+    )
+
+    return G
 
 def road_shapefile_to_dataframe(edges,road_properties_dataframe,
     road_speeds_dataframe,time_costs_dataframe,tariff_costs_dataframe,exchange_rate):
@@ -266,15 +292,6 @@ def road_shapefile_to_dataframe(edges,road_properties_dataframe,
         edges: Geopandas DataFrame with network edge topology and attributes
     """
     tqdm.pandas()
-    add_columns = ['road_name','terrain','road_type','surface',
-        'road_cond','width','length',
-        'prog_min','prog_max','dist_min','dist_max',
-        'road_quality','road_service',
-        'min_speed','max_speed',
-        'min_time','max_time',
-        'min_time_cost','max_time_cost',
-        'min_tariff_cost','max_tariff_cost', 'tmda_count'
-        ]
 
     # assign road name
     edges['road_name'] = edges.progress_apply(assign_road_name, axis=1)
@@ -316,6 +333,9 @@ def road_shapefile_to_dataframe(edges,road_properties_dataframe,
     edges[['min_tariff_cost', 'max_tariff_cost']] = edges['tariff_cost'].apply(pd.Series)
     edges.drop('tariff_cost', axis=1, inplace=True)
 
+    edges = add_roads_generalised_costs(edges)
+
+    add_columns = [c for c in edges.columns.values.tolist() if c not in ['edge_id','from_node','to_node','geometry']]
     # make sure that From and To node are the first two columns of the dataframe
     # to make sure the conversion from dataframe to igraph network goes smooth
     edges = edges[['edge_id','from_node','to_node'] + add_columns + ['geometry']]
@@ -561,7 +581,9 @@ def main(config):
 
     '''Add properties to the national roads
     '''
+    km_markers= find_km_markers(edges[edges['road_type']=='national'][['edge_id','length','geometry']],marker_df)
     edges = pd.merge(edges,km_markers,how='left',on=['edge_id']).fillna(0)
+    del km_markers
     '''Add the quality and service
     '''
     for a in attributes_desc:
@@ -575,6 +597,7 @@ def main(config):
             edge_attr = get_numeric_attributes(edges[edges['road_type']=='national'][['edge_id','length','geometry']],road_attr,a['id_column'],a['attribute'],a['attribute_rename'])
 
         edges = pd.merge(edges,edge_attr,how='left',on=['edge_id']).fillna(0)
+        del edge_attr, road_attr
 
     edges = road_shapefile_to_dataframe(edges,road_properties_df,road_speeds_df,time_costs_df,tariff_costs_df,exchange_rate)
 
