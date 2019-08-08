@@ -141,6 +141,7 @@ def main():
     dist_types = ['min_distance', 'max_distance']
     time_types = ['min_time', 'max_time']
     cost_types = ['min_gcost', 'max_gcost']
+    index_cols = ['origin_id', 'destination_id', 'origin_province', 'destination_province']
     percentage = [100.0]
     single_edge = True
 
@@ -233,14 +234,18 @@ def main():
             # Perform failure analysis
             edge_fail_ranges = []
             for t in range(len(types)):
+                edge_path_idx = get_flow_paths_indexes_of_edges(flow_df,path_types[t])
                 print ('* Performing {} {} failure analysis'.format(types[t],modes[m]['sector']))
                 ef_list = []
                 for f_edge in range(len(ef_sc_list)):
                     fail_edge = ef_sc_list[f_edge]
                     if isinstance(fail_edge,list) == False:
                         fail_edge = [fail_edge]
+                    
                     ef_dict = igraph_scenario_edge_failures_new(
-                            G_multi_df, fail_edge, flow_df,path_types[t],modes[m]['{}_tons_column'.format(types[t])], cost_types[t], time_types[t],modes[m]['sector'])
+                            G_multi_df, fail_edge, flow_df,edge_path_idx,
+                            path_types[t],modes[m]['{}_tons_column'.format(types[t])], 
+                            cost_types[t], time_types[t],modes[m]['sector'],new_path=True)
                     if ef_dict:
                         ef_list += ef_dict
 
@@ -249,13 +254,17 @@ def main():
                 df = pd.DataFrame(ef_list)
 
                 print ('* Assembling {} {} failure results'.format(types[t],modes[m]['sector']))
-                ic_cols = modes[m]['{}_ind_cols'.format(types[t])]
 
+                ind_cols = [c for c in flow_df.columns.values.tolist() if c not in index_cols+dist_types+time_types+cost_types+path_types]
+                ic_cols = [c for c in ind_cols if '{}_'.format(types[t]) == c[:4]]
+                if len(ic_cols) == 0:
+                    ic_cols = ind_cols
 
                 select_cols = ['origin_id', 'destination_id', 'origin_province', 'destination_province', dist_types[t], time_types[t],
                                cost_types[t]] + ic_cols
                 flow_df_select = flow_df[select_cols]
-                flow_df_select = merge_failure_results(flow_df_select,df,modes[m]['{}_tons_column'.format(types[t])],
+                
+                flow_df_select = merge_failure_results(flow_df_select,df,'edge_id',modes[m]['{}_tons_column'.format(types[t])],
                     dist_types[t],time_types[t],cost_types[t])
 
                 del df

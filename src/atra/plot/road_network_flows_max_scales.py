@@ -28,10 +28,6 @@ def main():
     mode_file = pd.merge(mode_file,flow_file,how='left', on=['edge_id']).fillna(0)
     mode_file = mode_file[(mode_file['road_type'] == 'national') | (mode_file['road_type'] == 'province') | (mode_file['road_type'] == 'rural')]
 
-    # mode_file = mode_file[mode_file['max_total_tons'] > 0]
-    # mode_file = mode_file[(mode_file['road_type'] == 'rural') & (mode_file['max_total_tons'] > 0)]
-    # print (mode_file)
-
     plot_sets = [
         {
             'file_tag': 'tmda',
@@ -58,30 +54,7 @@ def main():
             'significance':0
         },
     ]
-
-    plot_sets = [
-        {
-            'file_tag': 'tmda',
-            'legend_label': "AADT (vehicles/day)",
-            'divisor': 365.0,
-            'columns': ['tmda_count'],
-            'title_cols': ['Vehicle Count'],
-            'significance':0
-        },
-    ]
-
-    plot_sets = [
-        {
-            'file_tag': 'commodities',
-            'legend_label': "AADF ('000 tons/day)",
-            'divisor': 1000,
-            'columns': ['max_{}'.format(x) for x in ['total_tons']],
-            'title_cols': ['Total tonnage'],
-            'significance':0
-        },
-    ]
-
-
+    
     for plot_set in plot_sets:
         for c in range(len(plot_set['columns'])):
             # basemap

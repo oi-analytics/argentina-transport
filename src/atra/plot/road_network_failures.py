@@ -81,59 +81,7 @@ def main():
             'significance': 0
         }
     ]
-    # plot_set = [
-    #     {
-    #         'column': 'min_total_tons',
-    #         'no_access':[0,1],
-    #         'title': 'Min Daily Tons disrupted',
-    #         'legend_label': "AADF disrupted ('000 tons/day)",
-    #         'divisor': 1000,
-    #         'significance': 0
-    #     },
-    #     {
-    #         'column': 'max_total_tons',
-    #         'no_access':[0,1],
-    #         'title': 'Max Daily Tons disrupted',
-    #         'legend_label': "AADF disrupted ('000 tons/day)",
-    #         'divisor': 1000,
-    #         'significance': 0
-    #     },
-    # ]
-
-    # plot_set = [
-    #     {
-    #         'column': 'min_total_tons',
-    #         'no_access':[0,1],
-    #         'title': 'Min Daily Tons disrupted',
-    #         'legend_label': "Tons disrupted ('000 tons/day)",
-    #         'divisor': 1000,
-    #         'significance': 0
-    #     },
-    #     {
-    #         'column': 'max_total_tons',
-    #         'no_access':[0,1],
-    #         'title': 'Max Daily Tons disrupted',
-    #         'legend_label': "Tons disrupted ('000 tons/day)",
-    #         'divisor': 1000,
-    #         'significance': 0
-    #     },
-    #     {
-    #         'column': 'min_econ_loss',
-    #         'no_access':[1],
-    #         'title': 'Min Macroeconomic losses',
-    #         'legend_label': "Economic loss (million USD/day)",
-    #         'divisor': 1000000,
-    #         'significance': 0
-    #     },
-    #     {
-    #         'column': 'max_econ_loss',
-    #         'no_access':[1],
-    #         'title': 'Max Macroeconomic losses',
-    #         'legend_label': "Economic loss (million USD/day)",
-    #         'divisor': 1000000,
-    #         'significance': 0
-    #     }
-    # ]
+    
     data_path = config['paths']['data']
     region_file_path = os.path.join(config['paths']['data'], 'network',
                                    'road_edges.shp')
@@ -150,7 +98,7 @@ def main():
         ax = get_axes()
         plot_basemap(ax, data_path)
         scale_bar(ax, location=(0.8, 0.05))
-        plot_basemap_labels(ax, data_path, include_regions=False)
+        plot_basemap_labels(ax, data_path, include_regions=True)
 
         column = plot_set[c]['column']
 

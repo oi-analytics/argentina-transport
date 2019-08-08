@@ -99,6 +99,9 @@ def main():
     boundary_cols = ['department_id','department_name','province_id','province_name']
     hazard_cols = ['climate_scenario','hazard_type','model','probability','year']
 
+    flood_types = ['fluvial flooding','pluvial flooding']
+    climate_scenarios = ['Baseline','Future_Med','Future_High'] 
+
     # Give the paths to the input data files
     hazard_path = os.path.join(output_path, 'hazard_scenarios')
 
@@ -108,8 +111,7 @@ def main():
             'national_scale_boundary_stats.xlsx')
 
     national_hazard_file = os.path.join(output_path,
-            'hazard_scenarios',
-            'national_scale_hazard_intersections.xlsx')
+            'hazard_scenarios')
 
     # Specify the output files and paths to be created
     output_dir = os.path.join(output_path, 'network_stats')
@@ -127,7 +129,10 @@ def main():
     '''Flood stats
     '''
     for m in range(len(modes)):
-        flood_df = pd.read_excel(national_hazard_file,sheet_name=modes[m],encoding='utf-8-sig')
+        flood_df = pd.read_csv(os.path.join(national_hazard_file,
+                            '{}_hazard_intersections.csv'.format(modes[m])),
+                            encoding='utf-8-sig')
+        
         network_stats = pd.read_excel(national_file,sheet_name=modes[m],encoding='utf-8-sig')
         if modes[m] in ['road','rail']:
             edges = pd.read_csv(os.path.join(data_path,'network','{}_edges.csv'.format(modes[m])),encoding='utf-8-sig')
@@ -158,8 +163,16 @@ def main():
             flood_df.rename(columns={'length':'exposure_length_km'},inplace=True)
             flood_df['return period'] = 1/flood_df['probability']
 
+            return_periods = list(set(flood_df['return period'].values.tolist()))
+            f_df = pd.DataFrame(return_periods,columns=['return period'])
             flood_df['percentage_exposure'] = 1.0*flood_df['exposure_length_km']/total_length
             # flood_df.to_csv(os.path.join(output_path,'network_stats','{}_flood_exposure.csv'.format(modes[m])))
+            for ft in flood_types:
+                for cs in climate_scenarios:
+                    f_s = flood_df[(flood_df['hazard_type'] == ft) & (flood_df['climate_scenario'] == cs)][['return period','exposure_length_km']]
+                    f_df = pd.merge(f_df,f_s,how='left',on=['return period']).fillna(0)
+                    f_df.rename(columns={'exposure_length_km':'{}_{}'.format(ft,cs)},inplace=True)
+
             del edges, network_stats, hazard_stats
         else:
             if modes[m] == 'port':
@@ -196,11 +209,19 @@ def main():
 
             total_nodes = len(nodes.index)
             flood_df = flood_df[['hazard_type','climate_scenario','probability']].groupby(['hazard_type','climate_scenario','probability']).size().reset_index(name='counts')
+            flood_df['return period'] = 1/flood_df['probability']
             flood_df['percentage_exposure'] = 1.0*flood_df['counts']/total_nodes
             # flood_df.to_csv(os.path.join(output_path,'network_stats','{}_flood_exposure.csv'.format(modes[m])))
+            return_periods = list(set(flood_df['return period'].values.tolist()))
+            f_df = pd.DataFrame(return_periods,columns=['return period'])
+            for ft in flood_types:
+                for cs in climate_scenarios:
+                    f_s = flood_df[(flood_df['hazard_type'] == ft) & (flood_df['climate_scenario'] == cs)][['return period','counts']]
+                    f_df = pd.merge(f_df,f_s,how='left',on=['return period']).fillna(0)
+                    f_df.rename(columns={'counts':'{}_{}'.format(ft,cs)},inplace=True)
             del nodes, network_stats, hazard_stats
 
-        flood_df.to_excel(nat_excel_writer, modes[m], index=False,encoding='utf-8-sig')
+        f_df.to_excel(nat_excel_writer, modes[m], index=False,encoding='utf-8-sig')
         nat_excel_writer.save()
         print ('* Done with mode:',modes[m])
 

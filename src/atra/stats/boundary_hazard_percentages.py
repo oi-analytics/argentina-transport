@@ -77,7 +77,6 @@ def main():
 
     # Supply input data and parameters
     modes = ['road','rail']
-    out_modes = ['national_roads', 'national_rail', 'air_ports', 'inland_ports', 'sea_ports']
     boundary_cols = ['department_id','department_name','province_id','province_name']
     hazard_cols = ['climate_scenario','hazard_type','model','probability','year']
     national_results = 'Yes'
@@ -85,7 +84,7 @@ def main():
     # Give the paths to the input data files
     national_file = os.path.join(output_path,
             'network_stats',
-            'national_scale_stats.xlsx')
+            'national_scale_boundary_stats.xlsx')
 
     national_hazard_file = os.path.join(output_path,
             'hazard_scenarios',

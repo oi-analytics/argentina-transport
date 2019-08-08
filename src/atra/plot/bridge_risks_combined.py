@@ -20,9 +20,8 @@ def main():
     data_path = config['paths']['data']
     output_path = config['paths']['output']
 
-    hazard_cols = ['hazard_type','climate_scenario','year']
-    duration = 10
-
+    hazard_cols = ['climate_scenario','year']
+    duration = 30
     hazard_set = [
         {
             'hazard': 'fluvial flooding',
@@ -37,7 +36,7 @@ def main():
     change_labels = ['< -100','-100 to -50','-50 to -10','-10 to 0','0 to 10','10 to 50','50 to 100',' > 100','No change/value']
     change_ranges = [(-1e10,-100),(-100,-50),(-50,-10),(-10,0),(0.001,10),(10,50),(50,100),(100,1e10)]
 
-    eael_set = [
+    risk_set = [
         {
             'column': 'max_eael',
             'title': 'Max EAEL',
@@ -61,38 +60,24 @@ def main():
         },
     ]
 
-    eael_set = [
-        {
-            'column': 'max_risk',
-            'title': 'Total Risk',
-            'legend_label': "Risk (million USD)",
-            'divisor': 1000000,
-            'significance': 0
-        },
-    ]
-
-
-    road_file_path = os.path.join(config['paths']['data'], 'network',
-                                   'road_edges.shp')
-    road_file = gpd.read_file(road_file_path,encoding='utf-8')
+    road_file = gpd.read_file(os.path.join(data_path, 'network',
+                                   'road_edges.shp'),encoding='utf-8')
     road_file = road_file[road_file['road_type'] == 'national']
 
-    region_file_path = os.path.join(config['paths']['data'], 'network',
-                               'bridge_edges.shp')
-    region_file = gpd.read_file(region_file_path,encoding='utf-8')
-
+    region_file = gpd.read_file(os.path.join(data_path, 'network',
+                               'bridge_edges.shp'),encoding='utf-8')
 
     fail_scenarios = pd.read_csv(os.path.join(output_path,
-                                'risk_results',
-                                'bridge_hazard_and_climate_risks.csv'))
+                            'risk_results',
+                            'bridge_combined_climate_risks.csv'))
     fail_scenarios['max_eael'] = duration*fail_scenarios['max_eael_per_day']
     fail_scenarios['max_risk'] = fail_scenarios['max_eael'] + fail_scenarios['ead']
-
-    all_edge_fail_scenarios = fail_scenarios[hazard_cols + ['bridge_id','ead','max_eael','max_risk']]
-    all_edge_fail_scenarios = all_edge_fail_scenarios.groupby(hazard_cols + ['bridge_id'])['ead','max_eael','max_risk'].max().reset_index()
+    
+    # all_edge_fail_scenarios = fail_scenarios[fail_scenarios['max_eael'] > 0]
+    all_edge_fail_scenarios = fail_scenarios
 
     # Climate change effects
-    all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(['hazard_type','bridge_id'])
+    all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(['bridge_id'])
     scenarios = list(set(all_edge_fail_scenarios.index.values.tolist()))
     change_tup = []
     for sc in scenarios:
@@ -103,7 +88,7 @@ def main():
             for e in range(len(eael)):
                 if eael[e] > 0:
                     # change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),cl,yrs,[0]*len(cl),eael,[1e9]*len(cl)))
-                    change_tup += [(sc[0],sc[1],cl[e],yrs[e],0,eael[e],1e9)]
+                    change_tup += [(sc,cl[e],yrs[e],0,eael[e],1e9)]
         elif len(yrs) > 1:
             vals = list(zip(cl,eael,yrs))
             vals = sorted(vals, key=lambda pair: pair[-1])
@@ -111,15 +96,13 @@ def main():
             cl = [c for (c,p,y) in vals[1:]]
             yrs = [y for (c,p,y) in vals[1:]]
             fut = [p for (c,p,y) in vals[1:]]
-            change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),cl,yrs,[vals[0][1]]*len(cl),fut,change))
+            change_tup += list(zip([sc]*len(cl),cl,yrs,[vals[0][1]]*len(cl),fut,change))
 
-    change_df = pd.DataFrame(change_tup,columns=['hazard_type','bridge_id',
-                                            'climate_scenario','year',
-                                            'current','future','change']).fillna(np.inf)
+    change_df = pd.DataFrame(change_tup,columns=['bridge_id','climate_scenario','year','current','future','change']).fillna(np.inf)
     change_df = change_df[change_df['change'] != np.inf]
-    change_df.to_csv(os.path.join(config['paths']['output'],
+    change_df.to_csv(os.path.join(output_path,
         'network_stats',
-        'national_bridge_hazard_specific_risk_climate_change.csv'
+        'national_bridge_{}_days_risks_climate_change_combined.csv'.format(duration)
         ), index=False
     )
 
@@ -127,9 +110,8 @@ def main():
     change_df = change_df.set_index(hazard_cols)
     scenarios = list(set(change_df.index.values.tolist()))
     for sc in scenarios:
-        hazard_type = sc[0]
-        climate_scenario = sc[1]
-        year = sc[2]
+        climate_scenario = sc[0]
+        year = sc[1]
         percentage = change_df.loc[[sc], 'change'].values.tolist()
         edges = change_df.loc[[sc], 'bridge_id'].values.tolist()
         edges_df = pd.DataFrame(list(zip(edges,percentage)),columns=['bridge_id','change'])
@@ -151,7 +133,7 @@ def main():
             zorder=5
         )
 
-        name = [c['name'] for c in hazard_set if c['hazard'] == hazard_type][0]
+        # name = [c['name'] for c in hazard_set if c['hazard'] == hazard_type][0]
         for record in edges_vals.itertuples():
             geom = record.geometry
             region_val = record.change
@@ -181,12 +163,13 @@ def main():
         else:
             climate_scenario = climate_scenario.upper()
 
-        title = 'Percentage change in Risks for {} {} {}'.format(name,climate_scenario.replace('_',' ').title(),year)
+        title = 'Percentage change in Flood Risks for {} {}'.format(climate_scenario.replace('_',' ').title(),year)
         print(" * Plotting {}".format(title))
 
         plt.title(title, fontsize=10)
         output_file = os.path.join(config['paths']['figures'],
-                                   'national-bridges-{}-{}-{}-risks-change-percentage.png'.format(name,climate_scenario.replace('-',' ').title(),year))
+                                   'national-bridges-{}-{}-{}-days-risks-change-percentage.png'.format(climate_scenario.replace('-',' ').title(),
+                                                                                                    year,duration))
         save_fig(output_file)
         plt.close()
 
@@ -196,22 +179,21 @@ def main():
     all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(hazard_cols)
     scenarios = list(set(all_edge_fail_scenarios.index.values.tolist()))
     for sc in scenarios:
-        hazard_type = sc[0]
-        climate_scenario = sc[1]
+        climate_scenario = sc[0]
         if climate_scenario == 'none':
-            climate_scenario = 'current'
+            climate_scenario = 'baseline'
         else:
             climate_scenario = climate_scenario.upper()
-        year = sc[2]
+        year = sc[1]
         max_risk = all_edge_fail_scenarios.loc[[sc], 'max_risk'].values.tolist()
         max_eael = all_edge_fail_scenarios.loc[[sc], 'max_eael'].values.tolist()
         ead = all_edge_fail_scenarios.loc[[sc], 'ead'].values.tolist()
         edges = all_edge_fail_scenarios.loc[[sc], 'bridge_id'].values.tolist()
-        edges_df = pd.DataFrame(list(zip(edges,ead,max_eael,max_risk)),columns=['bridge_id','ead','max_eael','max_risk'])
+        edges_df = pd.DataFrame(list(zip(edges,max_risk,max_eael,ead)),columns=['bridge_id','max_risk','max_eael','ead'])
         edges_vals = pd.merge(region_file,edges_df,how='left',on=['bridge_id']).fillna(0)
         del edges_df
 
-        for c in range(len(eael_set)):
+        for c in range(len(risk_set)):
             proj_lat_lon = ccrs.PlateCarree()
             ax = get_axes()
             plot_basemap(ax, data_path)
@@ -227,7 +209,7 @@ def main():
                 zorder=5
             )
             # generate weight bins
-            column = eael_set[c]['column']
+            column = risk_set[c]['column']
             weights = [record[column] for iter_, record in edges_vals.iterrows()]
 
             max_weight = max(weights)
@@ -273,7 +255,7 @@ def main():
                     edgecolor='none',
                     zorder=cat_style.zindex
                 )
-            name = [h['name'] for h in hazard_set if h['hazard'] == hazard_type][0]
+            # name = [h['name'] for h in hazard_set if h['hazard'] == hazard_type][0]
 
             x_l = -62.4
             x_r = x_l + 0.4
@@ -285,13 +267,13 @@ def main():
             ax.text(
                 x_l,
                 base_y + y_step - y_text_nudge,
-                eael_set[c]['legend_label'],
+                risk_set[c]['legend_label'],
                 horizontalalignment='left',
                 transform=proj_lat_lon,
                 size=10)
 
-            divisor = eael_set[c]['divisor']
-            significance_ndigits = eael_set[c]['significance']
+            divisor = risk_set[c]['divisor']
+            significance_ndigits = risk_set[c]['significance']
             max_sig = []
             for (i, ((nmin, nmax), line_style)) in enumerate(width_by_range.items()):
                 if round(nmin/divisor, significance_ndigits) < round(nmax/divisor, significance_ndigits):
@@ -335,7 +317,7 @@ def main():
             if climate_scenario == 'none':
                 climate_scenario = 'Current'
             
-            title = 'Bridges ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario.replace('_',' ').title(),year)
+            title = 'Bridges ({}) {} {}'.format(risk_set[c]['title'],climate_scenario.replace('_',' ').title(),year)
             print ('* Plotting ',title)
 
             plt.title(title, fontsize=12)
@@ -344,10 +326,9 @@ def main():
             # output
             output_file = os.path.join(
                 config['paths']['figures'], 
-                'national-bridges-{}-{}-{}-{}.png'.format(name.replace(' ',''),
-                                                            climate_scenario.replace('.',''),
-                                                            year,
-                                                            eael_set[c]['column']))
+                'national-bridges-{}-{}-{}-{}-days.png'.format(climate_scenario.replace('.',''),
+                                                        year,
+                                                        risk_set[c]['column'],duration))
             save_fig(output_file)
             plt.close()
 

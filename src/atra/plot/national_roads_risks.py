@@ -20,6 +20,8 @@ def main():
 
     hazard_cols = ['hazard_type','climate_scenario','year']
     duration = 10
+    data_path = config['paths']['data']
+    output_path = config['paths']['output']
 
     hazard_set = [
         {
@@ -37,51 +39,62 @@ def main():
 
     eael_set = [
         {
-            'column': 'min_eael',
-            'title': 'Min EAEL',
-            'legend_label': "EAEL (million USD)",
-            'divisor': 1000000,
-            'significance': 0
-        },
-        {
             'column': 'max_eael',
             'title': 'Max EAEL',
             'legend_label': "EAEL (million USD)",
             'divisor': 1000000,
             'significance': 0
-        }
+        },
+        {
+            'column': 'ead',
+            'title': 'EAD',
+            'legend_label': "EAD (million USD)",
+            'divisor': 1000000,
+            'significance': 0
+        },
+        {
+            'column': 'max_risk',
+            'title': 'Total Risk',
+            'legend_label': "Risk (million USD)",
+            'divisor': 1000000,
+            'significance': 0
+        },
     ]
 
-    data_path = config['paths']['data']
+    eael_set = [
+        {
+            'column': 'max_risk',
+            'title': 'Total Risk',
+            'legend_label': "Risk (million USD)",
+            'divisor': 1000000,
+            'significance': 0
+        },
+    ]
 
-    region_file_path = os.path.join(config['paths']['data'], 'network',
+
+    region_file_path = os.path.join(data_path, 'network',
                                'road_edges.shp')
     region_file = gpd.read_file(region_file_path,encoding='utf-8')
     region_file = region_file[(region_file['road_type'] == 'national') | (region_file['road_type'] == 'province') | (region_file['road_type'] == 'rural')]
 
 
-    flow_file_path = os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
-                               'single_edge_failures_minmax_road_100_percent_disrupt.csv')
-    flow_file = pd.read_csv(flow_file_path)
+    fail_scenarios = pd.read_csv(os.path.join(output_path,
+                                'risk_results',
+                                'road_hazard_and_climate_risks.csv'))
+    fail_scenarios['max_eael'] = duration*fail_scenarios['max_eael_per_day']
+    fail_scenarios['max_risk'] = fail_scenarios['max_eael'] + fail_scenarios['ead']
 
-    flow_file_path = os.path.join(config['paths']['output'], 'network_stats',
-                               'national_road_hazard_intersections_risks.csv')
-
-    fail_sc = pd.read_csv(flow_file_path)
-    fail_scenarios = pd.merge(fail_sc,flow_file,how='left', on=['edge_id']).fillna(0)
-    del flow_file, fail_sc
-
-    fail_scenarios['min_eael'] = duration*fail_scenarios['risk_wt']*fail_scenarios['min_econ_impact']
-    fail_scenarios['max_eael'] = duration*fail_scenarios['risk_wt']*fail_scenarios['max_econ_impact']
-    all_edge_fail_scenarios = fail_scenarios[hazard_cols + ['edge_id','min_eael','max_eael']]
-    all_edge_fail_scenarios = all_edge_fail_scenarios.groupby(hazard_cols + ['edge_id'])['min_eael','max_eael'].max().reset_index()
+    all_edge_fail_scenarios = fail_scenarios[hazard_cols + ['edge_id','ead','max_eael','max_risk']]
+    all_edge_fail_scenarios = all_edge_fail_scenarios.groupby(hazard_cols + ['edge_id'])['ead',
+                                                                    'max_eael',
+                                                                    'max_risk'].max().reset_index()
 
     # Climate change effects
     all_edge_fail_scenarios = all_edge_fail_scenarios.set_index(['hazard_type','edge_id'])
     scenarios = list(set(all_edge_fail_scenarios.index.values.tolist()))
     change_tup = []
     for sc in scenarios:
-        eael = all_edge_fail_scenarios.loc[[sc], 'max_eael'].values.tolist()
+        eael = all_edge_fail_scenarios.loc[[sc], 'max_risk'].values.tolist()
         yrs = all_edge_fail_scenarios.loc[[sc], 'year'].values.tolist()
         cl = all_edge_fail_scenarios.loc[[sc], 'climate_scenario'].values.tolist()
         if 2016 not in yrs:
@@ -98,11 +111,13 @@ def main():
             fut = [p for (c,p,y) in vals[1:]]
             change_tup += list(zip([sc[0]]*len(cl),[sc[1]]*len(cl),cl,yrs,[vals[0][1]]*len(cl),fut,change))
 
-    change_df = pd.DataFrame(change_tup,columns=['hazard_type','edge_id','climate_scenario','year','current','future','change']).fillna('inf')
-    change_df = change_df[change_df['change'] != 'inf']
+    change_df = pd.DataFrame(change_tup,columns=['hazard_type','edge_id',
+                                                'climate_scenario','year',
+                                                'current','future','change']).fillna(np.inf)
+    change_df = change_df[change_df['change'] != np.inf]
     change_df.to_csv(os.path.join(config['paths']['output'],
         'network_stats',
-        'national_road_eael_climate_change.csv'
+        'national_road_hazard_specific_risk_climate_change.csv'
         ), index=False
     )
 
@@ -145,7 +160,7 @@ def main():
 
         ax.legend(
             handles=legend_handles,
-            title='Percentage change in EAEL',
+            title='Percentage change in Risks',
             loc=(0.55,0.2),
             fancybox=True,
             framealpha=1.0
@@ -155,7 +170,7 @@ def main():
         else:
             climate_scenario = climate_scenario.upper()
 
-        title = 'Percentage change in EAEL for {} {} {}'.format(name,climate_scenario.replace('_',' ').title(),year)
+        title = 'Percentage change in Risks for {} {} {}'.format(name,climate_scenario.replace('_',' ').title(),year)
         print(" * Plotting {}".format(title))
 
         plt.title(title, fontsize=10)
@@ -176,10 +191,11 @@ def main():
         else:
             climate_scenario = climate_scenario.upper()
         year = sc[2]
-        min_eael = all_edge_fail_scenarios.loc[[sc], 'min_eael'].values.tolist()
+        max_risk = all_edge_fail_scenarios.loc[[sc], 'max_risk'].values.tolist()
         max_eael = all_edge_fail_scenarios.loc[[sc], 'max_eael'].values.tolist()
+        ead = all_edge_fail_scenarios.loc[[sc], 'ead'].values.tolist()
         edges = all_edge_fail_scenarios.loc[[sc], 'edge_id'].values.tolist()
-        edges_df = pd.DataFrame(list(zip(edges,min_eael,max_eael)),columns=['edge_id','min_eael','max_eael'])
+        edges_df = pd.DataFrame(list(zip(edges,ead,max_eael,max_risk)),columns=['edge_id','ead','max_eael','max_risk'])
         edges_vals = pd.merge(region_file,edges_df,how='left',on=['edge_id']).fillna(0)
         del edges_df
 
@@ -306,7 +322,7 @@ def main():
             title = 'Roads ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario.replace('_',' ').title(),year)
             print ('* Plotting ',title)
 
-            plt.title(title, fontsize=14)
+            plt.title(title, fontsize=12)
             legend_from_style_spec(ax, styles,loc='lower left')
 
             # output

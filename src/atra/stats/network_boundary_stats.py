@@ -83,7 +83,9 @@ def main():
     # Give the paths to the input data files
     # load provinces and get geometry of the right province
     print('* Reading provinces dataframe')
-    province_path = os.path.join(incoming_data_path,'2','provincia','Provincias.shp')
+    province_path = os.path.join(incoming_data_path,
+                                    'admin_boundaries_and_census',
+                                    'provincia','Provincias.shp')
     provinces = gpd.read_file(province_path,encoding='utf-8')
     provinces = provinces.to_crs({'init': 'epsg:4326'})
     provinces.rename(columns={'OBJECTID':'province_id','nombre':'province_name','Geometry':'geom_type'},inplace=True)
@@ -92,7 +94,7 @@ def main():
     '''Assign provinces to zones
     '''
     print('* Reading department dataframe')
-    zones_path = os.path.join(incoming_data_path, '2',
+    zones_path = os.path.join(incoming_data_path, 'admin_boundaries_and_census',,
                                 'departamento', 'Departamentos.shp')
     zones = gpd.read_file(zones_path,encoding='utf-8')
     zones = zones.to_crs({'init': 'epsg:4326'})

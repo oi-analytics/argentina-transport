@@ -37,6 +37,7 @@ def main():
 
     # Supply input data and parameters
     modes = ['road', 'rail','bridge']
+    # modes = ['road']
     mode_files = ['road_edges','rail_edges','bridges']
     modes_id_cols = ['edge_id','edge_id','bridge_id']
     mode_length_thr = [500,500,5]
@@ -48,6 +49,10 @@ def main():
     # Give the paths to the input data files
     network_data_csv = os.path.join(data_path, 'network')
     fail_scenarios_data = os.path.join(output_path, 'hazard_scenarios')
+
+    risk_csv_dir = os.path.join(output_path, 'risk_results')
+    if os.path.exists(risk_csv_dir) == False:
+        os.mkdir(risk_csv_dir)
 
     # Process national scale results
     for m in range(len(modes)):
@@ -129,7 +134,7 @@ def main():
         scenarios_df.rename(
             columns={'road_length': '{}_length'.format(modes[m])}, inplace=True)
 
-        df_path = os.path.join(output_path, 'network_stats',
+        df_path = os.path.join(risk_csv_dir,
                                '{}_hazard_intersections_risk_weights.csv'.format(modes[m]))
         scenarios_df.to_csv(df_path, index=False)
         del scenarios_df

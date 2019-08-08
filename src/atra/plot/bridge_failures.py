@@ -154,7 +154,7 @@ def main():
         ax = get_axes()
         plot_basemap(ax, data_path)
         scale_bar(ax, location=(0.8, 0.05))
-        plot_basemap_labels(ax, data_path, include_regions=False)
+        plot_basemap_labels(ax, data_path, include_regions=True)
 
         ax.add_geometries(
             list(road_file.geometry),

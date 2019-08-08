@@ -50,15 +50,24 @@ def main():
                 filename = 'output_adaptation_{}_{}_days_max_{}_growth_disruption_fixed_parameters.csv'.format(
                             modes[m], dur,str(round(growth,1)).replace('.','p').replace('-','minus'))
 
-                adapt = pd.read_csv(os.path.join(output_path, 'adaptation_results', filename),encoding='utf-8-sig')
+                adapt = pd.read_csv(os.path.join(output_path, 
+                                                'adaptation_results', 
+                                                'combined_climate',
+                                                filename),encoding='utf-8-sig')
                 if modes[m] == 'road':
                     adapt_bcr = adapt[[modes_id[m],'max_exposure_length','min_bc_ratio','max_bc_ratio']]
                     adapt_bcr_min = adapt_bcr.groupby([modes_id[m]])['max_exposure_length','min_bc_ratio'].min().reset_index()
                     adapt_bcr_max = adapt_bcr.groupby([modes_id[m]])['max_exposure_length','max_bc_ratio'].max().reset_index()
-                    tot_max = adapt_bcr_max[adapt_bcr_max['max_bc_ratio'] > 1]['max_exposure_length'].sum()
+                    tot_max = len(adapt_bcr_max[adapt_bcr_max['max_bc_ratio'] > 1].index)
+                    tot_max_length = 0.001*adapt_bcr_max[adapt_bcr_max['max_bc_ratio'] > 1]['max_exposure_length'].sum()
                     tot_max_perc = 100*len(adapt_bcr_max[adapt_bcr_max['max_bc_ratio'] > 1].index)/len(adapt_bcr_max.index)
-                    tot_robust = adapt_bcr_min[adapt_bcr_min['min_bc_ratio'] > 1]['max_exposure_length'].sum()
+                    tot_robust = len(adapt_bcr_min[adapt_bcr_min['min_bc_ratio'] > 1].index)
+                    tot_robust_length = 0.001*adapt_bcr_min[adapt_bcr_min['min_bc_ratio'] > 1]['max_exposure_length'].sum()
                     tot_robust_perc = 100*len(adapt_bcr_min[adapt_bcr_min['min_bc_ratio'] > 1].index)/len(adapt_bcr_min.index)
+
+                    adapt_senstivity.append((dur,round(growth,1),
+                                            tot_max,tot_max_length,tot_max_perc,
+                                            tot_robust,tot_robust_length,tot_robust_perc))
                 else:
                     adapt_bcr = adapt[[modes_id[m],'min_bc_ratio','max_bc_ratio']]
                     adapt_bcr_min = adapt_bcr.groupby(modes_id[m])['min_bc_ratio'].min().reset_index()
@@ -68,41 +77,77 @@ def main():
                     tot_robust = len(adapt_bcr_min[adapt_bcr_min['min_bc_ratio'] > 1].index)
                     tot_robust_perc = 100*len(adapt_bcr_min[adapt_bcr_min['min_bc_ratio'] > 1].index)/len(adapt_bcr_min.index)
 
-                adapt_senstivity.append((dur,round(growth,1),tot_max,tot_max_perc,tot_robust,tot_robust_perc))
+                    adapt_senstivity.append((dur,round(growth,1),
+                                            tot_max,tot_max_perc,
+                                            tot_robust,tot_robust_perc))
 
                 print ('* Done {} {} days disruption and {} growth'.format(modes[m],dur,round(growth,1)))
 
-        adapt_senstivity = pd.DataFrame(adapt_senstivity,columns=['duration','growth','max_robust','max_robust_percent','tot_robust','tot_robust_percent'])
-
+        
         if modes[m] == 'road':
+            adapt_senstivity = pd.DataFrame(adapt_senstivity,
+                                            columns=['duration',
+                                                    'growth',
+                                                    'max_robust','max_robust_length',
+                                                    'max_robust_percent',
+                                                    'tot_robust','tot_robust_length','tot_robust_percent'])
             adapt_senstivity.to_csv(os.path.join(output_path,'network_stats','{}_adaptation_sensitvities_lengths.csv'.format(modes[m])),index=False)
+            adaptation_sentivity_plot(adapt_senstivity,'duration','growth',
+                                'max_robust_length','Maximum duration of disruption (days)',
+                                'Annual GDP growth (%)',
+                                '{} - Kilometers of roads for which Max. BCR > 1'.format(modes[m].title()),
+                                os.path.join(config['paths']['figures'],
+                                        '{}-adapt-senstivity-max-robust-length.png'.format(modes[m])),
+                                modes[m])
+
+            adaptation_sentivity_plot(adapt_senstivity,'duration','growth',
+                                'tot_robust_length','Maximum duration of disruption (days)',
+                                'Annual GDP growth (%)',
+                                '{} - Kilometers of roads for which Min.- Max. BCR > 1'.format(modes[m].title()),
+                                os.path.join(config['paths']['figures'],
+                                        '{}-adapt-senstivity-tot-robust-length.png'.format(modes[m])),
+                                modes[m])
+
             adaptation_sentivity_plot(adapt_senstivity,'duration','growth',
                                 'max_robust','Maximum duration of disruption (days)',
                                 'Annual GDP growth (%)',
-                                '{} - Kilometers of roads for which Max. BCR > 1'.format(modes[m].title()),
-                                os.path.join(config['paths']['figures'],'{}-adapt-senstivity-max-robust-length.png'.format(modes[m])),
+                                '{} - Numbers of roads for which Max. BCR > 1'.format(modes[m].title()),
+                                os.path.join(config['paths']['figures'],
+                                        '{}-adapt-senstivity-max-robust-numbers.png'.format(modes[m])),
                                 modes[m])
 
             adaptation_sentivity_plot(adapt_senstivity,'duration','growth',
                                 'tot_robust','Maximum duration of disruption (days)',
                                 'Annual GDP growth (%)',
-                                '{} - Kilometers of roads for which Min.- Max. BCR > 1'.format(modes[m].title()),
-                                os.path.join(config['paths']['figures'],'{}-adapt-senstivity-tot-robust-length.png'.format(modes[m])),
+                                '{} - Numbers of roads for which Min.- Max. BCR > 1'.format(modes[m].title()),
+                                os.path.join(config['paths']['figures'],
+                                        '{}-adapt-senstivity-tot-robust-numbers.png'.format(modes[m])),
                                 modes[m])
         else:
-            adapt_senstivity.to_csv(os.path.join(output_path,'network_stats','{}_adaptation_sensitvities.csv'.format(modes[m])),index=False)
+            adapt_senstivity = pd.DataFrame(adapt_senstivity,
+                                            columns=['duration',
+                                                    'growth',
+                                                    'max_robust',
+                                                    'max_robust_percent',
+                                                    'tot_robust',
+                                                    'tot_robust_percent'])
+            adapt_senstivity.to_csv(os.path.join(output_path,
+                                            'network_stats',
+                                            '{}_adaptation_sensitvities.csv'.format(modes[m])),index=False)
             adaptation_sentivity_plot(adapt_senstivity,'duration','growth',
                                 'max_robust','Maximum duration of disruption (days)',
                                 'Annual GDP growth (%)',
                                 '{} - Numbers of assets with Max. BCR > 1'.format(modes[m].title()),
-                                os.path.join(config['paths']['figures'],'{}-adapt-senstivity-max-robust.png'.format(modes[m])),
+                                os.path.join(config['paths']['figures'],
+                                        '{}-adapt-senstivity-max-robust-numbers.png'.format(modes[m])),
                                 modes[m])
 
             adaptation_sentivity_plot(adapt_senstivity,'duration','growth',
                                 'tot_robust','Maximum duration of disruption (days)',
                                 'Annual GDP growth (%)',
                                 '{} - Numbers of assets with Min.- Max. BCR > 1'.format(modes[m].title()),
-                                os.path.join(config['paths']['figures'],'{}-adapt-senstivity-tot-robust.png'.format(modes[m])),
+                                os.path.join(config['paths']['figures'],
+                                        '{}-adapt-senstivity-tot-robust-numbers.png'.format(modes[m])),
                                 modes[m])
 
 

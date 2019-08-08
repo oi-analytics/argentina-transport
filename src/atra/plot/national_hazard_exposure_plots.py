@@ -20,6 +20,7 @@ def main():
 
     data_path = config['paths']['data']
     modes = ['road', 'rail','bridge']
+    modes = ['road']
     hazard_cols = ['hazard_type','climate_scenario','year','probability']
     return_periods = [10,100,1000]
     plot_set = [
@@ -40,23 +41,12 @@ def main():
             'national_scale_hazard_intersections_boundary_summary.xlsx')
 
     # Give the paths to the input data files
-    # load provinces and get geometry of the right province
-    print('* Reading provinces dataframe')
-    province_path = os.path.join(config['paths']['incoming_data'],'2','provincia','Provincias.shp')
-    provinces = gpd.read_file(province_path,encoding='utf-8')
-    provinces = provinces.to_crs({'init': 'epsg:4326'})
-    sindex_provinces = provinces.sindex
-
-    '''Assign provinces to zones
-    '''
     print('* Reading department dataframe')
-    zones_path = os.path.join(config['paths']['incoming_data'], '2',
+    zones_path = os.path.join(config['paths']['incoming_data'],
+                                'admin_boundaries_and_census',
                                 'departamento', 'Departamentos.shp')
     zones = gpd.read_file(zones_path,encoding='utf-8')
     zones = zones.to_crs({'init': 'epsg:4326'})
-    zones['province_name'] = zones.progress_apply(lambda x: extract_value_from_gdf(
-        x, sindex_provinces, provinces,'nombre'), axis=1)
-
     zones.rename(columns={'OBJECTID':'department_id','Name':'department_name'},inplace=True)
 
     labels = ['0 to 10', '10 to 20', '20 to 30', '30 to 40', '40 to 100', 'No value']

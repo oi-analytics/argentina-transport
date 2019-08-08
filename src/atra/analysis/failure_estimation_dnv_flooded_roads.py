@@ -126,8 +126,10 @@ def main():
 
     Specify the output files and paths to be created
     """
-    data_path, calc_path, output_path = load_config()['paths']['data'], load_config()[
-        'paths']['calc'], load_config()['paths']['output']
+    incoming_path,data_path, calc_path, output_path = load_config()['paths']['incoming_data'],load_config()[
+                                                        'paths']['data'], load_config()[
+                                                        'paths']['calc'], load_config()[
+                                                        'paths']['output']
 
     # Supply input data and parameters
     modes = [
@@ -136,11 +138,6 @@ def main():
                 'min_tons_column':'total_tons',
                 'max_tons_column':'total_tons',
                 },
-                {
-                'sector':'rail',
-                'min_tons_column':'min_total_tons',
-                'max_tons_column':'max_total_tons',
-                }
     ]
 
     types = ['min', 'max']
@@ -193,16 +190,30 @@ def main():
         print ('* Loading {} igraph network and GeoDataFrame'.format(modes[m]['sector']))
         G_df = pd.read_csv(os.path.join(network_data_path,'{}_edges.csv'.format(modes[m]['sector'])),encoding='utf-8').fillna(0)
         gdf_edges = gpd.read_file(os.path.join(network_data_path,'{}_edges.shp'.format(modes[m]['sector'])),encoding='utf-8')
-        gdf_edges = gdf_edges[['edge_id','geometry']]
 
         # Create failure scenarios
-        print ('* Creating {} failure scenarios'.format(modes[m]['sector']))
+        print ('* Creating {} failure scenarios to include DNV identified roads not found flooded'.format(modes[m]['sector']))
+        epsg_utm_20s = 32720
+        flood_edges = gdf_edges[gdf_edges['dnv_flood'] == 1].edge_id.values.tolist()
+        
+        flood_points = gpd.read_file(os.path.join(incoming_path,'DNV_flood_points','flood_points.shp')).to_crs(epsg=epsg_utm_20s)
+        flood_points['id'] = flood_points.index.values.tolist()
+        flood_points['poly_geometry'] = flood_points.geometry.apply(lambda x: x.buffer(120))
+        poly_df = flood_points[['id','poly_geometry']]
+        poly_df.rename(columns={'poly_geometry':'geometry'},inplace=True)
+        road_matches = gpd.sjoin(poly_df,gdf_edges[gdf_edges['road_type'] == 'national'][['edge_id','geometry']].to_crs(epsg=epsg_utm_20s), how="inner", op='intersects').reset_index()
+        flood_edges += road_matches.edge_id.values.tolist()
+        del flood_points, road_matches
+
         fail_df = pd.read_csv(os.path.join(
                         fail_scenarios_data, 
                         '{}_hazard_intersections.csv'.format(modes[m]['sector'])))
-        ef_sc_list = edge_failure_sampling(fail_df,'edge_id')
+        ef_list = edge_failure_sampling(fail_df,'edge_id')
+        ef_sc_list = [f for f in flood_edges if f not in ef_list]
+        del ef_list, fail_df
         print ('Number of failure scenarios',len(ef_sc_list))
 
+        gdf_edges = gdf_edges[['edge_id','geometry']]
         for perct in percentage:
             # Load flow paths
             print ('* Loading {} flow paths'.format(modes[m]['sector']))
@@ -265,9 +276,9 @@ def main():
                 flow_df_select.rename(columns={'tr_loss': tr_loss}, inplace=True)
 
                 if single_edge == True:
-                    file_name = 'single_edge_failures_all_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'single_edge_failures_all_{0}_{1}_{2}_percent_disrupt_dnv_flood_extra.csv'.format(modes[m]['sector'], types[t],int(perct))
                 else:
-                    file_name = 'multiple_edge_failures_all_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'multiple_edge_failures_all_{0}_{1}_{2}_percent_disrupt_dnv_flood_extra.csv'.format(modes[m]['sector'], types[t],int(perct))
 
                 df_path = os.path.join(all_fail_scenarios,file_name)
                 flow_df_select.drop('new_path',axis=1,inplace=True)
@@ -280,9 +291,9 @@ def main():
                 edge_impact = edge_impact.groupby(['edge_id', 'origin_province', 'destination_province'])[ic_cols].sum().reset_index()
 
                 if single_edge == True:
-                    file_name = 'single_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'single_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt_dnv_flood_extra.csv'.format(modes[m]['sector'], types[t],int(perct))
                 else:
-                    file_name = 'multiple_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'multiple_edge_failures_od_losses_{0}_{1}_{2}_percent_disrupt_dnv_flood_extra.csv'.format(modes[m]['sector'], types[t],int(perct))
 
                 df_path = os.path.join(isolated_ods,file_name)
                 edge_impact.to_csv(df_path, index = False,encoding='utf-8-sig')
@@ -293,9 +304,9 @@ def main():
                 edge_impact = edge_impact.groupby(['edge_id', 'origin_province', 'destination_province'])[tr_loss,modes[m]['{}_tons_column'.format(types[t])]].sum().reset_index()
 
                 if single_edge == True:
-                    file_name = 'single_edge_failures_rerout_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'single_edge_failures_rerout_losses_{0}_{1}_{2}_percent_disrupt_dnv_flood_extra.csv'.format(modes[m]['sector'], types[t],int(perct))
                 else:
-                    file_name = 'multiple_edge_failures_rerout_losses_{0}_{1}_{2}_percent_disrupt.csv'.format(modes[m]['sector'], types[t],int(perct))
+                    file_name = 'multiple_edge_failures_rerout_losses_{0}_{1}_{2}_percent_disrupt_dnv_flood_extra.csv'.format(modes[m]['sector'], types[t],int(perct))
 
                 df_path = os.path.join(rerouting,file_name)
                 edge_impact.to_csv(df_path, index = False,encoding='utf-8-sig')
@@ -317,9 +328,9 @@ def main():
 
             del edge_fail_ranges
             if single_edge == True:
-                file_name = 'single_edge_failures_minmax_{0}_{1}_percent_disrupt'.format(modes[m]['sector'],int(perct))
+                file_name = 'single_edge_failures_minmax_{0}_{1}_percent_disrupt_dnv_flood_extra'.format(modes[m]['sector'],int(perct))
             else:
-                file_name = 'multiple_edge_failures_minmax_{0}_{1}_percent_disrupt'.format(modes[m]['sector'],int(perct))
+                file_name = 'multiple_edge_failures_minmax_{0}_{1}_percent_disrupt_dnv_flood_extra'.format(modes[m]['sector'],int(perct))
 
             df_path = os.path.join(minmax_combine,file_name + '.csv')
             edge_impact.to_csv(df_path, index = False,encoding='utf-8-sig')

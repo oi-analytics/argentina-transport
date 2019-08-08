@@ -82,18 +82,25 @@ def main():
                 node_file.drop('geometry',axis=1,inplace=True)
                 write_file = nodes_flows_from_edges(mode_file,node_file,modes_col[m],['min_total_tons','max_total_tons'])
 
-            write_file.sort_values(by=['max_total_tons'],ascending=False).to_csv(os.path.join(output_path,'network_stats','{}_ranked_flows.csv'.format(modes[m])),encoding='utf-8-sig',index=False)
+            write_file.sort_values(by=['max_total_tons'],ascending=False).to_csv(os.path.join(output_path,
+                                                                                'network_stats',
+                                                                                '{}_ranked_flows.csv'.format(modes[m])),
+                                                                                encoding='utf-8-sig',
+                                                                                index=False)
 
         else:
-            flow_file_path = os.path.join(output_path, 'flow_mapping_combined','air_passenger.csv')
+            flow_file_path = os.path.join(data_path, 'usage','air_passenger.csv')
 
             flow_file = pd.read_csv(flow_file_path)
-            flow_file['passengers_2016'] = 1.0*flow_file['passengers_2016']/365
+            # flow_file['passengers'] = 1.0*flow_file['passengers']/365
             node_file = gpd.read_file(os.path.join(data_path, 'network','{}_nodes.shp'.format(modes[m])),encoding='utf-8')
             node_file.drop('geometry',axis=1,inplace=True)
-            write_file = nodes_flows_from_edges(flow_file,node_file,modes_col[m],['passengers_2016'])
+            write_file = nodes_flows_from_edges(flow_file,node_file,modes_col[m],['passengers'])
 
-            write_file.sort_values(by=['passengers_2016'],ascending=False).to_csv(os.path.join(output_path,'network_stats','{}_ranked_flows.csv'.format(modes[m])),encoding='utf-8-sig',index=False)
+            write_file.sort_values(by=['passengers'],ascending=False).to_csv(os.path.join(output_path,'network_stats',
+                                                                                '{}_ranked_flows.csv'.format(modes[m])),
+                                                                                encoding='utf-8-sig',
+                                                                                index=False)
 
 
 

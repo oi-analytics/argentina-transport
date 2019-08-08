@@ -99,12 +99,16 @@ def combine_hazards_and_network_attributes_and_impacts(hazard_dataframe, network
 
 
 def correct_exposures(x,length_thr):
-    if x.percent_exposure > 100:
-        return 100.0*x.exposure_length/x.percent_exposure, 100.0, 1.0
-    elif x.exposure_length < length_thr:
-        return x.exposure_length,x.percent_exposure, 1.0*x.exposure_length/length_thr
+    el = float(x.exposure_length)
+    ep = float(x.percent_exposure)
+    if ep > 100:
+        el = 100.0*el/ep 
+        ep = 100.0
+
+    if el < length_thr:
+        return el,ep, 1.0*el/length_thr
     else:
-        return x.exposure_length,x.percent_exposure, 1.0
+        return el,ep, 1.0
 
 def create_hazard_scenarios_for_adaptation(all_edge_fail_scenarios, index_cols, length_thr):
     tqdm.pandas()
@@ -120,13 +124,13 @@ def create_hazard_scenarios_for_adaptation(all_edge_fail_scenarios, index_cols, 
                     'percent_exposure']].groupby(index_cols)['exposure_length',
                     'percent_exposure'].min().reset_index()
     min_exposures.rename(columns={'exposure_length':'min_exposure_length','percent_exposure':'min_exposure_percent'},inplace=True)
-    min_exposures['min_duration_wt'] = 0.01*min_exposures['min_exposure_percent']
+    # min_exposures['min_duration_wt'] = 0.01*min_exposures['min_exposure_percent']
     max_exposures = prob_exposures[index_cols + \
                     ['exposure_length',
                     'percent_exposure']].groupby(index_cols)['exposure_length',
                     'percent_exposure'].max().reset_index()
     max_exposures.rename(columns={'exposure_length':'max_exposure_length','percent_exposure':'max_exposure_percent'},inplace=True)
-    max_exposures['max_duration_wt'] = 0.01*max_exposures['max_exposure_percent']
+    # max_exposures['max_duration_wt'] = 0.01*max_exposures['max_exposure_percent']
 
     exposures = pd.merge(min_exposures,max_exposures,how='left',on=index_cols).fillna(0)
     del min_exposures,max_exposures
@@ -245,15 +249,6 @@ def network_od_path_estimations(graph,
         estimated generalised costs of routes
 
     """
-    # if vehicle_weight == 0 and tonnage == 0:
-    #     vehicle_weight = 1
-    #     tonnage = 1
-    # elif vehicle_weight == 0 and tonnage > 0:
-    #     vehicle_weight = tonnage
-
-    # graph = add_igraph_generalised_costs(graph, np.ceil(
-    #     tonnage/vehicle_weight), tonnage)
-
     paths = graph.get_shortest_paths(source, target, weights=cost_criteria, output="epath")
 
     edge_path_list = []
@@ -373,33 +368,15 @@ def write_flow_paths_to_network_files(save_paths_df,
 
     del gdf_edges, save_paths_df
 
-def identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria):
-    """Identify all paths that contain an edge
+def get_flow_paths_indexes_of_edges(flow_dataframe,path_criteria):
+    tqdm.pandas()
+    flow_dataframe[path_criteria] = flow_dataframe.progress_apply(lambda x:ast.literal_eval(x[path_criteria]),axis=1)
+    edge_path_index = defaultdict(list)
+    for k,v in zip(chain.from_iterable(flow_dataframe[path_criteria].ravel()), flow_dataframe.index.repeat(flow_dataframe[path_criteria].str.len()).tolist()):
+        edge_path_index[k].append(v)
 
-    Parameters
-    ---------
-    network_df_in - Pandas DataFrame of network
-    edge_failure_set - List of string edge ID's
-    flow_dataframe - Pandas DataFrame of list of edge paths
-    path_criteria - String name of column of edge paths in flow dataframe
-
-    Outputs
-    -------
-    network_df - Pandas DataFrame of network
-        With removed edges
-    edge_path_index - List of integer indexes
-        Of locations of paths in flow dataframe
-    """
-
-    edge_path_index = []
-    network_df = copy.deepcopy(network_df_in)
-    for edge in edge_failure_set:
-        network_df = network_df[network_df.edge_id != edge]
-        edge_path_index += flow_dataframe.loc[flow_dataframe[path_criteria].str.contains(
-            "'{}'".format(edge))].index.tolist()
-
-    edge_path_index = list(set(edge_path_index))
-    return network_df, edge_path_index
+    del flow_dataframe
+    return edge_path_index
 
 
 def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
@@ -433,7 +410,8 @@ def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
         new_time - Float value of estimated time of OD journey after disruption
     """
     edge_fail_dictionary = []
-    
+    # network_df,edge_path_index = identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria)
+
     edge_path_index = list(set(list(chain.from_iterable([path_idx for path_key,path_idx in edge_flow_path_indexes.items() if path_key in edge_failure_set]))))
 
     if edge_path_index:
@@ -514,87 +492,6 @@ def igraph_scenario_edge_failures_new(network_df_in, edge_failure_set,
 
     return edge_fail_dictionary
 
-
-def igraph_scenario_edge_failures(network_df_in, edge_failure_set,
-    flow_dataframe, vehicle_weight, path_criteria,
-    tons_criteria, cost_criteria, time_criteria,transport_mode):
-    """Estimate network impacts of each failures
-    When the tariff costs of each path are fixed by vehicle weight
-
-    Parameters
-    ---------
-    network_df_in - Pandas DataFrame of network
-    edge_failure_set - List of string edge ID's
-    flow_dataframe - Pandas DataFrame of list of edge paths
-    vehicle_weight - Float weight of vehcile weight
-    path_criteria - String name of column of edge paths in flow dataframe
-    tons_criteria - String name of column of path tons in flow dataframe
-    cost_criteria - String name of column of path costs in flow dataframe
-    time_criteria - String name of column of path travel time in flow dataframe
-
-
-    Returns
-    -------
-    edge_failure_dictionary : list[dict]
-        With attributes
-        edge_id - String name or list of failed edges
-        origin - String node ID of Origin of disrupted OD flow
-        destination - String node ID of Destination of disrupted OD flow
-        no_access - Boolean 1 (no reroutng) or 0 (rerouting)
-        new_cost - Float value of estimated cost of OD journey after disruption
-        new_distance - Float value of estimated distance of OD journey after disruption
-        new_path - List of string edge ID's of estimated new route of OD journey after disruption
-        new_time - Float value of estimated time of OD journey after disruption
-    """
-    edge_fail_dictionary = []
-    network_df,edge_path_index = identify_all_failure_paths(network_df_in,edge_failure_set,flow_dataframe,path_criteria)
-
-    if edge_path_index:
-        if len(edge_failure_set) == 1:
-            edge_failure_set = edge_failure_set[0]
-
-        network_graph = ig.Graph.TupleList(network_df.itertuples(
-            index=False), edge_attrs=list(network_df.columns)[2:])
-
-        nodes_name = np.asarray([x['name'] for x in network_graph.vs])
-        select_flows = flow_dataframe[flow_dataframe.index.isin(edge_path_index)]
-
-        no_access = select_flows[(~select_flows['origin_id'].isin(nodes_name)) | (
-            ~select_flows['destination_id'].isin(nodes_name))]
-        if len(no_access.index) > 0:
-            for iter_, value in no_access.iterrows():
-                edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': value['origin_id'], 'destination_id': value['destination_id'],
-                                             'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
-
-        po_access = select_flows[(select_flows['origin_id'].isin(nodes_name)) & (
-            select_flows['destination_id'].isin(nodes_name))]
-        if len(po_access.index) > 0:
-            po_access = po_access.set_index('origin_id')
-            origins = list(set(po_access.index.values.tolist()))
-            for origin in origins:
-                destinations = po_access.loc[[origin], 'destination_id'].values.tolist()
-                tons = po_access.loc[[origin], tons_criteria].values.tolist()
-                paths = network_graph.get_shortest_paths(
-                    origin, destinations, weights=cost_criteria, output="epath")
-                for p in range(len(paths)):
-                    if len(paths[p]) > 0:
-                        new_dist = 0
-                        new_time = 0
-                        new_gcost = 0
-                        new_path = []
-                        for n in paths[p]:
-                            new_dist += network_graph.es[n]['length']
-                            new_time += network_graph.es[n][time_criteria]
-                            new_gcost += network_graph.es[n][cost_criteria]
-                            new_path.append(network_graph.es[n]['edge_id'])
-                        edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destinations[p],
-                                                     'new_path':new_path,'new_distance': new_dist, 'new_time': new_time,
-                                                     'new_cost': tons[p]*new_gcost, 'no_access': 0})
-                    else:
-                        edge_fail_dictionary.append({'edge_id': edge_failure_set, 'origin_id': origin, 'destination_id': destinations[p],
-                                                     'new_path':[],'new_distance': 0, 'new_time': 0, 'new_cost': 0, 'no_access': 1})
-
-    return edge_fail_dictionary
 
 def rearrange_minmax_values(edge_failure_dataframe):
     """Write results to Shapefiles

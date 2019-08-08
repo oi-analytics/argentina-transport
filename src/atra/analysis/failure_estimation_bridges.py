@@ -183,7 +183,7 @@ def main():
         df.to_csv(os.path.join(output_path,
                 'flow_mapping_combined',
                 'weighted_flows_bridge_{}_percent.csv'.format(int(perct))),
-                encoding='utf-8-sig')
+                index=False,encoding='utf-8-sig')
 
         del df
 

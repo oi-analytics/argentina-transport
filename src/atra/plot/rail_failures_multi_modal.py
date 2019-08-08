@@ -81,6 +81,67 @@ def plot_ranges(input_data, division_factor,x_label, y_label,plot_title,plot_col
     plt.savefig(plot_file_path, dpi=500)
     plt.close()
 
+def plot_many_ranges(input_dfs, division_factor,x_label, y_label,plot_title,plot_color,plot_labels,plot_file_path):
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    length = []
+    for i in range(len(input_dfs)):
+        input_data = input_dfs[i]
+
+        vals_min_max = []
+        for a, b in input_data.itertuples(index=False):
+            if a < b:
+                min_, max_ = a, b
+            else:
+                min_, max_ = b, a
+            vals_min_max.append((min_, max_))
+
+        # vals_min_max.sort(key=lambda el: el[1])
+
+        vals_min_max = list(zip(*vals_min_max))
+
+        percentlies = 100.0*np.arange(0,len(vals_min_max[0]))/len(vals_min_max[0])
+        length.append(len(vals_min_max[0]))
+        ax.plot(percentlies,
+            1.0*np.array(vals_min_max[0])/division_factor,
+            linewidth=0.5,
+            color=plot_color[i]
+        )
+        ax.plot(percentlies,
+            1.0*np.array(vals_min_max[1])/division_factor,
+            linewidth=0.5,
+            color=plot_color[i]
+        )
+        ax.fill_between(percentlies,
+            1.0*np.array(vals_min_max[0])/division_factor,
+            1.0*np.array(vals_min_max[1])/division_factor,
+            alpha=0.5,
+            edgecolor=None,
+            facecolor=plot_color[i],
+            label = plot_labels[i]
+        )
+
+    length = max(length)
+    if 'BCR' in y_label:
+        ax.plot(np.arange(0,100),
+            np.array([1]*100),
+            linewidth=0.5,
+            color='red',
+            label = 'BCR = 1'
+        )
+        # ax.set_xscale('log')
+        ax.set_yscale('log')
+
+    # ax.tick_params(axis='x', rotation=45)
+    ax.legend(loc='upper left')
+    plt.xlabel(x_label, fontweight='bold')
+    plt.ylabel(y_label, fontweight='bold')
+    plt.title(plot_title)
+
+    plt.tight_layout()
+    plt.savefig(plot_file_path, dpi=500)
+    plt.close()
+
 def change_to_infinity(x,dividend_column,divisor_column):
     if x[divisor_column] == 0 and x[dividend_column] == 0:
         return 0
@@ -100,18 +161,34 @@ def main():
     change_labels = ['< -100','-100 to -50','-50 to -10','-10 to 0','0 to 10','10 to 50','50 to 100',' > 100','No change/value']
     change_ranges = [(-1e10,-100),(-100,-50),(-50,-10),(-10,0),(0.001,10),(10,50),(50,100),(100,1e10)]
 
+    region_file_path = os.path.join(config['paths']['data'], 'network',
+                               'rail_edges.shp')
+    region_file = gpd.read_file(region_file_path,encoding='utf-8')
     
     fail_file = pd.read_csv(os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
                                'single_edge_failures_minmax_rail_100_percent_disrupt_multi_modal.csv'))
     
+    fail_file = fail_file[fail_file['max_tr_loss'] < 1e7]
+    region_file = pd.merge(region_file[['edge_id',
+                                    'geometry']],fail_file[['edge_id',
+                                                        'min_tr_loss',
+                                                        'max_tr_loss']],how='left',on=['edge_id']).fillna(0)
 
     flow_file = pd.read_csv(os.path.join(config['paths']['output'], 'failure_results','minmax_combined_scenarios',
                                'single_edge_failures_minmax_rail_100_percent_disrupt.csv'))
-    fail_file = pd.merge(fail_file,flow_file[['edge_id','min_econ_impact','max_econ_impact']],how='outer', on=['edge_id']).fillna(0)
+    
+    region_file = pd.merge(region_file,flow_file[['edge_id',
+                                                'min_econ_impact',
+                                                'max_econ_impact']],how='left',on=['edge_id']).fillna(0)
+
+
+    fail_file = pd.merge(fail_file,flow_file[['edge_id',
+                                            'min_econ_impact',
+                                            'max_econ_impact']],how='outer', on=['edge_id']).fillna(0)
     del flow_file
 
-    flow_file = pd.read_csv(os.path.join(config['paths']['output'], 'network_stats',
-                               'national_rail_hazard_intersections_risks.csv'))
+    flow_file = pd.read_csv(os.path.join(config['paths']['output'], 'risk_results',
+                               'rail_hazard_intersections_risk_weights.csv'))
     fail_file = pd.merge(fail_file,flow_file,how='left', on=['edge_id']).fillna(0)
     del flow_file
 
@@ -121,15 +198,18 @@ def main():
     fail_file['min_eael_multimodal'] = duration*fail_file['risk_wt']*fail_file['min_tr_loss']
     fail_file['max_eael_multimodal'] = duration*fail_file['risk_wt']*fail_file['max_tr_loss']
 
-    fail_file.to_csv('test.csv')
-    fail_file_min = fail_file.groupby(['edge_id'])['min_tr_loss','min_econ_impact','min_eael_multimodal','min_eael'].min().reset_index()
-    fail_file_max = fail_file.groupby(['edge_id'])['max_tr_loss','max_econ_impact','max_eael_multimodal','max_eael'].max().reset_index()
+    # fail_file.to_csv('test.csv')
+    fail_file = fail_file.groupby(['edge_id',
+                                'climate_scenario'])[
+                                'min_eael_multimodal','min_eael',
+                                'max_eael_multimodal','max_eael'].sum().reset_index()
+    # fail_file.to_csv('test.csv')
+    fail_file_min = fail_file.groupby(['edge_id'])['min_eael_multimodal','min_eael'].min().reset_index()
+    fail_file_max = fail_file.groupby(['edge_id'])['max_eael_multimodal','max_eael'].max().reset_index()
     del fail_file
 
-    region_file_path = os.path.join(config['paths']['data'], 'network',
-                               'rail_edges.shp')
-    region_file = gpd.read_file(region_file_path,encoding='utf-8')
-    region_file = pd.merge(region_file[['edge_id','geometry']],fail_file_min,how='left',on=['edge_id']).fillna(0)
+    
+    region_file = pd.merge(region_file,fail_file_min,how='left',on=['edge_id']).fillna(0)
     region_file = pd.merge(region_file,fail_file_max,how='left',on=['edge_id']).fillna(0)
     del fail_file_min,fail_file_max
 
@@ -184,12 +264,12 @@ def main():
     ]
 
     plt_file_path = os.path.join(config['paths']['figures'],'rail-economic-loss-ranges-100-percent-multi-modal.png')
-    plot_ranges(region_file[['min_tr_loss','max_tr_loss']],
-                1000000,
-                "Percentile rank (%)",
-                "Economic impacts (million USD/day)",
-                "Rail - Range of total economic impacts due to single link failures",
-                rail_color,plt_file_path,very_high_value,yticks_loc,y_ticks_labels)
+    # plot_ranges(region_file[['min_tr_loss','max_tr_loss']],
+    #             1000000,
+    #             "Percentile rank (%)",
+    #             "Economic impacts (million USD/day)",
+    #             "Rail - Range of total economic impacts due to single link failures",
+    #             rail_color,plt_file_path,very_high_value,yticks_loc,y_ticks_labels)
 
     plt_file_path = os.path.join(config['paths']['figures'],'rail-eael-ranges-100-percent-multi-modal.png')
     plot_ranges(region_file[['min_eael_multimodal','max_eael_multimodal']],
@@ -199,7 +279,21 @@ def main():
                 "Rail - Range of EAEL due to single link failures",
                 rail_color,plt_file_path)
 
-    
+    risk_df = region_file[['max_eael','max_eael_multimodal']]
+    risk_df['zeroes'] = [0]*len(risk_df.index)
+    risk_df['eael_multimodal'] = risk_df['max_eael'] + risk_df['max_eael_multimodal']
+    risk_df = risk_df[(risk_df['max_eael'] > 0.5e6) | (risk_df['max_eael_multimodal'] > 0.5e6)]
+    risk_df = risk_df.sort_values(['eael_multimodal'], ascending=True)
+    plot_many_ranges([risk_df[['zeroes','max_eael']],risk_df[['max_eael','eael_multimodal']]], 
+                    1e6,
+                    'Percentile rank (%)', 
+                    'EAEL (million US$)',
+                    'Rail - Max. EAEL ranges with and without multi-modal option > {:,} US$'.format(500000),
+                    ['#f03b20','#08519c'],
+                    ['Without multi-modal options','With multi-modal options'],
+                    os.path.join(config['paths']['figures'],
+                            'rail-eael-comparisons-multi-modal.png'))
+    del risk_df
     for t in ['min','max']:
         for ch in change_sets: 
             edges_vals = region_file[['edge_id','geometry','{}_{}'.format(t,ch['columns'][0]),'{}_{}'.format(t,ch['columns'][1])]]

@@ -69,7 +69,7 @@ def main():
     flow_file = pd.read_csv(flow_file_path)
 
     flow_file_path = os.path.join(config['paths']['output'], 'network_stats',
-                               'national_rail_hazard_intersections_risks.csv')
+                               'rail_hazard_intersections_risk_weights.csv')
 
     fail_sc = pd.read_csv(flow_file_path)
     fail_scenarios = pd.merge(fail_sc,flow_file,how='left', on=['edge_id']).fillna(0)
@@ -127,7 +127,7 @@ def main():
         ax = get_axes()
         plot_basemap(ax, data_path)
         scale_bar(ax, location=(0.8, 0.05))
-        plot_basemap_labels(ax, data_path, include_regions=False)
+        plot_basemap_labels(ax, data_path, include_regions=True)
 
         name = [c['name'] for c in hazard_set if c['hazard'] == hazard_type][0]
         for record in edges_vals.itertuples():
@@ -192,7 +192,7 @@ def main():
             ax = get_axes()
             plot_basemap(ax, data_path)
             scale_bar(ax, location=(0.8, 0.05))
-            plot_basemap_labels(ax, data_path, include_regions=False)
+            plot_basemap_labels(ax, data_path, include_regions=True)
 
             # generate weight bins
             column = eael_set[c]['column']
@@ -302,85 +302,11 @@ def main():
             if climate_scenario == 'none':
                 climate_scenario = 'Current'
             
-            title = 'Railways ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario,year)
+            climate_scenario = climate_scenario.replace('_',' ')
+            title = 'Railways ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario.title(),year)
             print ('* Plotting ',title)
 
-    #         for cat, geoms in rail_geoms_by_category.items():
-    #             cat_style = styles[cat]
-    #             ax.add_geometries(
-    #                 geoms,
-    #                 crs=proj_lat_lon,
-    #                 linewidth=0,
-    #                 facecolor=cat_style.color,
-    #                 edgecolor='none',
-    #                 zorder=cat_style.zindex
-    #             )
-    #         name = [h['name'] for h in hazard_set if h['hazard'] == hazard_type][0]
-
-    #         x_l = -62.4
-    #         x_r = x_l + 0.4
-    #         base_y = -42.1
-    #         y_step = 0.8
-    #         y_text_nudge = 0.2
-    #         x_text_nudge = 0.2
-
-    #         ax.text(
-    #             x_l,
-    #             base_y + y_step - y_text_nudge,
-    #             eael_set[c]['legend_label'],
-    #             horizontalalignment='left',
-    #             transform=proj_lat_lon,
-    #             size=10)
-
-    #         divisor = eael_set[c]['divisor']
-    #         significance_ndigits = eael_set[c]['significance']
-    #         max_sig = []
-    #         for (i, ((nmin, nmax), line_style)) in enumerate(width_by_range.items()):
-    #             if round(nmin/divisor, significance_ndigits) < round(nmax/divisor, significance_ndigits):
-    #                 max_sig.append(significance_ndigits)
-    #             elif round(nmin/divisor, significance_ndigits+1) < round(nmax/divisor, significance_ndigits+1):
-    #                 max_sig.append(significance_ndigits+1)
-    #             elif round(nmin/divisor, significance_ndigits+2) < round(nmax/divisor, significance_ndigits+2):
-    #                 max_sig.append(significance_ndigits+2)
-    #             else:
-    #                 max_sig.append(significance_ndigits+3)
-
-    #         significance_ndigits = max(max_sig)
-    #         for (i, ((nmin, nmax), width)) in enumerate(width_by_range.items()):
-    #             y = base_y - (i*y_step)
-    #             line = LineString([(x_l, y), (x_r, y)]).buffer(width)
-    #             ax.add_geometries(
-    #                 [line],
-    #                 crs=proj_lat_lon,
-    #                 linewidth=0,
-    #                 edgecolor='#000000',
-    #                 facecolor='#000000',
-    #                 zorder=2)
-    #             if nmin == max_weight:
-    #                 value_template = '>{:.' + str(significance_ndigits) + 'f}'
-    #                 label = value_template.format(
-    #                     round(max_weight/divisor, significance_ndigits))
-    #             else:
-    #                 value_template = '{:.' + str(significance_ndigits) + \
-    #                     'f}-{:.' + str(significance_ndigits) + 'f}'
-    #                 label = value_template.format(
-    #                     round(nmin/divisor, significance_ndigits), round(nmax/divisor, significance_ndigits))
-
-    #             ax.text(
-    #                 x_r + x_text_nudge,
-    #                 y - y_text_nudge,
-    #                 label,
-    #                 horizontalalignment='left',
-    #                 transform=proj_lat_lon,
-    #                 size=10)
-
-    #         if climate_scenario == 'none':
-    #             climate_scenario = 'Current'
-
-    #         title = 'Railways ({}) {} {} {}'.format(eael_set[c]['title'],name,climate_scenario,year)
-    #         print ('* Plotting ',title)
-
-            plt.title(title, fontsize=14)
+            plt.title(title, fontsize=12)
             legend_from_style_spec(ax, styles,loc='lower left')
 
             # output
