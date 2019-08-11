@@ -37,7 +37,6 @@ def main():
 
     # Supply input data and parameters
     modes = ['road', 'rail','bridge']
-    # modes = ['road']
     mode_files = ['road_edges','rail_edges','bridges']
     modes_id_cols = ['edge_id','edge_id','bridge_id']
     mode_length_thr = [500,500,5]
@@ -64,49 +63,6 @@ def main():
         edge_id = modes_id_cols[m]
         length_thr = mode_length_thr[m]
         sel_cols = [modes_id_cols[m],'length']
-
-        # if modes[m] == 'rail':
-        #     index_cols = ['edge_id', 'hazard_type', 'model',
-        #                   'climate_scenario', 'year', 'edge_length']
-        #     sel_cols = ['edge_id', 'length']
-        #     cols = ['climate_scenario', 'edge_id', 'hazard_type', 'max_depth', 'min_depth','model', 'probability', 'year', 'length']
-        #     length_thr = 500.0
-        #     G_df = pd.read_csv(os.path.join(network_data_csv,
-        #                                   'rail_edges.csv'), encoding='utf-8-sig')
-        #     edge_id = 'edge_id'
-        # elif modes[m] == 'road':
-        #     index_cols = ['edge_id', 'hazard_type', 'model',
-        #                     'climate_scenario', 'year',
-        #                     'road_type','road_name','surface',
-        #                     'road_cond', 'width', 'edge_length']
-        #     sel_cols = ['edge_id','road_type',
-        #                 'road_name','surface',
-        #                 'road_cond','width', 'length']
-        #     cols = ['climate_scenario', 'edge_id',
-        #             'hazard_type', 'max_depth',
-        #             'min_depth','model', 'probability',
-        #             'year', 'length']
-        #     length_thr = 500.0
-        #     G_df = pd.read_csv(os.path.join(network_data_csv,
-        #                                   'road_edges.csv'), encoding='utf-8-sig')
-        #     edge_id = 'edge_id'
-        # else:
-        #     length_thr = 5.0
-        #     index_cols = ['bridge_id', 'hazard_type', 'model',
-        #                   'climate_scenario', 'year',
-        #                   'structure_type','pavement_material_asc',
-        #                   'pavement_material_desc','substructure_material',
-        #                   'superstructure_material','road_name',
-        #                   'width', 'edge_length']
-        #     sel_cols = ['bridge_id','structure_type','pavement_material_asc',
-        #                 'pavement_material_desc','substructure_material',
-        #                 'superstructure_material','road_name','width', 'length']
-        #     cols = ['climate_scenario', 'bridge_id', 'hazard_type', 'max_depth', 'min_depth','model', 'probability', 'year', 'length']
-        #     G_df = pd.read_csv(os.path.join(network_data_csv,
-        #                                   'bridges.csv'), encoding='utf-8_sig')
-        #     G_df.rename(columns = {'ruta':'road_name'},inplace=True)
-        #     edge_id = 'bridge_id'
-
 
         G_df = G_df[sel_cols]
         # Load failure scenarios

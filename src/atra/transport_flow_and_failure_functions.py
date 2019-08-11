@@ -110,10 +110,31 @@ def correct_exposures(x,length_thr):
     else:
         return el,ep, 1.0
 
+def change_depth_string_to_number(x):
+    if 'cm' in x:
+        return 0.01*float(x.split('cm')[0])
+    elif 'm' in x:
+        return 1.0*float(x.split('m')[0])
+    else:
+        return x
+
+
 def create_hazard_scenarios_for_adaptation(all_edge_fail_scenarios, index_cols, length_thr):
     tqdm.pandas()
-    min_max_height = all_edge_fail_scenarios.groupby(index_cols)['min_flood_depth','max_flood_depth'].max().reset_index()
-    prob_exposures = all_edge_fail_scenarios.groupby(index_cols + ['probability'])['percent_exposure','exposure_length'].sum().reset_index()
+    all_edge_fail_scenarios['min_flood_depth'] = all_edge_fail_scenarios.min_flood_depth.progress_apply(
+                                                lambda x:change_depth_string_to_number(x))
+    all_edge_fail_scenarios['max_flood_depth'] = all_edge_fail_scenarios.max_flood_depth.progress_apply(
+                                                lambda x:change_depth_string_to_number(x))
+    min_height_prob = all_edge_fail_scenarios.groupby(index_cols)['min_flood_depth',
+                                                        'probability'].min().reset_index()
+    min_height_prob.rename(columns={'probability': 'min_probability'},inplace=True)
+    max_height_prob = all_edge_fail_scenarios.groupby(index_cols)['max_flood_depth',
+                                                        'probability'].max().reset_index()
+    max_height_prob.rename(columns={'probability': 'max_probability'},inplace=True)
+    min_max_height_prob = pd.merge(min_height_prob,max_height_prob,how='left',on=index_cols)
+    del min_height_prob,max_height_prob
+    prob_exposures = all_edge_fail_scenarios.groupby(index_cols + ['probability'])['percent_exposure',
+                                                        'exposure_length'].sum().reset_index()
     del all_edge_fail_scenarios
 
     prob_exposures['exposures_risk'] = prob_exposures.progress_apply(lambda x: correct_exposures(x,length_thr),axis=1)
@@ -124,18 +145,16 @@ def create_hazard_scenarios_for_adaptation(all_edge_fail_scenarios, index_cols, 
                     'percent_exposure']].groupby(index_cols)['exposure_length',
                     'percent_exposure'].min().reset_index()
     min_exposures.rename(columns={'exposure_length':'min_exposure_length','percent_exposure':'min_exposure_percent'},inplace=True)
-    # min_exposures['min_duration_wt'] = 0.01*min_exposures['min_exposure_percent']
     max_exposures = prob_exposures[index_cols + \
                     ['exposure_length',
                     'percent_exposure']].groupby(index_cols)['exposure_length',
                     'percent_exposure'].max().reset_index()
     max_exposures.rename(columns={'exposure_length':'max_exposure_length','percent_exposure':'max_exposure_percent'},inplace=True)
-    # max_exposures['max_duration_wt'] = 0.01*max_exposures['max_exposure_percent']
 
     exposures = pd.merge(min_exposures,max_exposures,how='left',on=index_cols).fillna(0)
     del min_exposures,max_exposures
-    height_exposures = pd.merge(min_max_height,exposures,how='left',on=index_cols).fillna(0)
-    del min_max_height, exposures
+    height_prob_exposures = pd.merge(min_max_height_prob,exposures,how='left',on=index_cols).fillna(0)
+    del min_max_height_prob, exposures
 
     prob_exposures = prob_exposures.set_index(index_cols)
     scenarios = list(set(prob_exposures.index.values.tolist()))
@@ -165,8 +184,8 @@ def create_hazard_scenarios_for_adaptation(all_edge_fail_scenarios, index_cols, 
     new_cols = ['risk_wt', 'dam_wt']
     scenarios_df = pd.DataFrame(scenarios_list, columns=index_cols + new_cols)
 
-    scenarios_df = pd.merge(scenarios_df,height_exposures,how='left',on=index_cols).fillna(0)
-    del scenarios_list,height_exposures
+    scenarios_df = pd.merge(scenarios_df,height_prob_exposures,how='left',on=index_cols).fillna(0)
+    del scenarios_list,height_prob_exposures
     return scenarios_df
 
 def swap_min_max(x, min_col, max_col):

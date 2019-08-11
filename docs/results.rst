@@ -261,7 +261,7 @@ Purpose:
 Execution:
     - Load data described in `Topological network requirements <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/parameters.html#topological-network-requirements>`_, `Combining Network Failure and Macroeconomic loss Results <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/results.html#combining-network-failure-and-macroeconomic-loss-results>`_, and `Adaptation Options <https://argentina-transport-risk-analysis.readthedocs.io/en/latest/data.html#adaptation-options>`_
     - Common functions are in :py:mod:`atra.adaptation_options`
-    - Run :py:mod:`atra.analysis.run_options_national`
+    - Run :py:mod:`atra.analysis.adaptation_analysis`
 
 Result:
     - Store results as excel sheets in ``/results/adaptation_results/``

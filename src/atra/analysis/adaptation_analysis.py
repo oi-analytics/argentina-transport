@@ -41,31 +41,49 @@ def main():
     growth_rates = np.arange(-2,4,0.2)
 
     modes = ['road','bridge']
+    modes_id_cols = ['edge_id','bridge_id']
     result_types = ['combined_climate','hazard_and_climate']
+    index_columns = [['climate_scenario'],['hazard_type','climate_scenario']]
     start_year = 2016
     end_year = 2050
     min_periodic_year = 4
     max_periodic_year = 8
 
-    for result_type in result_types:
+    for r_t in range(len(result_types)):
+        result_type = result_types[r_t]
         adapt_results = os.path.join(output_path,'adaptation_results',result_type)
         if os.path.exists(adapt_results) == False:
             os.mkdir(adapt_results)
-        
-        for dur in duration_list:
-            for growth_rate in growth_rates:
-                for file_id in modes:
-                    run_adaptation_calculation(
-                        file_id, data_path, output_path,result_type, 
-                        duration_max=dur, 
-                        discount_rate=discount_rate,
-                        growth_rate=round(growth_rate,1),
-                        start_year=start_year,
-                        end_year=end_year,
-                        min_period=min_periodic_year,
-                        max_period=max_periodic_year,  
-                        read_from_file=read_from_file)
+        for m in range(len(modes)):
+            costs_df = get_adaptation_options_costs(
+                    modes[m], 
+                    data_path,
+                    output_path,
+                    result_type, 
+                    discount_rate=discount_rate,
+                    start_year=start_year,
+                    end_year=end_year,
+                    min_period=min_periodic_year,
+                    max_period=max_periodic_year,  
+                    read_from_file=read_from_file)
 
+            # for dur in duration_list:
+            #     for growth_rate in growth_rates:
+            #         run_adaptation_calculation(
+            #             costs_df,
+            #             modes[m],
+            #             output_path,
+            #             modes_id_cols[m],
+            #             index_columns[r_t],
+            #             result_type, 
+            #             duration_max=dur, 
+            #             discount_rate=discount_rate,
+            #             growth_rate=round(growth_rate,1),
+            #             start_year=start_year,
+            #             end_year=end_year,
+            #             min_period=min_periodic_year,
+            #             max_period=max_periodic_year,  
+            #             read_from_file=read_from_file)
 
 
 if __name__ == '__main__':
